@@ -791,11 +791,13 @@ export async function playFinale(pixelSprite: HTMLCanvasElement, onBlack?: () =>
   // les textes de fin, posés sur le noir
   const lines = async () => {
     await wait(26.6 * 1000);
-    text.textContent = 'Transfert du sujet 07\u00a0:';
-    await wait(1500);
-    text.textContent = 'Transfert du sujet 07\u00a0:\n4\u00a0212 / 4\u00a0212.';
-    await wait(3400);
-    text.textContent = 'Transfert du sujet 07\u00a0:\n4\u00a0212 / 4\u00a0212.\n\n— FIN —';
+    text.textContent = 'Transfert du sujet 07.';
+    await wait(1600);
+    text.textContent = 'Transfert du sujet 07.\n\nPopulation transférée vers Azura\u00a0:';
+    await wait(1400);
+    text.textContent = 'Transfert du sujet 07.\n\nPopulation transférée vers Azura\u00a0:\n4\u00a0212 / 4\u00a0212';
+    await wait(2600);
+    text.textContent = 'Transfert du sujet 07.\n\nPopulation transférée vers Azura\u00a0:\n4\u00a0212 / 4\u00a0212\n\n— FIN —';
     text.className = 'with-end';
   };
   void lines();
