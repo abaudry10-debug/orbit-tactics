@@ -500,9 +500,10 @@ export class Game {
     const [hx, hy] = this.heroPixel();
     const mw = this.map.width * T;
     const mh = this.map.height * T;
-    const camX = mw <= view.w ? (mw - view.w) / 2 : Math.max(0, Math.min(mw - view.w, hx + T / 2 - view.w / 2));
+    // caméra toujours centrée sur le héros, comme dans Pokémon (au-delà du bord : décor de ruines)
+    const camX = hx + T / 2 - view.w / 2;
     const visH = view.h - view.padBottom; // on garde le héros au-dessus des commandes
-    const camY = mh <= visH ? (mh - visH) / 2 : Math.max(0, Math.min(mh - visH, hy + T / 2 - visH / 2));
+    const camY = hy + T / 2 - visH / 2;
     const ox = Math.round(camX);
     const oy = Math.round(camY);
 
@@ -510,7 +511,10 @@ export class Game {
     const y0 = Math.floor(oy / T) - 1;
     for (let y = y0; y <= y0 + view.h / T + 2; y++) {
       for (let x = x0; x <= x0 + view.w / T + 2; x++) {
-        if (x < 0 || y < 0 || x >= this.map.width || y >= this.map.height) continue;
+        if (x < 0 || y < 0 || x >= this.map.width || y >= this.map.height) {
+          if (this.map.outdoor) c.drawImage(tile('rubble', hash(x, y)), x * T - ox, y * T - oy);
+          continue;
+        }
         const obj = this.objAt(x, y);
         const sprite = obj ? this.objSprite(obj) : '';
         const name = sprite || this.tileName(x, y);

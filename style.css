@@ -264,10 +264,10 @@ body {
 /* téléphone à la verticale : l'écran de jeu en haut, la manette en dessous (opaque) */
 @media (orientation: portrait) {
   :root {
-    --controls-h: 210px;
+    --controls-h: 220px;
   }
   #screen {
-    bottom: calc(var(--controls-h) + var(--safe-bottom));
+    bottom: calc(var(--controls-h) + env(safe-area-inset-bottom));
     border-bottom: 3px solid var(--ink);
     box-shadow: 0 6px 24px rgba(0, 0, 0, 0.6);
   }
@@ -275,12 +275,31 @@ body {
     background: radial-gradient(ellipse at 50% 100%, #2a1420 0%, var(--bg) 70%);
   }
   #controls {
-    height: var(--controls-h);
+    bottom: 0;
+    height: calc(var(--controls-h) + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
     align-items: center;
-    padding-top: 6px;
   }
+  /* le dialogue est dans l'écran de jeu : on le colle en bas de cet écran */
   #dialog {
-    bottom: calc(var(--controls-h) + var(--safe-bottom) + 10px);
+    bottom: 10px;
+  }
+  /* Menu, Sac et Journal au-dessus du bouton A */
+  .right {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 12px;
+  }
+  .pills {
+    flex-direction: row;
+    gap: 6px;
+  }
+  .pill {
+    min-width: 0;
+    padding: 4px 10px;
+  }
+  .pill .lbl {
+    display: none;
   }
   .d {
     background: #2b2236;
