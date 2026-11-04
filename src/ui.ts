@@ -323,7 +323,7 @@ export function showPlace(name: string) {
 
 // ---------- fenêtres pause / confirmation ----------
 export const overlayOpen = () =>
-  !$('pause').hidden || !$('confirm').hidden || !$('viewer').hidden || !$('switches').hidden || !$('finale').hidden || !$('term').hidden || !$('banner').hidden;
+  !$('pause').hidden || !$('confirm').hidden || !$('viewer').hidden || !$('switches').hidden || !$('finale').hidden || !$('term').hidden;
 
 export function confirm(question: string, onYes: () => void, onNo?: () => void, labels?: [string, string]) {
   $('confirm-text').textContent = question;
@@ -1013,32 +1013,4 @@ function keyIcon() {
   for (let i = 0; i < 9; i++) c.fillRect(4 + (i % 3) * 3, 3 + Math.floor(i / 3) * 3, 2, 2);
   c.fillStyle = '#ffffff'; c.fillRect(4, 12, 8, 1);
   return cv;
-}
-
-// ---------- grande notification (étape clé franchie) ----------
-let bannerDone: (() => void) | undefined;
-let bannerTimer = 0;
-export const bannerOpen = () => !$('banner').hidden;
-
-export function showBanner(title: string, text: string, done?: () => void) {
-  $('banner-title').textContent = title;
-  $('banner-text').textContent = text;
-  const b = $('banner');
-  b.hidden = false;
-  b.classList.remove('show');
-  void b.offsetWidth;
-  b.classList.add('show');
-  sfx.success();
-  bannerDone = done;
-  window.clearTimeout(bannerTimer);
-  bannerTimer = window.setTimeout(closeBanner, 4500);
-}
-
-export function closeBanner() {
-  if ($('banner').hidden) return;
-  window.clearTimeout(bannerTimer);
-  $('banner').hidden = true;
-  const cb = bannerDone;
-  bannerDone = undefined;
-  cb?.();
 }

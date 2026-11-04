@@ -274,16 +274,28 @@ export function startStatic() {
   const s = ac.createBufferSource();
   s.buffer = noiseBuf;
   s.loop = true;
+  // un souffle doux et étouffé plutôt qu'un grésillement agressif
   const f = ac.createBiquadFilter();
-  f.type = 'bandpass';
-  f.frequency.value = 1800;
-  f.Q.value = 0.6;
+  f.type = 'lowpass';
+  f.frequency.value = 850;
+  f.Q.value = 0.4;
+  const f2 = ac.createBiquadFilter();
+  f2.type = 'highpass';
+  f2.frequency.value = 160;
+  // une lente « respiration » du souffle, comme une onde qui va et vient
+  const breath = ac.createOscillator();
+  breath.frequency.value = 0.35;
+  const breathGain = ac.createGain();
+  breathGain.gain.value = 0.25;
+  const swell = ac.createGain();
+  swell.gain.value = 0.75;
+  breath.connect(breathGain).connect(swell.gain);
   const noise = ac.createGain();
-  noise.gain.value = 0.12;
-  s.connect(f).connect(noise).connect(sfxBus);
-  // le signal lointain : des bips réguliers, modulés
+  noise.gain.value = 0.045;
+  s.connect(f).connect(f2).connect(swell).connect(noise).connect(sfxBus);
+  // le signal lointain : des bips réguliers, doux
   const o = ac.createOscillator();
-  o.type = 'square';
+  o.type = 'sine';
   o.frequency.value = 660;
   const lfo = ac.createOscillator();
   lfo.type = 'square';
@@ -299,6 +311,7 @@ export function startStatic() {
   s.start();
   o.start();
   lfo.start();
+  breath.start();
   staticNodes = {
     noise,
     tone,
@@ -309,6 +322,7 @@ export function startStatic() {
       s.stop(t + 0.3);
       o.stop(t + 0.3);
       lfo.stop(t + 0.3);
+      breath.stop(t + 0.3);
     },
   };
 }
@@ -317,8 +331,8 @@ export function startStatic() {
 export function setStatic(clarity: number) {
   if (!ac || !staticNodes) return;
   const t = ac.currentTime;
-  staticNodes.noise.gain.setTargetAtTime(0.14 * (1 - clarity * 0.8), t, 0.05);
-  staticNodes.tone.gain.setTargetAtTime(0.06 * clarity * clarity, t, 0.05);
+  staticNodes.noise.gain.setTargetAtTime(0.05 * (1 - clarity * 0.7), t, 0.08);
+  staticNodes.tone.gain.setTargetAtTime(0.05 * clarity * clarity, t, 0.08);
 }
 
 export function stopStatic() {

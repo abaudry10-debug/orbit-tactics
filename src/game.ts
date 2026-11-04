@@ -564,7 +564,6 @@ export class Game {
     ui: (kind, then) => {
       releaseAll();
       if (kind === 'switches') ui.openSwitches(SWITCHES, RESTART_ORDER, () => then?.());
-      else if (kind === 'plansBanner') ui.showBanner('Plans du pod mobile', 'Tu as maintenant les plans pour réparer ta capsule 07.', then);
       else if (kind === 'archives')
         ui.openTerminal({
           folders: ARCHIVES,

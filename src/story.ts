@@ -70,7 +70,7 @@ export const CLUES: Clue[] = [
   { id: 'mis11', thread: 'missions', title: 'Le dossier Azura', text: 'Le dossier de la mission Aurore est vide : toutes ses archives ont été supprimées le jour du grand départ.' },
   { id: 'lead7', thread: 'leads', doneWhen: 'archUnlock_plans', title: 'Le post-it du télescope', text: '« Dossier LAZARE, ordinateur du spatioport. Code d’accès : la période de l’étoile errante, en années. »' },
   { id: 'mis9', thread: 'missions', title: 'La grille de décodage', text: 'La grille de la mission Aurore associe chaque groupe de trois bips à un chiffre : ··· 0 · ··– 1 · ·–· 2 · ·–– 3 · –·· 4 · –·– 5 · ––· 6 · ––– 7.' },
-  { id: 'cap9', thread: 'capsules', title: 'Le journal du Dr Varn', text: '« Les navettes ne suffiront jamais. Alors nous enverrons nos esprits. Sur Azura, la mission Aurore cultive un corps neuf pour chacun de nous. Les capsules transfèrent chaque esprit vers son double et protègent nos anciens corps de la chaleur. 4 212 habitants, 4 212 capsules. Tout le monde part. »' },
+  { id: 'cap9', thread: 'capsules', title: 'Le journal du Dr Varn', text: '« Les navettes ne suffiront jamais. Ce ne sont pas nos corps qui partiront. Sur Azura, la mission Aurore prépare de quoi nous accueillir. 4 212 habitants, 4 212 capsules. Tout le monde part. »' },
   { id: 'lead5', thread: 'leads', doneWhen: 'heliosOn', title: 'Le carnet du technicien', text: '« Arrêt d’urgence à la troisième cloche : j’ai coupé la pompe, puis l’onduleur, puis la ventilation, puis la turbine, et enfin le régulateur. » — R. Ilunga' },
   { id: 'lead6', thread: 'leads', doneWhen: 'podAssembled', title: 'Les plans du pod mobile', text: '1. Matrice vierge. 2. Noyau de transfert. 3. Antenne de synchronisation, accordée sur la balise d’Azura. 4. Clé de synchronisation. 5. Amorce : source isolée, type BS-1.' },
 ];
@@ -112,7 +112,7 @@ export const QUESTIONS: Question[] = [
     answer: 'Ses quatre groupes de bips se traduisent avec la grille de la mission Aurore : c’est une clé à quatre chiffres.',
   },
   {
-    id: 'q-culture', thread: 'capsules', opensWith: ['cap10'], answeredBy: 'cap9',
+    id: 'q-culture', thread: 'capsules', opensWith: ['cap10'], answeredBy: 'plansRead',
     ask: 'Que faisait-on pousser dans ces cuves ?',
     answer: 'Des corps neufs, un pour chacun. La mission Aurore en a emporté de quoi en faire 4 212 sur Azura.',
   },
@@ -187,7 +187,9 @@ export const ARCHIVES: ArchiveFolder[] = [
       '3. ANTENNE : à accorder sur la balise d’Azura (voir relevé radio).',
       '4. CLÉ DE SYNCHRONISATION : extraite du signal d’Azura.',
       '5. AMORCE : source isolée, type BS-1.',
-      'À l’arrivée : un corps cultivé par la mission Aurore attend chaque esprit.',
+      'Sur Azura, la mission Aurore cultive un double de chaque habitant.',
+      'La capsule copie l’esprit du dormeur et l’envoie vers son double.',
+      'L’ancien corps reste ici, endormi, à l’abri de la chaleur.',
     ],
   },
   {
@@ -252,7 +254,7 @@ export interface Api {
   say(lines: string[], then?: () => void): void;
   keypad(title: string, onCode: (code: string) => void): void;
   sfx(name: 'success' | 'wrong' | 'door' | 'item'): void;
-  ui(kind: 'switches' | 'orbit' | 'codebook' | 'archives' | 'plansBanner', then?: () => void): void;
+  ui(kind: 'switches' | 'orbit' | 'codebook' | 'archives', then?: () => void): void;
 }
 
 export const SCRIPTS: Record<string, (api: Api) => void> = {
@@ -642,9 +644,8 @@ export const SCRIPTS: Record<string, (api: Api) => void> = {
     api.say(
       [
         'Le bureau du Dr Ilse Varn. Son journal est ouvert.',
-        '« Les navettes ne suffiront jamais. Alors nous enverrons nos esprits. »',
-        '« Sur Azura, la mission Aurore cultive un corps neuf pour chacun de nous. »',
-        '« Les capsules transfèrent chaque esprit vers son double, et protègent nos anciens corps de la chaleur. »',
+        '« Les navettes ne suffiront jamais. Ce ne sont pas nos corps qui partiront. »',
+        '« Sur Azura, la mission Aurore prépare de quoi nous accueillir. »',
         '« 4 212 habitants, 4 212 capsules. Tout le monde part. »',
       ],
       () => api.clue('cap9'),
@@ -663,9 +664,8 @@ export const SCRIPTS: Record<string, (api: Api) => void> = {
       if (api.has('arch_plans')) {
         const first = !api.has('plansRead');
         api.set('plansRead');
-        if (first)
-          api.ui('plansBanner', () => api.say(['Un pod mobile… La capsule 07 pourrait servir de base.'], () => api.clue('lead6')));
-        else api.clue('lead6');
+        api.clue('lead6');
+        if (first) api.say(['Un pod mobile… La capsule 07 pourrait servir de base.']);
       }
     }),
 

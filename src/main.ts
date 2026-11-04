@@ -152,7 +152,6 @@ $('pause-quit').addEventListener('click', () => {
 
 // ---------- autres boutons ----------
 $('journal-close').addEventListener('click', () => ui.setJournal(false));
-$('banner').addEventListener('click', () => ui.closeBanner());
 $('bag-close').addEventListener('click', () => ui.setBag(false));
 $('viewer-close').addEventListener('click', () => ui.closeViewer());
 $('switches-close').addEventListener('click', () => ui.closeSwitches());
@@ -185,7 +184,6 @@ onPress((b) => {
     if (b === 'b' || b === 'menu') ui.closeSwitches();
     return;
   }
-  if (ui.bannerOpen()) return ui.closeBanner();
   if (ui.termOpen()) return ui.termInput(b);
   if (ui.keypadOpen()) return ui.keypadInput(b);
   if (ui.radioOpen()) return ui.radioInput(b);
