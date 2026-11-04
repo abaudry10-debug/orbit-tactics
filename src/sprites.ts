@@ -848,6 +848,15 @@ function drawDog(c: Ctx, frame: number, off: boolean) {
   if (off) r(c, 7, 9, 1, 2, P.ink); // fendu
 }
 
+/** Pixel éteint, détouré (fond transparent), pour la scène finale. */
+export function dogAsleep(): HTMLCanvasElement {
+  const [cv, c] = canvas();
+  drawDog(c, 0, true);
+  c.clearRect(0, 13, T, 3); // pas d'ombre au sol
+  r(c, 4, 12, 2, 3, P.ink); r(c, 11, 12, 2, 3, P.ink);
+  return cv;
+}
+
 const dogCache = new Map<string, HTMLCanvasElement>();
 export function dog(dir: Dir, frame: number): HTMLCanvasElement {
   const id = `${dir}:${frame}`;

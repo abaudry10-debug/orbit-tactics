@@ -199,16 +199,24 @@ let cursor = 0;
 let onCode: ((code: string) => void) | undefined;
 export const keypadOpen = () => !$('keypad').hidden;
 
+let kpLen = 4;
+let kpComma = -1;
+
 function renderKeypad() {
   $('keypad-digits').querySelectorAll<HTMLElement>('.digit').forEach((el, i) => {
+    el.hidden = i >= kpLen;
     el.querySelector('span')!.textContent = String(digits[i]);
     el.classList.toggle('active', i === cursor);
+    el.classList.toggle('comma', i === kpComma);
   });
 }
 
-export function openKeypad(title: string, cb: (code: string) => void, subtitle = 'Code de mission') {
+/** Clavier à molettes. `len` chiffres ; `comma` : une virgule s'affiche après ce chiffre (fréquences). */
+export function openKeypad(title: string, cb: (code: string) => void, subtitle = 'Code de mission', len = 4, comma = -1) {
   $('keypad-title').textContent = title;
   $('keypad-sub').textContent = subtitle;
+  kpLen = len;
+  kpComma = comma;
   digits = [0, 0, 0, 0];
   cursor = 0;
   onCode = cb;
@@ -220,15 +228,15 @@ export function keypadInput(b: string) {
   if (b !== 'a' && b !== 'b') sfx.key();
   if (b === 'up') digits[cursor] = (digits[cursor] + 1) % 10;
   else if (b === 'down') digits[cursor] = (digits[cursor] + 9) % 10;
-  else if (b === 'left') cursor = (cursor + 3) % 4;
-  else if (b === 'right') cursor = (cursor + 1) % 4;
+  else if (b === 'left') cursor = (cursor + kpLen - 1) % kpLen;
+  else if (b === 'right') cursor = (cursor + 1) % kpLen;
   else if (b === 'a') return submitKeypad();
   else if (b === 'b') return closeKeypad();
   renderKeypad();
 }
 
 function submitKeypad() {
-  const code = digits.join('');
+  const code = digits.slice(0, kpLen).join('');
   const cb = onCode;
   closeKeypad();
   cb?.(code);
@@ -515,54 +523,90 @@ export function closeSwitches() {
 // ---------- scène finale ----------
 const wait = (ms: number) => new Promise((res) => window.setTimeout(res, ms));
 
-export async function playFinale(pixelSprite: HTMLCanvasElement) {
+export async function playFinale(pixelSprite: HTMLCanvasElement, onBlack?: () => void) {
   const el = $('finale');
   const cv = $('finale-canvas') as HTMLCanvasElement;
   const text = $('finale-text');
   const c = cv.getContext('2d')!;
-  cv.width = 120;
-  cv.height = 200;
+  // canevas aux proportions de l'écran, en gros pixels
+  const W = 80;
+  const H = Math.max(80, Math.round((W * el.parentElement!.clientHeight) / Math.max(1, el.parentElement!.clientWidth)));
+  cv.width = W;
+  cv.height = H;
   c.imageSmoothingEnabled = false;
   text.textContent = '';
+  el.className = 'finale clear';
   el.hidden = false;
-  el.className = 'finale white';
-  // 1. l'éclair blanc ; Pixel endormi, à peine visible… son œil clignote une fois
-  const drawWhite = (blink: boolean) => {
-    c.fillStyle = '#ffffff';
-    c.fillRect(0, 0, 120, 200);
-    c.globalAlpha = 0.18;
-    c.drawImage(pixelSprite, 52, 150);
+  /** Fait varier t de 0 à 1 pendant `ms`, en redessinant à chaque image. */
+  const animate = (ms: number, draw: (t: number) => void) =>
+    new Promise<void>((res) => {
+      const t0 = performance.now();
+      const step = (now: number) => {
+        const t = Math.min(1, (now - t0) / ms);
+        draw(t);
+        if (t < 1) requestAnimationFrame(step);
+        else res();
+      };
+      requestAnimationFrame(step);
+    });
+  const fill = (col: string, alpha = 1) => {
+    c.globalAlpha = alpha;
+    c.fillStyle = col;
+    c.fillRect(0, 0, W, H);
     c.globalAlpha = 1;
-    if (blink) {
+  };
+  // 1. tout s'assombrit peu à peu, jusqu'au noir complet
+  await animate(2400, (t) => { c.clearRect(0, 0, W, H); fill('#000', t * t); });
+  el.className = 'finale';
+  onBlack?.();
+  await wait(1000);
+  // 2. dans le noir, la silhouette de Pixel… et son œil qui clignote une fois
+  const dx = Math.round(W / 2 - 8), dy = Math.round(H * 0.62);
+  const pixel = (alpha: number, eye: boolean) => {
+    fill('#000');
+    c.globalAlpha = alpha;
+    c.drawImage(pixelSprite, dx, dy);
+    c.globalAlpha = 1;
+    if (eye) {
+      c.fillStyle = 'rgba(94,240,255,0.35)';
+      c.fillRect(dx + 11, dy + 4, 3, 3);
       c.fillStyle = '#5ef0ff';
-      c.fillRect(52 + 12, 150 + 5, 1, 1);
+      c.fillRect(dx + 12, dy + 5, 1, 1);
     }
   };
-  drawWhite(false);
-  await wait(1600);
-  drawWhite(true);
-  await wait(180);
-  drawWhite(false);
-  await wait(1400);
-  // 2. une seconde de ciel bleu
-  el.className = 'finale';
-  for (let y = 0; y < 200; y++) {
-    const k = y / 200;
-    c.fillStyle = `rgb(${Math.round(90 + 90 * k)},${Math.round(160 + 60 * k)},${Math.round(235 + 15 * k)})`;
-    c.fillRect(0, y, 120, 1);
+  await animate(900, (t) => pixel(0.4 * t, false));
+  await wait(700);
+  pixel(0.4, true);
+  await wait(260);
+  pixel(0.4, false);
+  await wait(900);
+  await animate(700, (t) => pixel(0.4 * (1 - t), false));
+  await wait(500);
+  // 3. l'éclair blanc du transfert
+  await animate(450, (t) => { fill('#000'); fill('#fff', t); });
+  await wait(1500);
+  // 4. fondu vers un ciel bleu
+  const sky = document.createElement('canvas');
+  sky.width = W;
+  sky.height = H;
+  const s = sky.getContext('2d')!;
+  for (let y = 0; y < H; y++) {
+    const k = y / H;
+    s.fillStyle = `rgb(${Math.round(90 + 90 * k)},${Math.round(160 + 60 * k)},${Math.round(235 + 15 * k)})`;
+    s.fillRect(0, y, W, 1);
   }
   const cloud = (x: number, y: number) => {
-    c.fillStyle = '#ffffff';
-    c.fillRect(x, y, 22, 4); c.fillRect(x + 4, y - 3, 12, 3); c.fillRect(x + 8, y - 5, 6, 2);
+    s.fillStyle = '#ffffff';
+    s.fillRect(x, y, 18, 3); s.fillRect(x + 3, y - 2, 10, 2); s.fillRect(x + 6, y - 4, 5, 2);
   };
-  cloud(14, 60); cloud(70, 92); cloud(30, 140);
-  await wait(1800);
-  // 3. le noir, puis le dernier texte
-  c.fillStyle = '#000000';
-  c.fillRect(0, 0, 120, 200);
-  await wait(900);
-  text.textContent = 'Transfert du sujet 07 : 4 212 / 4 212.';
-  await wait(4200);
+  cloud(8, Math.round(H * 0.25)); cloud(50, Math.round(H * 0.45)); cloud(20, Math.round(H * 0.7));
+  await animate(1800, (t) => { fill('#fff'); c.globalAlpha = t; c.drawImage(sky, 0, 0); c.globalAlpha = 1; });
+  await wait(2200);
+  // 5. le noir, puis le dernier texte
+  await animate(1000, (t) => { c.drawImage(sky, 0, 0); fill('#000', t); });
+  await wait(700);
+  text.textContent = 'Transfert du sujet 07 :\n4\u00a0212 / 4\u00a0212.';
+  await wait(4500);
   text.textContent = '';
   await wait(700);
   el.hidden = true;

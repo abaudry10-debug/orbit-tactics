@@ -2,7 +2,7 @@
 import { playTheme, sfx } from './audio.js';
 import { heldDir, releaseAll } from './input.js';
 import { MAPS, START, SOLID, charAt, type GameMap, type MapObject } from './maps.js';
-import { T, bigTree, dish, dog, frozenTrain, hash, hero, radioTower, shuttleWreck, solarTower, tile, type Dir } from './sprites.js';
+import { T, bigTree, dish, dog, dogAsleep, frozenTrain, hash, hero, radioTower, shuttleWreck, solarTower, tile, type Dir } from './sprites.js';
 import { ARCHIVE_CODE, ARCHIVES, CLUES, FINALE, ITEMS, QUESTIONS, RADIO_FREQ, RESTART_ORDER, SCRIPTS, SIGNAL_KEY, SWITCHES, type Api } from './story.js';
 import * as ui from './ui.js';
 
@@ -359,13 +359,24 @@ export class Game {
     }
     if (!f.has('podTuned')) {
       if (!this.items.has('capteur')) return ui.say(['L’antenne doit être accordée sur la balise d’Azura. Il me faudrait le récepteur.']);
-      ui.say(['L’antenne doit être accordée sur la balise d’Azura.', 'Avec le récepteur, cherche le signal.'], () => {
-        ui.openRadio(RADIO_FREQ, () => {
-          f.add('podTuned');
-          sfx.success();
-          this.save();
-          ui.say(['L’antenne capte la balise d’Azura. Synchronisation possible.']);
-        });
+      ui.say(['L’antenne doit être accordée sur la balise d’Azura.', '« SAISIR LA FRÉQUENCE DE LA BALISE ».'], () => {
+        releaseAll();
+        ui.openKeypad(
+          'FRÉQUENCE',
+          (code) => {
+            if (code !== String(Math.round(RADIO_FREQ * 10)).padStart(3, '0')) {
+              sfx.wrong();
+              return ui.say(['« AUCUNE BALISE SUR CETTE FRÉQUENCE. »']);
+            }
+            f.add('podTuned');
+            sfx.success();
+            this.save();
+            ui.say(['« BALISE D’AZURA ACQUISE. »', 'L’antenne capte le signal. Synchronisation possible.']);
+          },
+          'Fréquence en MHz',
+          3,
+          1,
+        );
       });
       return;
     }
@@ -394,7 +405,6 @@ export class Game {
       : [
           '« AMORCE : SOURCE ISOLÉE REQUISE — TYPE BS-1. »',
           'Une BS-1… Il n’en existe qu’une.',
-          'Elle est dans Pixel.',
           'Pixel vient s’asseoir au pied de la capsule, et te regarde.',
         ];
     f.add('primeHint');
@@ -428,9 +438,8 @@ export class Game {
         ui.say(
           ['Tu glisses la batterie dans le logement de l’amorce. La capsule ronronne.', 'Tu t’allonges dans la capsule 07. Pixel est couché à son pied.', ...FINALE],
           async () => {
-            this.blackout = true;
             sfx.success();
-            await ui.playFinale(tile('dogOff', 0));
+            await ui.playFinale(dogAsleep(), () => { this.blackout = true; });
             this.locked = false;
             this.onFinished();
           },

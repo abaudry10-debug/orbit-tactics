@@ -1024,10 +1024,9 @@ h1 {
   align-items: center;
   justify-content: center;
   background: #000;
-  transition: background 1.2s;
 }
-.finale.white {
-  background: #fff;
+.finale.clear {
+  background: transparent;
 }
 #finale-canvas {
   position: absolute;
@@ -1038,11 +1037,13 @@ h1 {
   object-fit: cover;
 }
 #finale-text {
+  white-space: pre-line;
   position: relative;
   z-index: 1;
   padding: 0 24px;
   text-align: center;
-  font-size: 30px;
+  font-size: min(30px, 6.5vw);
+  line-height: 1.4;
   color: #e6ecff;
   letter-spacing: 1px;
 }
@@ -1109,3 +1110,7 @@ h1 {
 }
 .term-cursor { animation: termBlink 1s steps(2) infinite; }
 @keyframes termBlink { 50% { opacity: 0; } }
+
+.digit[hidden] { display: none; }
+.digit.comma { position: relative; margin-right: 14px; }
+.digit.comma::after { content: ','; position: absolute; right: -14px; bottom: 34%; font-size: 34px; color: inherit; }
