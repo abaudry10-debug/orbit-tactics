@@ -533,6 +533,171 @@ const houseDoor: Painter = (c) => {
   r(c, 4, 4, 8, 12, P.ink); r(c, 5, 5, 6, 11, '#6e4a30'); r(c, 9, 10, 1, 1, P.hazard);
 };
 
+// ---------- étape 2 : intérieurs, métro, colline ----------
+const woodFloor: Painter = (c, v) => {
+  r(c, 0, 0, T, T, '#7a5636');
+  for (const y of [0, 5, 10, 15]) r(c, 0, y, T, 1, '#5e4028');
+  r(c, (v * 5) % T, 1, 1, 4, '#5e4028'); r(c, (v * 7 + 8) % T, 6, 1, 4, '#5e4028'); r(c, (v * 3 + 4) % T, 11, 1, 4, '#5e4028');
+  r(c, 3, 2, 3, 1, '#8a6644');
+};
+const wallpaperTop: Painter = (c) => { r(c, 0, 0, T, T, '#4a3a4e'); r(c, 0, 0, T, 1, '#5e4a62'); };
+const wallpaperFront: Painter = (c, v) => {
+  r(c, 0, 0, T, T, '#c9a98a');
+  for (let x = 1; x < T; x += 4) for (let y = 2 + (x % 8 === 1 ? 0 : 3); y < 12; y += 6) r(c, x, y, 2, 2, '#b48e70');
+  r(c, 0, 12, T, 4, '#6e4a30'); r(c, 0, 12, T, 1, '#8a6644');
+  if (v === 2) r(c, 9, 3, 4, 5, '#a88468'); // tache d'humidité
+};
+const plankTop: Painter = (c) => { r(c, 0, 0, T, T, '#4a3424'); r(c, 0, 0, T, 1, '#5e4430'); };
+const plankFront: Painter = (c, v) => {
+  r(c, 0, 0, T, T, '#7a5a3a');
+  for (const x of [0, 5, 10]) r(c, x, 0, 1, T, '#5a3e26');
+  r(c, 2, 4 + v, 1, 1, '#3a2818'); r(c, 12, 9 - v, 1, 1, '#3a2818');
+  if (v === 1) { r(c, 6, 6, 3, 2, '#2f6fbf'); r(c, 6, 6, 3, 1, '#4f8fdf'); } // morceau de tôle bleue
+};
+const metroWallTop: Painter = (c) => { r(c, 0, 0, T, T, '#1e2228'); r(c, 0, 0, T, 1, '#2c3038'); };
+const metroWallFront: Painter = (c, v) => {
+  r(c, 0, 0, T, T, '#cfc7b0');
+  for (let y = 0; y < T; y += 4) r(c, 0, y, T, 1, '#b2aa92');
+  for (let y = 0; y < T; y += 8) for (let x = 0; x < T; x += 8) r(c, x + (y % 16 ? 4 : 0), y, 1, 4, '#b2aa92');
+  r(c, 0, 10, T, 2, '#2f6b52');
+  if (v === 2) { r(c, 3, 3, 5, 3, '#8c846e'); r(c, 4, 6, 2, 2, '#8c846e'); }
+};
+const platform: Painter = (c, v) => {
+  r(c, 0, 0, T, T, '#6e6a62');
+  r(c, 0, 0, T, 1, '#7e7a72'); r(c, 0, 8, T, 1, '#5e5a52'); r(c, 8, 0, 1, T, '#5e5a52');
+  if (v === 1) r(c, 3, 4, 2, 1, '#4e4a44');
+};
+const platformEdge: Painter = (c) => {
+  platform(c, 0);
+  r(c, 0, 10, T, 3, P.hazard); for (let x = 0; x < T; x += 4) r(c, x, 10, 2, 3, P.ink);
+  r(c, 0, 13, T, 3, '#2a2622');
+};
+const rails: Painter = (c, v) => {
+  r(c, 0, 0, T, T, '#2a2622');
+  for (let x = 1; x < T; x += 5) r(c, x, 2, 3, 12, '#4a3a2a'); // traverses
+  r(c, 0, 4, T, 1, '#8a8a92'); r(c, 0, 11, T, 1, '#8a8a92');
+  if (v === 2) r(c, 7, 7, 2, 2, '#3a3632');
+};
+const sky: Painter = (c, v) => {
+  r(c, 0, 0, T, T, '#d6562d');
+  if (v === 0) r(c, 4, 6, 6, 1, '#e8733a');
+  if (v === 2) r(c, 9, 11, 4, 1, '#b23e30');
+};
+const grating: Painter = (c) => {
+  r(c, 0, 0, T, T, '#3a3f48');
+  for (let i = 0; i < T; i += 3) { r(c, i, 0, 1, T, '#555c68'); r(c, 0, i, T, 1, '#2a2e36'); }
+  r(c, 0, 0, T, 1, '#6d7686');
+};
+const bed: Painter = (c, v) => {
+  woodFloor(c, v);
+  r(c, 1, 2, 14, 13, P.ink); r(c, 2, 3, 12, 11, '#c25a6a'); r(c, 2, 3, 12, 4, '#f0e0d0');
+  r(c, 3, 4, 4, 2, '#ffffff'); for (let x = 3; x < 13; x += 3) r(c, x, 9, 1, 4, '#a84a5a');
+};
+const drawings: Painter = (c, v) => {
+  wallpaperFront(c, v);
+  r(c, 1, 2, 6, 7, P.paper); r(c, 2, 5, 4, 3, '#8a6a4a'); r(c, 3, 3, 2, 2, P.hazard); // cabane + lampe
+  r(c, 9, 1, 6, 6, P.paper); r(c, 10, 4, 4, 2, '#9ad8ff'); r(c, 11, 2, 1, 1, P.hazard); r(c, 13, 2, 1, 1, P.hazard); // boîtes de verre et étoiles
+};
+const toybox: Painter = (c, v) => {
+  woodFloor(c, v);
+  r(c, 2, 6, 12, 9, P.ink); r(c, 3, 7, 10, 7, '#3a7d9a'); r(c, 3, 7, 10, 2, '#5a9dba');
+  r(c, 5, 4, 3, 3, '#e05a4a'); r(c, 9, 3, 2, 4, P.hazard);
+};
+const lampBox: Painter = (c, v) => {
+  woodFloor(c, v);
+  r(c, 3, 9, 10, 6, P.woodDark); r(c, 3, 9, 10, 1, P.wood);
+  r(c, 5, 4, 6, 5, P.ink); r(c, 6, 5, 4, 3, '#c04a2a'); r(c, 10, 5, 2, 3, '#fff3b0'); // lampe torche
+};
+const lampBoxEmpty: Painter = (c, v) => {
+  woodFloor(c, v);
+  r(c, 3, 9, 10, 6, P.woodDark); r(c, 3, 9, 10, 1, P.wood);
+};
+const counter: Painter = (c) => {
+  platform(c, 0);
+  r(c, 0, 6, T, 9, P.ink); r(c, 1, 7, 14, 7, '#8a6a4a'); r(c, 1, 7, 14, 2, '#a88464');
+  r(c, 3, 2, 10, 4, P.ink); r(c, 4, 3, 8, 2, '#f2c230'); r(c, 6, 3, 1, 2, P.ink); r(c, 9, 3, 1, 2, P.ink); // panneau
+};
+const caisson = (full: boolean): Painter => (c) => {
+  platform(c, 1);
+  r(c, 2, 4, 12, 11, P.ink); r(c, 3, 5, 10, 9, '#d7dde4'); r(c, 3, 9, 10, 1, P.neon);
+  r(c, 6, 6, 4, 2, full ? '#b48cff' : P.metalDark); r(c, 3, 5, 10, 1, '#f2f5f8');
+};
+const ladder: Painter = (c) => {
+  sky(c, 1);
+  r(c, 4, 0, 2, T, P.metalDark); r(c, 10, 0, 2, T, P.metalDark);
+  for (let y = 2; y < T; y += 4) r(c, 4, y, 8, 1, P.metalLight);
+};
+const towerBase: Painter = (c, v) => {
+  dust(c, v);
+  r(c, 4, 0, 2, T, P.metalDark); r(c, 10, 0, 2, T, P.metalDark);
+  for (let y = 2; y < T; y += 4) r(c, 4, y, 8, 1, P.metalLight);
+  r(c, 2, 13, 12, 3, 'rgba(0,0,0,0.25)');
+};
+const metroStairsUp: Painter = (c) => {
+  metroWallFront(c, 0);
+  r(c, 2, 2, 12, 14, P.ink);
+  for (let i = 0; i < 5; i++) r(c, 3, 3 + i * 3, 10, 2, i % 2 ? '#4a4652' : '#5a5662');
+  r(c, 5, 0, 6, 2, '#f2c230');
+};
+const lazarePoster: Painter = (c, v) => {
+  metroWallFront(c, v);
+  r(c, 2, 1, 12, 9, P.ink); r(c, 3, 2, 10, 7, '#e6eaef');
+  r(c, 6, 3, 4, 5, '#9ad8ff'); r(c, 7, 4, 2, 3, '#ffffff'); r(c, 4, 7, 8, 1, P.neon);
+};
+const networkMap: Painter = (c, v) => {
+  metroWallFront(c, v);
+  r(c, 1, 1, 14, 9, P.ink); r(c, 2, 2, 12, 7, '#f2efe6');
+  r(c, 3, 5, 10, 1, '#d04a42'); r(c, 7, 3, 1, 5, '#3a7d60');
+  for (const x of [3, 7, 12]) r(c, x, 4, 2, 3, P.ink);
+};
+const obsTop: Painter = (c, v) => {
+  r(c, 0, 0, T, T, '#d9dde4'); r(c, 0, 0, T, 2, '#f2f4f7');
+  for (let x = 2; x < T; x += 5) r(c, x, 0, 1, T, '#b9c0ca');
+  if (v === 1) { r(c, 6, 3, 4, 10, P.ink); r(c, 7, 4, 2, 8, '#24406a'); } // fente du télescope
+};
+const obsFront: Painter = (c, v) => {
+  r(c, 0, 0, T, T, '#8a96a8'); r(c, 0, 0, T, 2, '#b9c0ca'); r(c, 0, 14, T, 2, '#6a7688');
+  r(c, 3, 5, 10, 5, P.ink); r(c, 4, 6, 8, 3, '#24406a'); r(c, 4, 6, 2, 1, '#9ad8ff');
+  if (v === 2) { r(c, 4, 6, 8, 3, '#1a1e26'); }
+};
+const obsDoor: Painter = (c) => {
+  obsFront(c, 1);
+  r(c, 4, 3, 8, 13, P.ink); r(c, 5, 4, 6, 12, P.metal); r(c, 8, 4, 1, 12, P.metalDark); r(c, 10, 9, 1, 2, P.red);
+};
+const console_: Painter = (c, v) => {
+  dust(c, v);
+  r(c, 2, 5, 12, 10, P.metalDark); r(c, 2, 5, 12, 1, P.metalLight);
+  r(c, 4, 7, 8, 4, P.ink); r(c, 5, 8, 4, 1, '#ffb347'); r(c, 5, 10, 2, 1, '#ffb347');
+};
+
+const antennaBase: Painter = (c) => {
+  grating(c, 0);
+  r(c, 3, 11, 10, 4, P.ink); r(c, 4, 12, 8, 2, P.metalDark);
+  r(c, 7, 1, 2, 11, P.metalDark); r(c, 7, 1, 1, 11, P.metalLight);
+  r(c, 3, 3, 10, 1, P.metal); r(c, 4, 6, 8, 1, P.metal); r(c, 6, 0, 4, 1, P.red);
+  r(c, 10, 12, 1, 1, '#46e08a');
+};
+
+export function radioTower(): HTMLCanvasElement {
+  const [cv, c] = canvas(32, 80);
+  const m = P.metalDark;
+  r(c, 6, 20, 2, 60, m); r(c, 24, 20, 2, 60, m);
+  for (let y = 22; y < 78; y += 8) { r(c, 6, y, 20, 1, P.metal); for (let i = 0; i < 8; i++) r(c, 7 + i * 2, y + 1 + (i % 4), 1, 1, P.metal); }
+  r(c, 10, 10, 12, 12, m); r(c, 11, 11, 10, 10, '#454c59');
+  r(c, 15, 0, 2, 12, m); r(c, 14, 0, 4, 2, P.red);
+  r(c, 4, 12, 6, 8, P.ink); r(c, 5, 13, 4, 6, '#c9ced6'); r(c, 22, 14, 6, 6, P.ink); r(c, 23, 15, 4, 4, '#c9ced6'); // paraboles
+  return cv;
+}
+
+export function frozenTrain(): HTMLCanvasElement {
+  const [cv, c] = canvas(96, 32);
+  r(c, 0, 6, 96, 22, P.ink); r(c, 1, 7, 94, 20, '#c9ced6'); r(c, 1, 7, 94, 3, '#e6e9ee'); r(c, 1, 20, 94, 3, '#2f6b52');
+  for (let x = 6; x < 92; x += 14) { r(c, x, 11, 9, 7, P.ink); r(c, x + 1, 12, 7, 5, '#1c2533'); }
+  r(c, 47, 9, 2, 16, '#8a8f99');
+  r(c, 2, 27, 92, 3, '#2a2622');
+  return cv;
+}
+
 // ---------- grands décors (plus grands qu'une case) ----------
 export function shuttleWreck(): HTMLCanvasElement {
   const [cv, c] = canvas(64, 48);
@@ -619,6 +784,22 @@ const ICONS: Record<string, Painter> = {
     r(c, 2, 4, 12, 9, P.ink); r(c, 3, 5, 10, 7, '#24406a'); r(c, 3, 8, 10, 1, '#335a8c'); r(c, 8, 5, 1, 7, '#335a8c');
     r(c, 6, 13, 4, 2, P.metalDark); r(c, 7, 2, 2, 2, P.hazard); r(c, 4, 6, 2, 1, P.glass);
   },
+  lampe: (c) => {
+    r(c, 2, 6, 9, 5, P.ink); r(c, 3, 7, 7, 3, '#c04a2a'); r(c, 3, 7, 7, 1, '#e06a4a');
+    r(c, 10, 4, 4, 9, P.ink); r(c, 11, 5, 2, 7, '#fff3b0'); r(c, 6, 7, 1, 1, P.hazard);
+    r(c, 14, 6, 2, 1, '#fff3b0'); r(c, 14, 10, 2, 1, '#fff3b0'); r(c, 15, 8, 1, 1, '#fff3b0');
+  },
+  capteur: (c) => {
+    r(c, 2, 6, 12, 9, P.ink); r(c, 3, 7, 10, 7, '#6a5a3a'); r(c, 4, 8, 5, 3, '#0d1210');
+    r(c, 5, 9, 1, 1, '#ffb347'); r(c, 6, 10, 1, 1, '#ffb347'); r(c, 7, 9, 1, 1, '#ffb347');
+    r(c, 10, 8, 2, 2, P.metalLight); r(c, 10, 11, 2, 2, P.metalLight); // molettes
+    r(c, 11, 0, 1, 7, P.metalLight); r(c, 12, 0, 2, 1, P.metalLight);
+  },
+  noyau: (c) => {
+    r(c, 4, 1, 8, 14, P.ink); r(c, 5, 2, 6, 12, '#d7dde4'); r(c, 6, 4, 4, 8, '#2a4a6a');
+    r(c, 7, 5, 2, 6, P.neon); r(c, 7, 7, 2, 2, '#ffffff'); r(c, 5, 2, 6, 1, '#f2f5f8');
+    r(c, 3, 6, 1, 4, P.metalDark); r(c, 12, 6, 1, 4, P.metalDark);
+  },
   matrice: (c) => {
     r(c, 3, 3, 10, 10, P.ink); r(c, 4, 4, 8, 8, '#4a2a7a'); r(c, 5, 5, 6, 6, '#b48cff'); r(c, 7, 7, 2, 2, '#f0e0ff');
     for (const i of [4, 7, 10]) { r(c, i, 1, 1, 2, P.metalLight); r(c, i, 13, 1, 2, P.metalLight); r(c, 1, i, 2, 1, P.metalLight); r(c, 13, i, 2, 1, P.metalLight); }
@@ -650,6 +831,13 @@ const REGISTRY: Record<string, Painter[]> = {
   spatioTop: [spatioTop], spatioFront: [spatioFront], rocketEmblem: [rocketEmblem], pad: [pad],
   heliosTop: [heliosTop], heliosFront: [heliosFront], sunEmblem: [sunEmblem], heliosDoor: [heliosDoor],
   houseTop: [houseTop], houseFront: [houseFront], houseDoor: [houseDoor],
+  woodFloor: [woodFloor], wallpaperTop: [wallpaperTop], wallpaperFront: [wallpaperFront],
+  plankTop: [plankTop], plankFront: [plankFront], metroWallTop: [metroWallTop], metroWallFront: [metroWallFront],
+  platform: [platform], platformEdge: [platformEdge], rails: [rails], sky: [sky], grating: [grating],
+  bed: [bed], drawings: [drawings], toybox: [toybox], lampBox: [lampBox], lampBoxEmpty: [lampBoxEmpty],
+  counter: [counter], caisson: [caisson(true)], caissonEmpty: [caisson(false)], ladder: [ladder], towerBase: [towerBase],
+  metroStairsUp: [metroStairsUp], lazarePoster: [lazarePoster], networkMap: [networkMap],
+  obsTop: [obsTop], obsFront: [obsFront], obsDoor: [obsDoor], console: [console_], antennaBase: [antennaBase],
   dust: [dust], grass: [grass], asphalt: [asphalt], road: [road], labFloor: [labFloor],
   toxic0: [toxicFrame(0)], toxic1: [toxicFrame(1)], rubble: [rubble], fence: [fence],
   wallTop: [wallTop], wallFront: [wallFront], labWallTop: [labWallTop], labWallFront: [labWallFront],

@@ -93,6 +93,24 @@
         </div>
       </section>
 
+      <!-- récepteur radio -->
+      <section id="radio" class="overlay" hidden>
+        <div class="keypad-box radio-box">
+          <h2>RÉCEPTEUR</h2>
+          <p>Tourne la molette pour chercher un signal</p>
+          <div class="radio-screen"><span id="radio-freq">40,0</span><small>MHz</small></div>
+          <div id="radio-meter"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <p id="radio-status">Bruit</p>
+          <div class="radio-knobs">
+            <button data-tune="-1" class="menu">◀◀</button>
+            <button data-tune="-0.1" class="menu">◀</button>
+            <button data-tune="0.1" class="menu">▶</button>
+            <button data-tune="1" class="menu">▶▶</button>
+          </div>
+          <button id="radio-close" class="menu">Ranger le récepteur</button>
+        </div>
+      </section>
+
       <!-- clavier à code -->
       <section id="keypad" class="overlay" hidden>
         <div class="keypad-box">

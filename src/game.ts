@@ -2,8 +2,8 @@
 import { playTheme, sfx } from './audio.js';
 import { heldDir, releaseAll } from './input.js';
 import { MAPS, START, SOLID, charAt, type GameMap, type MapObject } from './maps.js';
-import { T, dish, dog, hash, hero, shuttleWreck, solarTower, tile, type Dir } from './sprites.js';
-import { CLUES, ITEMS, QUESTIONS, SCRIPTS, type Api } from './story.js';
+import { T, dish, dog, frozenTrain, hash, hero, radioTower, shuttleWreck, solarTower, tile, type Dir } from './sprites.js';
+import { CLUES, ITEMS, QUESTIONS, RADIO_FREQ, SCRIPTS, type Api } from './story.js';
 import * as ui from './ui.js';
 
 /** Taille de la vue en pixels de jeu ; recalculée selon l'écran (voir main.ts). */
@@ -63,6 +63,8 @@ export class Game {
   private decalShuttle = shuttleWreck();
   private decalDish = dish();
   private decalTower = solarTower();
+  private decalRadio = radioTower();
+  private decalTrain = frozenTrain();
 
   constructor(ctx: CanvasRenderingContext2D) {
     this.ctx = ctx;
@@ -157,7 +159,8 @@ export class Game {
 
   get busy(): boolean {
     return (
-      this.locked || this.blackout || ui.dialogOpen() || ui.journalOpen() || ui.keypadOpen() || ui.overlayOpen() || ui.bagOpen()
+      this.locked || this.blackout || ui.dialogOpen() || ui.journalOpen() || ui.keypadOpen() || ui.overlayOpen() || ui.bagOpen() ||
+      ui.radioOpen()
     );
   }
 
@@ -290,6 +293,16 @@ export class Game {
       return;
     }
     if (id === 'pelle') return this.dig();
+    if (id === 'capteur') {
+      if (this.map.id === 'sommet') {
+        releaseAll();
+        ui.openRadio(RADIO_FREQ, () => this.onSignal());
+        return;
+      }
+      if (this.map.dark) return ui.say(['Sous terre, le récepteur ne capte que du silence.']);
+      if (this.map.id === 'colline') return ui.say(['Des grésillements, très faibles. Il faudrait prendre de la hauteur… la tour radio ?']);
+      return ui.say(['Des grésillements. Rien d’autre. Il faudrait un point très haut.']);
+    }
     if (id === 'battery') {
       const target = this.map.objects.find(
         (o) => o.id === 'pixelOff' && !this.flags.has('pixelOn') && Math.max(Math.abs(o.x - this.x), Math.abs(o.y - this.y)) <= 1,
@@ -310,6 +323,22 @@ export class Game {
     }
     const it = ITEMS[id];
     ui.say([it ? it.text : '…']);
+  }
+
+  private onSignal() {
+    if (this.flags.has('signalFound')) return;
+    this.flags.add('signalFound');
+    sfx.success();
+    ui.say(
+      [
+        '… Là ! Sur 47,2, un signal se détache du bruit.',
+        'Régulier, insistant. Il vient de très loin, de la planète d’Aurore.',
+        'Ce n’est pas du silence… mais je n’y comprends rien. Le message est indéchiffrable.',
+        ...(this.flags.has('noyauFound') ? ['(Fin du contenu actuel : l’étape 3, le transporteur, arrive bientôt.)'] : []),
+      ],
+      () => this.addClue('mis7'),
+    );
+    this.save();
   }
 
   private dig() {
@@ -473,6 +502,15 @@ export class Game {
       case '=': return 'labFloor';
       case '#': return below === '#' ? 'wallTop' : 'wallFront';
       case 'X': return below === 'X' ? 'labWallTop' : 'labWallFront';
+      case 'Y': return below === 'Y' ? 'wallpaperTop' : 'wallpaperFront';
+      case 'K': return below === 'K' ? 'plankTop' : 'plankFront';
+      case 'W': return below === 'W' ? 'metroWallTop' : 'metroWallFront';
+      case 'w': return 'woodFloor';
+      case 'm': return 'platform';
+      case '_': return 'platformEdge';
+      case 'r': return 'rails';
+      case 'k': return 'sky';
+      case 'g': return 'grating';
       default: return 'dust';
     }
   }
@@ -512,7 +550,8 @@ export class Game {
     for (let y = y0; y <= y0 + view.h / T + 2; y++) {
       for (let x = x0; x <= x0 + view.w / T + 2; x++) {
         if (x < 0 || y < 0 || x >= this.map.width || y >= this.map.height) {
-          if (this.map.outdoor) c.drawImage(tile('rubble', hash(x, y)), x * T - ox, y * T - oy);
+          const voidTile = this.map.voidTile ?? (this.map.outdoor ? 'rubble' : '');
+          if (voidTile) c.drawImage(tile(voidTile, hash(x, y)), x * T - ox, y * T - oy);
           continue;
         }
         const obj = this.objAt(x, y);
@@ -524,7 +563,9 @@ export class Game {
 
     // grands décors, alignés sur le bas de leur emprise
     for (const d of this.map.decals ?? []) {
-      const img = d.kind === 'shuttle' ? this.decalShuttle : d.kind === 'dish' ? this.decalDish : this.decalTower;
+      const img =
+        d.kind === 'shuttle' ? this.decalShuttle : d.kind === 'dish' ? this.decalDish : d.kind === 'radioTower' ? this.decalRadio
+        : d.kind === 'train' ? this.decalTrain : this.decalTower;
       c.drawImage(img, d.x * T - ox, (d.y + d.h) * T - img.height - oy);
     }
 
@@ -564,6 +605,28 @@ export class Game {
     } else drawHero();
 
     this.renderAtmosphere();
+    if (this.map.dark) this.renderDarkness(hx - ox + T / 2, hy - oy + T / 2 - 2);
+  }
+
+  /** Le noir complet, sauf un halo autour du héros : grand avec la lampe, minuscule sans. */
+  private renderDarkness(cx: number, cy: number) {
+    const c = this.ctx;
+    const lamp = this.items.has('lampe');
+    const flicker = lamp ? Math.sin(this.time * 9) * 1.5 + Math.sin(this.time * 23) * 0.8 : 0;
+    const inner = lamp ? 26 + flicker : 6;
+    const outer = lamp ? 64 + flicker : 16;
+    const g = c.createRadialGradient(cx, cy, inner, cx, cy, outer);
+    g.addColorStop(0, 'rgba(4,3,8,0)');
+    g.addColorStop(0.7, 'rgba(4,3,8,0.85)');
+    g.addColorStop(1, 'rgba(4,3,8,0.98)');
+    c.fillStyle = g;
+    c.fillRect(0, 0, view.w, view.h);
+    if (lamp) {
+      c.fillStyle = 'rgba(255,230,160,0.06)';
+      c.beginPath();
+      c.arc(cx, cy, inner, 0, Math.PI * 2);
+      c.fill();
+    }
   }
 
   private objSprite(o: MapObject): string {

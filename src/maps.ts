@@ -7,10 +7,13 @@
 //   T  arbre mort       C  épave de voiture S  sable (on peut y creuser)
 //   P  panneau solaire  v  potager brûlé     H  aire d'envol      N  décor solide (épave…)
 //   =  sol du labo      X  mur du labo
+//   w  parquet          Y  mur tapissé      K  mur de planches
+//   m  quai de métro    _  bord de quai     r  rails            W  mur de métro
+//   g  caillebotis      k  ciel (vide)
 
 import type { Dir } from './sprites.js';
 
-export const SOLID = new Set(['#', '~', '*', '|', 'T', 'C', 'X', 'P', 'N']);
+export const SOLID = new Set(['#', '~', '*', '|', 'T', 'C', 'X', 'P', 'N', 'Y', 'K', 'W', 'k']);
 
 export interface Door {
   to: string; // carte d'arrivée
@@ -44,7 +47,7 @@ export interface Skin {
   y: number;
   w: number;
   h: number;
-  style: 'lab' | 'res' | 'metro' | 'spatio' | 'helios' | 'house';
+  style: 'lab' | 'res' | 'metro' | 'spatio' | 'helios' | 'house' | 'obs';
 }
 
 /** Grand décor dessiné par-dessus les cases (navette, antenne…), aligné sur le bas de son emprise. */
@@ -53,7 +56,7 @@ export interface Decal {
   y: number;
   w: number;
   h: number;
-  kind: 'shuttle' | 'dish' | 'tower';
+  kind: 'shuttle' | 'dish' | 'tower' | 'radioTower' | 'train';
 }
 
 export interface GameMap {
@@ -69,6 +72,8 @@ export interface GameMap {
   marks?: { x: number; y: number; sprite: string }[]; // case remplacée par un dessin (enseigne, emblème)
   decals?: Decal[];
   solidBase?: string; // dessin sous les cases N
+  dark?: boolean; // plongé dans le noir : il faut la lampe
+  voidTile?: string; // dessin au-delà des bords (sinon ruines dehors, noir dedans)
 }
 
 class Builder {
@@ -175,7 +180,7 @@ function buildVesper(): GameMap {
       { id: 'pixelOff', x: 23, y: 7, sprite: 'dogOff', script: 'pixelOff', hideWhen: 'pixelOn' },
       { id: 'noteLea', x: 24, y: 8, sprite: 'note', script: 'noteLea' },
       { id: 'crate1', x: 17, y: 25, sprite: 'crate', script: 'crate' },
-      { id: 'metro', x: 12, y: 20, sprite: 'stairs', script: 'metro' },
+      { id: 'metro', x: 12, y: 20, sprite: 'stairs', script: 'metro', door: { to: 'metro', x: 5, y: 2, dir: 'down', needs: 'hasLamp' } },
       { id: 'spatioport', x: 34, y: 23, sprite: 'bunkerDoor', script: 'spatioport' },
       {
         id: 'researchDoor', x: 34, y: 15, sprite: 'bunkerDoor', spriteWhen: ['researchOpen', 'bunkerDoorOpen'], script: 'researchDoor',
@@ -233,7 +238,10 @@ function buildQuartier(): GameMap {
     height: b.height,
     rows: b.rows,
     objects: [
-      { id: 'leaHouse', x: 6, y: 6, sprite: 'houseDoor', script: 'leaHouse' },
+      {
+        id: 'leaHouse', x: 6, y: 6, sprite: 'houseDoor', script: 'leaHouse',
+        door: { to: 'maisonLea', x: 5, y: 6, dir: 'up', needs: 'leaOpen' },
+      },
       { id: 'leaMailbox', x: 8, y: 8, sprite: 'sign', script: 'leaMailbox' },
       { id: 'motherJournal', x: 16, y: 8, sprite: 'note', script: 'motherJournal' },
       { id: 'pilotHouse', x: 15, y: 6, sprite: 'houseDoor', script: 'pilotHouse' },
@@ -244,7 +252,10 @@ function buildQuartier(): GameMap {
       { id: 'garden', x: 24, y: 21, sprite: 'plantsSign', script: 'garden' },
       { id: 'shed', x: 29, y: 19, sprite: 'shed', script: 'shed' },
       { id: 'thermo2', x: 18, y: 14, sprite: 'thermometer', script: 'thermometer2' },
-      { id: 'tank', x: 31, y: 22, sprite: 'crate', script: 'tank' },
+      {
+        id: 'tank', x: 31, y: 22, sprite: 'crate', spriteWhen: ['knowsCabin', 'plankFront'], script: 'tank',
+        door: { to: 'cabane', x: 4, y: 4, dir: 'up', needs: 'knowsCabin' },
+      },
       exit('toVesper', 35, 12, { to: 'vesper', x: 1, y: 10, dir: 'right' }),
     ],
     skins: [
@@ -321,12 +332,111 @@ function buildCentrale(): GameMap {
   };
 }
 
+// ---------- Étape 2 : maison de Léa (intérieur) ----------
+function buildMaisonLea(): GameMap {
+  const b = new Builder(10, 8, 'w');
+  b.border('Y').rect(1, 1, 8, 1, 'Y');
+  return {
+    id: 'maisonLea', name: 'Chez Léa', outdoor: false, width: b.width, height: b.height, rows: b.rows,
+    objects: [
+      { id: 'leaBed', x: 2, y: 2, sprite: 'bed', script: 'leaBed' },
+      { id: 'leaDrawings', x: 5, y: 1, sprite: 'drawings', script: 'leaDrawings' },
+      { id: 'leaDiary', x: 7, y: 2, sprite: 'desk', script: 'leaDiary' },
+      { id: 'leaToys', x: 8, y: 5, sprite: 'toybox', script: 'leaToys' },
+      { id: 'leaExit', x: 5, y: 7, sprite: 'houseDoor', door: { to: 'quartier', x: 6, y: 7, dir: 'down' } },
+    ],
+  };
+}
+
+// ---------- Étape 2 : la cabane secrète de Léa ----------
+function buildCabane(): GameMap {
+  const b = new Builder(8, 6, 'w');
+  b.border('K').rect(1, 1, 6, 1, 'K');
+  return {
+    id: 'cabane', name: 'La cabane secrète', outdoor: false, width: b.width, height: b.height, rows: b.rows,
+    objects: [
+      { id: 'lampBox', x: 2, y: 2, sprite: 'lampBox', spriteWhen: ['hasLamp', 'lampBoxEmpty'], script: 'lampBox' },
+      { id: 'leaLastNote', x: 5, y: 2, sprite: 'note', script: 'leaLastNote' },
+      { id: 'cabaneExit', x: 4, y: 5, sprite: 'plankFront', door: { to: 'quartier', x: 31, y: 23, dir: 'down' } },
+    ],
+  };
+}
+
+// ---------- Étape 2 : le métro (dans le noir) ----------
+function buildMetro(): GameMap {
+  const b = new Builder(40, 14, 'W');
+  b.rect(1, 8, 38, 2, 'r'); // la voie, d'un bout à l'autre
+  // trois stations : Centre, Marée, Colline
+  for (const [x, w] of [[1, 10], [15, 9], [31, 8]] as const) b.rect(x, 2, w, 5, 'm').rect(x, 7, w, 1, '_');
+  b.rect(26, 10, 13, 3, 'm'); // dépôt sous la voie
+  b.rect(28, 11, 6, 1, 'N'); // rame figée
+  return {
+    id: 'metro', name: 'Métro — ligne 2', outdoor: false, dark: true, width: b.width, height: b.height, rows: b.rows,
+    solidBase: 'rails',
+    objects: [
+      { id: 'metroUpCentre', x: 5, y: 1, sprite: 'metroStairsUp', door: { to: 'vesper', x: 12, y: 21, dir: 'down' } },
+      { id: 'lazarePoster', x: 3, y: 1, sprite: 'lazarePoster', script: 'lazarePoster' },
+      { id: 'networkMap', x: 8, y: 1, sprite: 'networkMap', script: 'networkMap' },
+      { id: 'mareeSign', x: 17, y: 1, sprite: 'networkMap', script: 'mareeSign' },
+      { id: 'lostFound', x: 20, y: 2, sprite: 'counter', script: 'lostFound' },
+      { id: 'metroTicket', x: 23, y: 5, sprite: 'note', script: 'metroTicket' },
+      { id: 'caisson', x: 36, y: 11, sprite: 'caisson', spriteWhen: ['noyauFound', 'caissonEmpty'], script: 'caisson' },
+      { id: 'metroUpColline', x: 35, y: 1, sprite: 'metroStairsUp', door: { to: 'colline', x: 4, y: 11, dir: 'down' } },
+    ],
+    decals: [{ x: 28, y: 11, w: 6, h: 1, kind: 'train' }],
+  };
+}
+
+// ---------- Étape 2 : la colline de l'observatoire ----------
+function buildColline(): GameMap {
+  const b = new Builder(26, 20, '.');
+  b.rect(2, 2, 6, 4, '"').rect(16, 13, 6, 4, '"');
+  b.rect(10, 3, 7, 5, '#'); // observatoire
+  b.rect(3, 9, 3, 1, '#'); // abri de la bouche de métro
+  b.set(20, 8, 'N'); // tour radio
+  b.border('*');
+  b.points('T', [[2, 15], [8, 17], [23, 4], [13, 15]]);
+  b.points('*', [[18, 3], [7, 13], [22, 11]]);
+  return {
+    id: 'colline', name: 'Colline de l’observatoire', outdoor: true, width: b.width, height: b.height, rows: b.rows,
+    objects: [
+      { id: 'collineStairs', x: 4, y: 10, sprite: 'stairs', door: { to: 'metro', x: 35, y: 2, dir: 'down' } },
+      { id: 'obsDoor', x: 13, y: 7, sprite: 'obsDoor', script: 'obsDoor' },
+      { id: 'obsConsole', x: 15, y: 9, sprite: 'console', script: 'obsConsole' },
+      { id: 'obsLog', x: 11, y: 9, sprite: 'note', script: 'obsLog' },
+      { id: 'towerLadder', x: 20, y: 9, sprite: 'towerBase', script: 'towerLadder', door: { to: 'sommet', x: 4, y: 4, dir: 'up' } },
+    ],
+    skins: [{ x: 10, y: 3, w: 7, h: 5, style: 'obs' }],
+    decals: [{ x: 19, y: 8, w: 2, h: 1, kind: 'radioTower' }],
+    solidBase: 'dust',
+  };
+}
+
+// ---------- Étape 2 : le sommet de la tour radio ----------
+function buildSommet(): GameMap {
+  const b = new Builder(9, 7, 'k');
+  b.rect(2, 2, 5, 3, 'g');
+  return {
+    id: 'sommet', name: 'Sommet de la tour radio', outdoor: true, width: b.width, height: b.height, rows: b.rows,
+    voidTile: 'sky',
+    objects: [
+      { id: 'bigAntenna', x: 4, y: 2, sprite: 'antennaBase', script: 'bigAntenna' },
+      { id: 'sommetLadder', x: 4, y: 5, sprite: 'ladder', door: { to: 'colline', x: 20, y: 10, dir: 'down' } },
+    ],
+  };
+}
+
 export const MAPS: Record<string, GameMap> = {
   lab: buildLab(),
   vesper: buildVesper(),
   quartier: buildQuartier(),
   research: buildResearch(),
   centrale: buildCentrale(),
+  maisonLea: buildMaisonLea(),
+  cabane: buildCabane(),
+  metro: buildMetro(),
+  colline: buildColline(),
+  sommet: buildSommet(),
 };
 
 export const START = { map: 'lab', x: 2, y: 3, dir: 'down' as Dir };

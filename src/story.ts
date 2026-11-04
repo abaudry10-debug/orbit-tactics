@@ -1,13 +1,14 @@
 // Histoire — étape 1 : indices du journal, questions, objets et scripts d'interaction.
 // Pour ajouter du contenu : une entrée dans CLUES, puis un script qui appelle api.clue().
 
-export type ThreadId = 'self' | 'capsules' | 'heat' | 'missions' | 'leads';
+export type ThreadId = 'self' | 'capsules' | 'heat' | 'missions' | 'leads' | 'lea';
 
 export const THREADS: { id: ThreadId; title: string; icon: string }[] = [
   { id: 'self', title: 'Qui suis-je ?', icon: '◉' },
   { id: 'capsules', title: 'Les capsules', icon: '▣' },
   { id: 'heat', title: 'Le ciel brûlant', icon: '☀' },
   { id: 'missions', title: 'Où sont-ils partis ?', icon: '▲' },
+  { id: 'lea', title: 'Léa', icon: '✿' },
   { id: 'leads', title: 'Pistes à suivre', icon: '➜' },
 ];
 
@@ -45,6 +46,16 @@ export const CLUES: Clue[] = [
   { id: 'lead2', thread: 'leads', title: 'Le prototype BS-1', text: 'Une batterie solaire expérimentale, perdue pendant l’évacuation de la centrale Hélios. « Sûrement enfouie sous le sable, quelque part près des ruines. »' },
   { id: 'lead3', thread: 'leads', title: 'Pixel', text: 'Un chien robot éteint. Sur son collier : « PIXEL ». Le petit panneau solaire sur son dos est fendu.' },
   { id: 'lead4', thread: 'leads', title: 'Le radioamateur', text: '« J’ai oublié mon récepteur dans la rame de la ligne 2. Il doit être aux objets trouvés de la station Marée. »' },
+  // Étape 2 — Léa
+  { id: 'lea1', thread: 'lea', title: 'Les dessins de Léa', text: 'Une cabane perchée dans une tour d’eau, une lampe, et Pixel. Sur un autre dessin : Papa et Maman couchés dans des boîtes de verre, sous des étoiles.' },
+  { id: 'lea2', thread: 'lea', title: 'Le journal de Léa', text: '« Papa m’a prêté sa lampe pour la cabane. Personne ne la trouvera derrière la tôle bleue. »' },
+  { id: 'lea3', thread: 'lea', title: 'Le dernier mot de Léa', text: '« Demain on dort tous dans les capsules. Maman dit qu’on se réveillera ailleurs, sous un ciel bleu. Pixel ne peut pas venir. Pardon Pixel. »' },
+  // Étape 2 — métro et colline
+  { id: 'cap6', thread: 'capsules', title: 'L’affiche du métro', text: '« Programme LAZARE. Votre esprit voyage. Votre corps se repose. » Un visage paisible, les yeux fermés.' },
+  { id: 'cap7', thread: 'capsules', title: 'Le caisson de maintenance', text: '« LAZARE — noyau de transfert de rechange, pour pod mobile. » Un pod mobile… on pourrait donc en construire un ailleurs qu’au laboratoire ?' },
+  { id: 'heat5', thread: 'heat', title: 'Le relevé de l’observatoire', text: 'Chaque année, Vesper se rapproche de son étoile. Une courbe descend jusqu’à une ligne rouge : « seuil de survie ». La date est entourée trois fois.' },
+  { id: 'mis6', thread: 'missions', title: 'Le dernier contact', text: '« Mission Aurore : monde habitable confirmé. Dernier contact sur 47,2. Ensuite, plus rien. »' },
+  { id: 'mis7', thread: 'missions', title: 'Un signal', text: 'Au sommet de la tour radio, sur 47,2 : un signal régulier, venu de la planète d’Aurore. Il n’est pas vide… mais il est indéchiffrable.' },
 ];
 
 /** Questions du journal : elles s'ouvrent avec un indice et se résolvent plus tard. */
@@ -79,6 +90,11 @@ export const QUESTIONS: Question[] = [
     answer: 'Les corps des habitants. Leur esprit est parti ailleurs. Le mien, non.',
   },
   {
+    id: 'q-cabin', thread: 'lea', opensWith: ['lea1'], answeredBy: 'hasLamp',
+    ask: 'Où est la cabane de Léa ?',
+    answer: 'Dans le château d’eau effondré, derrière une tôle bleue. La lampe de son père y était.',
+  },
+  {
     id: 'q-pixel', thread: 'leads', opensWith: ['lead3'], answeredBy: 'pixelOn',
     ask: 'Comment réveiller Pixel ?',
     answer: 'Avec la batterie solaire BS-1 déterrée près de la centrale Hélios.',
@@ -91,7 +107,12 @@ export const ITEMS: Record<string, { name: string; text: string; usable?: boolea
   pelle: { name: 'Pelle', text: 'Une pelle de jardin, solide. Utilise-la pour creuser là où tu te tiens.', usable: true },
   battery: { name: 'Batterie BS-1', text: 'Prototype de batterie solaire, encore chargée. Il faudrait la brancher sur quelque chose.', usable: true },
   matrice: { name: 'Matrice neuronale', text: 'Une puce qui luit doucement. Une pièce de transfert ? Le Dr Varn en parlait.' },
+  lampe: { name: 'Lampe torche', text: 'La lampe du père de Léa. Elle s’allume d’elle-même dans le noir.' },
+  capteur: { name: 'Récepteur radio', text: 'Le récepteur du radioamateur. Il capte les ondes, à condition d’être assez haut.', usable: true },
+  noyau: { name: 'Noyau de transfert', text: 'Un cylindre lumineux, « pour pod mobile ». Une pièce pour voyager ?' },
 };
+
+export const RADIO_FREQ = 47.2;
 
 export const MISSION_CODE = '2207';
 
@@ -206,8 +227,10 @@ export const SCRIPTS: Record<string, (api: Api) => void> = {
 
   crate: (api) => api.say(['Une caisse vide. Quelqu’un est passé avant moi.']),
 
-  metro: (api) =>
-    api.say(['Un escalier descend vers le métro.', 'En bas, le noir complet. Impossible d’y voir quoi que ce soit.']),
+  metro: (api) => {
+    if (api.has('hasLamp')) return api.say(['L’escalier du métro. Avec la lampe, je peux descendre.']);
+    api.say(['Un escalier descend vers le métro.', 'En bas, le noir complet. Il me faudrait une lampe.']);
+  },
 
   spatioport: (api) =>
     api.say(['Le hangar des navettes du spatioport. Les portes sont soudées.', 'Au-dessus, un panneau : « DÉPARTS — TOUS VOLS ANNULÉS ».'], () => api.clue('mis3')),
@@ -228,7 +251,15 @@ export const SCRIPTS: Record<string, (api: Api) => void> = {
   },
 
   // ----- quartier des Tilleuls -----
-  leaHouse: (api) => api.say(['Maison Moreau. La porte est coincée, comme gonflée par la chaleur.']),
+  leaHouse: (api) => {
+    if (api.has('leaOpen')) return api.say(['La porte de la maison Moreau est ouverte.']);
+    if (!api.has('pixelOn'))
+      return api.say(['Maison Moreau. La porte est coincée, comme gonflée par la chaleur.', 'En bas, une chatière. Bien trop petite pour moi.']);
+    api.say(['Pixel renifle la chatière… et s’y faufile d’un bond.', 'Un cliquetis à l’intérieur. Pixel a tiré le verrou !'], () => {
+      api.sfx('door');
+      api.set('leaOpen');
+    });
+  },
 
   leaMailbox: (api) => api.say(['Une boîte aux lettres : « Famille Moreau — Léa, Sam et Pixel ». Pixel a son nom sur la boîte.']),
 
@@ -278,8 +309,15 @@ export const SCRIPTS: Record<string, (api: Api) => void> = {
 
   thermometer2: (api) => api.say(['Encore un thermomètre bloqué au maximum. Tous les thermomètres de la ville le sont.']),
 
-  tank: (api) =>
-    api.say(['Les débris du château d’eau effondré.', 'Entre deux plaques de tôle, un passage étroit. Quelqu’un a dessiné une étoile à la craie.']),
+  tank: (api) => {
+    if (api.has('knowsCabin')) return api.say(['La tôle bleue est soulevée. La cabane de Léa est juste derrière.']);
+    if (api.has('readLeaDiary')) {
+      return api.say(['« Derrière la tôle bleue »… La voilà, coincée entre les débris.', 'Tu la soulèves : un passage mène à une petite cabane.'], () =>
+        api.set('knowsCabin'),
+      );
+    }
+    api.say(['Les débris du château d’eau effondré.', 'Des plaques de tôle de toutes les couleurs. Quelqu’un a dessiné une étoile à la craie.']);
+  },
 
   // ----- centre de recherche -----
   vitrine: (api) =>
@@ -354,7 +392,6 @@ export const SCRIPTS: Record<string, (api: Api) => void> = {
       [
         'Sur un socle, une puce qui luit doucement : « Matrice neuronale ».',
         'Tu la prends. Elle est tiède, presque vivante.',
-        '(Fin du contenu actuel. Le métro, la tour radio et le transporteur arrivent dans la prochaine mise à jour.)',
       ],
       () => api.item('matrice'),
     );
@@ -365,6 +402,104 @@ export const SCRIPTS: Record<string, (api: Api) => void> = {
       ['Une note manuscrite, signée I. Varn :', '« L’esprit part. Le corps reste dans sa capsule, à l’abri de la chaleur. »', '« Il ne se réveillera pas. Il ne devrait pas. »'],
       () => api.clue('cap5'),
     ),
+
+  // ----- étape 2 : maison et cabane de Léa -----
+  leaBed: (api) => api.say(['Un petit lit, soigneusement fait. Une peluche de chien robot sur l’oreiller.']),
+
+  leaDrawings: (api) =>
+    api.say(
+      [
+        'Des dessins d’enfant punaisés au mur.',
+        'Une cabane perchée dans une tour d’eau, avec une lampe et Pixel.',
+        'Un autre : Papa et Maman couchés dans des boîtes de verre, sous des étoiles.',
+      ],
+      () => api.clue('lea1'),
+    ),
+
+  leaDiary: (api) =>
+    api.say(['Un cahier à spirale, une page cornée :', '« Papa m’a prêté sa lampe pour la cabane. Personne ne la trouvera derrière la tôle bleue. »'], () => {
+      api.set('readLeaDiary');
+      api.clue('lea2');
+    }),
+
+  leaToys: (api) => api.say(['Un coffre à jouets. Des robots en plastique, une fusée, une boîte de piles vides.']),
+
+  lampBox: (api) => {
+    if (api.has('hasLamp')) return api.say(['La caisse est vide.']);
+    api.say(['Sur une caisse, une lampe torche rouge.', 'Tu la prends. Elle s’allume en clignotant, puis tient bon.'], () => {
+      api.set('hasLamp');
+      api.item('lampe');
+    });
+  },
+
+  leaLastNote: (api) =>
+    api.say(
+      [
+        'Un mot plié en quatre, épinglé au mur.',
+        '« Demain on dort tous dans les capsules. »',
+        '« Maman dit qu’on se réveillera ailleurs, sous un ciel bleu. »',
+        '« Pixel ne peut pas venir. Pardon Pixel. »',
+      ],
+      () => api.clue('lea3'),
+    ),
+
+  // ----- étape 2 : métro -----
+  lazarePoster: (api) =>
+    api.say(['Une affiche, éclairée par ta lampe :', '« Programme LAZARE. Votre esprit voyage. Votre corps se repose. »'], () => api.clue('cap6')),
+
+  networkMap: (api) => api.say(['Le plan de la ligne 2 : Centre — Marée — Colline de l’observatoire.']),
+
+  mareeSign: (api) => api.say(['« Station Marée ». Le carrelage est couvert de sel, comme si la mer était passée par là.']),
+
+  lostFound: (api) => {
+    if (api.hasItem('capteur')) return api.say(['Le bureau des objets trouvés. Des parapluies, une poussette, un vieux casque.']);
+    api.say(
+      ['Le bureau des objets trouvés.', 'Une étiquette sur une étagère : « Ligne 2 — récepteur radio — à rendre à M. Okafor ».', 'Tu prends le récepteur.'],
+      () => api.item('capteur'),
+    );
+  },
+
+  metroTicket: (api) => api.say(['Un ticket : « Station Marée → Spatioport. Aller simple. »']),
+
+  caisson: (api) => {
+    if (api.has('noyauFound')) return api.say(['Le caisson est vide.']);
+    api.say(
+      [
+        'Un caisson de maintenance, scellé au sol du dépôt.',
+        '« LAZARE — noyau de transfert de rechange, pour pod mobile. »',
+        'Tu ouvres le caisson. Le noyau luit doucement.',
+      ],
+      () => {
+        api.set('noyauFound');
+        api.item('noyau');
+        api.clue('cap7');
+        if (api.has('signalFound')) api.say(['(Fin du contenu actuel : l’étape 3, le transporteur, arrive bientôt.)']);
+      },
+    );
+  },
+
+  // ----- étape 2 : colline et tour radio -----
+  obsDoor: (api) => api.say(['La porte de l’observatoire est bloquée par des gravats.']),
+
+  obsConsole: (api) =>
+    api.say(
+      [
+        'Un pupitre de l’observatoire, encore alimenté par un panneau solaire.',
+        'Une courbe : chaque année, Vesper se rapproche de son étoile.',
+        'La courbe descend jusqu’à une ligne rouge : « seuil de survie ». La date est entourée trois fois.',
+      ],
+      () => api.clue('heat5'),
+    ),
+
+  obsLog: (api) =>
+    api.say(['Un carnet de veille, ouvert à la dernière page :', '« Mission Aurore : monde habitable confirmé. Dernier contact sur 47,2. Ensuite, plus rien. »'], () =>
+      api.clue('mis6'),
+    ),
+
+  towerLadder: (api) => api.say(['L’échelle de la tour radio. Ça monte haut.']),
+
+  bigAntenna: (api) =>
+    api.say(['Le sommet de la tour. L’antenne principale vibre doucement dans le vent chaud.', 'Ici, un récepteur pourrait capter quelque chose de très loin.']),
 
   // ----- centrale Hélios -----
   heliosSign: (api) =>

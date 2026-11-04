@@ -72,13 +72,13 @@ test('la batterie est enterrée dans le sable, sur une case accessible', () => {
 
 test('chaque objet a un script existant, chaque objet du sac est décrit', () => {
   for (const m of Object.values(MAPS)) for (const o of m.objects) if (o.script) assert.ok(SCRIPTS[o.script], o.script);
-  for (const id of ['badge', 'sonde', 'pelle', 'battery', 'matrice']) assert.ok(ITEMS[id], id);
+  for (const id of ['badge', 'sonde', 'pelle', 'battery', 'matrice', 'lampe', 'capteur', 'noyau']) assert.ok(ITEMS[id], id);
 });
 
 test('chaque indice, objet et réponse est obtenable', () => {
-  const clues = new Set<string>();
+  const clues = new Set<string>(['mis7']); // donné par le moteur (signal radio)
   const items = new Set<string>();
-  const flags = new Set<string>(['pixelOn', 'batteryFound']); // posés par le moteur (Pixel, fouille)
+  const flags = new Set<string>(['pixelOn', 'batteryFound', 'signalFound']); // posés par le moteur (Pixel, fouille, radio)
   for (const assumeAll of [false, true]) {
     for (const run of Object.values(SCRIPTS)) {
       const api = {
@@ -99,9 +99,40 @@ test('chaque indice, objet et réponse est obtenable', () => {
     assert.ok(threads.has(c.thread), c.id);
     assert.ok(clues.has(c.id), `indice jamais donné : ${c.id}`);
   }
-  for (const id of ['badge', 'sonde', 'pelle', 'matrice']) assert.ok(items.has(id), `objet jamais donné : ${id}`);
+  for (const id of ['badge', 'sonde', 'pelle', 'matrice', 'lampe', 'capteur', 'noyau']) assert.ok(items.has(id), `objet jamais donné : ${id}`);
   for (const q of QUESTIONS) {
     assert.ok(q.opensWith.every((c) => clues.has(c)), `${q.id} : ouverture impossible`);
     assert.ok(clues.has(q.answeredBy) || flags.has(q.answeredBy), `${q.id} : réponse impossible`);
+  }
+});
+
+test('la progression complète est possible : chaque porte finit par s’ouvrir', () => {
+  // On rejoue tous les scripts tant que de nouveaux drapeaux apparaissent,
+  // en ne connaissant au départ que ce que le moteur pose lui-même.
+  const flags = new Set<string>(['pixelOn', 'batteryFound', 'signalFound']);
+  const items = new Set<string>();
+  let grew = true;
+  while (grew) {
+    grew = false;
+    const before = flags.size + items.size;
+    for (const run of Object.values(SCRIPTS)) {
+      run({
+        has: (f: string) => flags.has(f),
+        set: (f: string) => void flags.add(f),
+        clue: () => {},
+        item: (id: string) => void items.add(id),
+        hasItem: (id: string) => items.has(id),
+        say: (_l: string[], then?: () => void) => then?.(),
+        keypad: (_t: string, cb: (c: string) => void) => cb(MISSION_CODE),
+        sfx: () => {},
+      });
+    }
+    if (flags.size + items.size > before) grew = true;
+  }
+  for (const m of Object.values(MAPS)) {
+    for (const o of m.objects) {
+      if (o.door?.needs) assert.ok(flags.has(o.door.needs), `${o.id} : ${o.door.needs} jamais posé`);
+      if (o.passWhen) assert.ok(flags.has(o.passWhen), `${o.id} : ${o.passWhen} jamais posé`);
+    }
   }
 });

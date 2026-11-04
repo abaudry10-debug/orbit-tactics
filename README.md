@@ -17,6 +17,14 @@ Sur iPhone : ouvre le lien dans Safari, puis **Partager → Sur l'écran d'accue
 - **Pixel**, le chien robot : réactivé avec la batterie, il suit le joueur et passe par les conduits.
 - **Sac à dos illustré** et **journal à questions**, qui se résolvent au fil des découvertes.
 
+## Étape 2
+
+- **Chez Léa** : Pixel ouvre la maison par la chatière ; ses dessins et son journal mènent à sa cabane secrète.
+- **La lampe torche**, cachée derrière la tôle bleue du château d'eau.
+- **Le métro dans le noir** : un halo de lumière autour du héros, trois stations et un dépôt (noyau de transfert, récepteur radio).
+- **La colline de l'observatoire** : relevé de l'orbite, journal de veille de la mission Aurore.
+- **La tour radio** : une molette de fréquence pour capter un signal lointain et indéchiffrable.
+
 Commandes : croix pour marcher, **A** pour examiner, **Sac** pour tes objets, **Journal** pour tes découvertes.
 Au clavier : flèches ou ZQSD, Espace pour A, I pour le sac, J pour le journal, Échap pour le menu.
 

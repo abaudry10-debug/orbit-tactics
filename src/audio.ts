@@ -265,3 +265,63 @@ export const sfx = {
     [60, 64, 67, 72, 76].forEach((n, i) => tone(sfxBus, 'triangle', hz(n), t + i * 0.07, 1.4 - i * 0.1, 0.07, { release: 1 }));
   },
 };
+
+// ---------- grésillements du récepteur radio ----------
+let staticNodes: { noise: GainNode; tone: GainNode; stop: () => void } | null = null;
+
+export function startStatic() {
+  if (!ac || staticNodes) return;
+  const s = ac.createBufferSource();
+  s.buffer = noiseBuf;
+  s.loop = true;
+  const f = ac.createBiquadFilter();
+  f.type = 'bandpass';
+  f.frequency.value = 1800;
+  f.Q.value = 0.6;
+  const noise = ac.createGain();
+  noise.gain.value = 0.12;
+  s.connect(f).connect(noise).connect(sfxBus);
+  // le signal lointain : des bips réguliers, modulés
+  const o = ac.createOscillator();
+  o.type = 'square';
+  o.frequency.value = 660;
+  const lfo = ac.createOscillator();
+  lfo.type = 'square';
+  lfo.frequency.value = 3.2;
+  const lfoGain = ac.createGain();
+  lfoGain.gain.value = 0.5;
+  const tone = ac.createGain();
+  tone.gain.value = 0;
+  const am = ac.createGain();
+  am.gain.value = 0.5;
+  lfo.connect(lfoGain).connect(am.gain);
+  o.connect(am).connect(tone).connect(sfxBus);
+  s.start();
+  o.start();
+  lfo.start();
+  staticNodes = {
+    noise,
+    tone,
+    stop: () => {
+      const t = ac!.currentTime;
+      noise.gain.setTargetAtTime(0, t, 0.05);
+      tone.gain.setTargetAtTime(0, t, 0.05);
+      s.stop(t + 0.3);
+      o.stop(t + 0.3);
+      lfo.stop(t + 0.3);
+    },
+  };
+}
+
+/** clarity : 0 = que du bruit, 1 = signal parfaitement accordé. */
+export function setStatic(clarity: number) {
+  if (!ac || !staticNodes) return;
+  const t = ac.currentTime;
+  staticNodes.noise.gain.setTargetAtTime(0.14 * (1 - clarity * 0.8), t, 0.05);
+  staticNodes.tone.gain.setTargetAtTime(0.06 * clarity * clarity, t, 0.05);
+}
+
+export function stopStatic() {
+  staticNodes?.stop();
+  staticNodes = null;
+}

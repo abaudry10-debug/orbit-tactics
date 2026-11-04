@@ -835,3 +835,72 @@ h1 {
 .clue.answer strong {
   color: #5a3a8a;
 }
+
+/* récepteur radio */
+.radio-box {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.radio-screen {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px;
+  background: #0d1210;
+  border: 3px solid var(--ink);
+  border-radius: 6px;
+  color: #ffb347;
+}
+#radio-freq {
+  font-size: 54px;
+  line-height: 1;
+}
+.radio-screen small {
+  font-size: 20px;
+  color: #b07a30;
+}
+#radio-meter {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  align-items: flex-end;
+  height: 26px;
+}
+#radio-meter i {
+  width: 10px;
+  background: #2a2420;
+}
+#radio-meter i:nth-child(1) { height: 6px; }
+#radio-meter i:nth-child(2) { height: 9px; }
+#radio-meter i:nth-child(3) { height: 12px; }
+#radio-meter i:nth-child(4) { height: 15px; }
+#radio-meter i:nth-child(5) { height: 18px; }
+#radio-meter i:nth-child(6) { height: 21px; }
+#radio-meter i:nth-child(7) { height: 24px; }
+#radio-meter i:nth-child(8) { height: 26px; }
+#radio-meter i.on {
+  background: #ffb347;
+}
+#radio-status {
+  margin: 0;
+  color: #e6d0a8;
+  font-size: 22px;
+}
+#radio.locked .radio-screen {
+  color: #46e08a;
+  box-shadow: 0 0 14px rgba(70, 224, 138, 0.6);
+}
+#radio.locked #radio-meter i.on {
+  background: #46e08a;
+}
+.radio-knobs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+.radio-knobs .menu {
+  padding: 10px 0;
+  font-size: 22px;
+}

@@ -165,6 +165,7 @@ onPress((b) => {
     return;
   }
   if (ui.keypadOpen()) return ui.keypadInput(b);
+  if (ui.radioOpen()) return ui.radioInput(b);
   if (ui.journalOpen()) {
     if (b === 'journal' || b === 'b' || b === 'a' || b === 'menu') ui.setJournal(false);
     return;
@@ -181,6 +182,7 @@ onPress((b) => {
 
 setupInput();
 ui.setupKeypadTouch();
+ui.setupRadioTouch();
 resize();
 showTitle();
 

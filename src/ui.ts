@@ -1,5 +1,5 @@
 // Interface HTML par-dessus le canvas : dialogues, journal, clavier à code, notifications.
-import { sfx } from './audio.js';
+import { setStatic, sfx, startStatic, stopStatic } from './audio.js';
 import { iconUrl } from './sprites.js';
 import { CLUES, ITEMS, QUESTIONS, THREADS } from './story.js';
 
@@ -284,4 +284,83 @@ export function confirm(question: string, onYes: () => void) {
     onYes();
   };
   no.onclick = close;
+}
+
+// ---------- récepteur radio (molette de fréquence) ----------
+let freq = 40.0;
+let target = 47.2;
+let onLock: (() => void) | undefined;
+let locked = false;
+export const radioOpen = () => !$('radio').hidden;
+
+function clarityOf(f: number) {
+  return Math.max(0, 1 - Math.abs(f - target) / 2.5);
+}
+
+function renderRadio() {
+  $('radio-freq').textContent = freq.toFixed(1).replace('.', ',');
+  const clarity = clarityOf(freq);
+  $('radio-meter').querySelectorAll('i').forEach((el, i) => el.classList.toggle('on', clarity > i / 8));
+  const lockedNow = Math.abs(freq - target) < 0.05;
+  $('radio-status').textContent = lockedNow ? 'Signal détecté !' : clarity > 0.6 ? 'Quelque chose…' : clarity > 0.2 ? 'Grésillements' : 'Bruit';
+  $('radio').classList.toggle('locked', lockedNow);
+  setStatic(lockedNow ? 1 : clarity * 0.7);
+  if (lockedNow && !locked) {
+    locked = true;
+    window.setTimeout(() => {
+      closeRadio();
+      onLock?.();
+    }, 900);
+  }
+}
+
+export function openRadio(targetFreq: number, cb: () => void) {
+  target = targetFreq;
+  onLock = cb;
+  locked = false;
+  freq = 40.0;
+  $('radio').hidden = false;
+  startStatic();
+  renderRadio();
+}
+
+export function closeRadio() {
+  $('radio').hidden = true;
+  stopStatic();
+}
+
+function nudge(delta: number) {
+  if (locked) return;
+  freq = Math.round(Math.min(60, Math.max(30, freq + delta)) * 10) / 10;
+  sfx.key();
+  renderRadio();
+}
+
+export function radioInput(b: string) {
+  if (b === 'right') nudge(0.1);
+  else if (b === 'left') nudge(-0.1);
+  else if (b === 'up') nudge(1);
+  else if (b === 'down') nudge(-1);
+  else if (b === 'b' || b === 'menu' || b === 'bag') closeRadio();
+}
+
+export function setupRadioTouch() {
+  document.querySelectorAll<HTMLElement>('[data-tune]').forEach((el) => {
+    let timer: number | undefined;
+    const step = Number(el.dataset.tune);
+    const stop = () => {
+      clearInterval(timer);
+      timer = undefined;
+    };
+    el.addEventListener('pointerdown', (ev) => {
+      ev.preventDefault();
+      nudge(step);
+      stop();
+      timer = window.setInterval(() => nudge(step), 140); // maintenir pour tourner la molette
+    });
+    el.addEventListener('pointerup', stop);
+    el.addEventListener('pointercancel', stop);
+    el.addEventListener('pointerleave', stop);
+  });
+  $('radio-close').addEventListener('click', closeRadio);
 }
