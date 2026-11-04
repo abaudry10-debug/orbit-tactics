@@ -122,6 +122,7 @@ function buildLab(): GameMap {
     rows: b.rows,
     objects: [
       { id: 'capsule07', x: 2, y: 2, sprite: 'capsule', script: 'capsule07' },
+      { id: 'pixelSleep', x: 3, y: 3, sprite: 'dogSleep', hiddenUntil: 'pixelSleep' },
       { id: 'capsuleA', x: 4, y: 2, sprite: 'capsuleFrost', script: 'capsuleFrost' },
       { id: 'capsuleB', x: 6, y: 2, sprite: 'capsuleFrost', script: 'capsuleFrost' },
       { id: 'terminal', x: 9, y: 2, sprite: 'terminal', script: 'terminal' },
@@ -182,7 +183,10 @@ function buildVesper(): GameMap {
       { id: 'noteLea', x: 24, y: 8, sprite: 'note', script: 'noteLea' },
       { id: 'crate1', x: 17, y: 25, sprite: 'crate', script: 'crate' },
       { id: 'metro', x: 12, y: 20, sprite: 'stairs', script: 'metro', door: { to: 'metro', x: 5, y: 2, dir: 'down', needs: 'hasLamp' } },
-      { id: 'spatioport', x: 34, y: 23, sprite: 'bunkerDoor', script: 'spatioport' },
+      {
+        id: 'spatioport', x: 34, y: 23, sprite: 'bunkerDoor', spriteWhen: ['heliosOn', 'bunkerDoorOpen'], script: 'spatioport',
+        door: { to: 'spatioportInt', x: 11, y: 10, dir: 'up', needs: 'heliosOn' },
+      },
       {
         id: 'researchDoor', x: 34, y: 15, sprite: 'bunkerDoor', spriteWhen: ['researchOpen', 'bunkerDoorOpen'], script: 'researchDoor',
         door: { to: 'research', x: 10, y: 12, dir: 'up', needs: 'researchOpen' },
@@ -327,7 +331,10 @@ function buildCentrale(): GameMap {
     objects: [
       { id: 'heliosSign', x: 13, y: 6, sprite: 'sign', script: 'heliosSign' },
       { id: 'controlPanel', x: 19, y: 12, sprite: 'crate', script: 'controlPanel' },
-      { id: 'heliosDoor', x: 21, y: 10, sprite: 'heliosDoor', script: 'heliosDoor' },
+      {
+        id: 'heliosDoor', x: 21, y: 10, sprite: 'heliosDoor', spriteWhen: ['turbinesOpen', 'bunkerDoorOpen'], script: 'heliosDoor',
+        door: { to: 'turbines', x: 6, y: 6, dir: 'up', needs: 'turbinesOpen' },
+      },
       exit('toVesperN', 15, 0, { to: 'vesper', x: 20, y: 28, dir: 'up' }),
     ],
     energy: [{ x: 22, y: 13, goneWhen: 'batteryFound' }],
@@ -407,7 +414,10 @@ function buildColline(): GameMap {
     id: 'colline', name: 'Colline de l’observatoire', outdoor: true, width: b.width, height: b.height, rows: b.rows,
     objects: [
       { id: 'collineStairs', x: 4, y: 10, sprite: 'stairs', door: { to: 'metro', x: 35, y: 2, dir: 'down' } },
-      { id: 'obsDoor', x: 13, y: 7, sprite: 'obsDoor', script: 'obsDoor' },
+      {
+        id: 'obsDoor', x: 13, y: 7, sprite: 'obsDoor', spriteWhen: ['obsOpen', 'labDoorOpen'], script: 'obsDoor',
+        door: { to: 'observatoire', x: 6, y: 7, dir: 'up', needs: 'obsOpen' },
+      },
       { id: 'obsConsole', x: 15, y: 9, sprite: 'console', script: 'obsConsole' },
       { id: 'obsLog', x: 11, y: 9, sprite: 'note', script: 'obsLog' },
       { id: 'towerLadder', x: 20, y: 9, sprite: 'towerBase', script: 'towerLadder', door: { to: 'sommet', x: 4, y: 4, dir: 'up' } },
@@ -432,6 +442,63 @@ function buildSommet(): GameMap {
   };
 }
 
+// ---------- Étape 3 : salle des turbines d'Hélios ----------
+function buildTurbines(): GameMap {
+  const b = new Builder(12, 8, 'm');
+  b.border('W').rect(1, 1, 10, 1, 'W');
+  return {
+    id: 'turbines', name: 'Salle des turbines', outdoor: false, width: b.width, height: b.height, rows: b.rows,
+    objects: [
+      { id: 'switchPanel', x: 6, y: 1, sprite: 'switchPanel', spriteWhen: ['heliosOn', 'switchPanelOn'], script: 'switchPanel' },
+      { id: 'restartPlaque', x: 8, y: 1, sprite: 'plaque', script: 'restartPlaque' },
+      { id: 'turbineA', x: 2, y: 3, sprite: 'turbine', script: 'turbine' },
+      { id: 'turbineB', x: 9, y: 3, sprite: 'turbine', script: 'turbine' },
+      { id: 'techNote', x: 2, y: 6, sprite: 'note', script: 'techNote' },
+      { id: 'turbinesExit', x: 6, y: 7, sprite: 'metroStairsUp', door: { to: 'centrale', x: 21, y: 11, dir: 'down' } },
+    ],
+  };
+}
+
+// ---------- Étape 3 : intérieur de l'observatoire ----------
+function buildObservatoire(): GameMap {
+  const b = new Builder(12, 9, '=');
+  b.border('X').rect(1, 1, 10, 1, 'X');
+  return {
+    id: 'observatoire', name: 'Observatoire', outdoor: false, width: b.width, height: b.height, rows: b.rows,
+    objects: [
+      { id: 'telescope', x: 6, y: 3, sprite: 'telescope', script: 'telescope' },
+      { id: 'orbitChart', x: 3, y: 1, sprite: 'orbitChart', script: 'orbitChart' },
+      { id: 'obsJournal', x: 9, y: 4, sprite: 'desk', script: 'obsJournal' },
+      { id: 'obsExit', x: 6, y: 8, sprite: 'labDoorOpen', door: { to: 'colline', x: 13, y: 8, dir: 'down' } },
+    ],
+  };
+}
+
+// ---------- Étape 3 : le spatioport (hangar et salle de contrôle) ----------
+function buildSpatioportInt(): GameMap {
+  const b = new Builder(22, 12, 'H');
+  b.border('X').rect(1, 1, 20, 1, 'X');
+  b.rect(12, 2, 1, 9, 'X').set(12, 6, '='); // cloison de la salle de contrôle, avec un passage
+  b.rect(13, 2, 8, 9, '=');
+  b.rect(2, 3, 4, 2, 'N').rect(2, 7, 4, 2, 'N'); // navettes clouées au sol
+  return {
+    id: 'spatioportInt', name: 'Spatioport — hangar', outdoor: false, width: b.width, height: b.height, rows: b.rows,
+    solidBase: 'pad',
+    objects: [
+      { id: 'missionBoard', x: 16, y: 1, sprite: 'missionBoard', script: 'missionBoard' },
+      { id: 'podPlans', x: 14, y: 4, sprite: 'podPlans', script: 'podPlans' },
+      { id: 'varnDesk', x: 19, y: 4, sprite: 'varnDesk', script: 'varnDesk' },
+      { id: 'codebook', x: 18, y: 8, sprite: 'book', script: 'codebook' },
+      { id: 'hangarNote', x: 8, y: 5, sprite: 'note', script: 'hangarNote' },
+      { id: 'spatioExit', x: 11, y: 11, sprite: 'labDoorOpen', door: { to: 'vesper', x: 34, y: 24, dir: 'down' } },
+    ],
+    decals: [
+      { x: 2, y: 3, w: 4, h: 2, kind: 'shuttle' },
+      { x: 2, y: 7, w: 4, h: 2, kind: 'shuttle' },
+    ],
+  };
+}
+
 export const MAPS: Record<string, GameMap> = {
   lab: buildLab(),
   vesper: buildVesper(),
@@ -443,6 +510,9 @@ export const MAPS: Record<string, GameMap> = {
   metro: buildMetro(),
   colline: buildColline(),
   sommet: buildSommet(),
+  turbines: buildTurbines(),
+  observatoire: buildObservatoire(),
+  spatioportInt: buildSpatioportInt(),
 };
 
 export const START = { map: 'lab', x: 2, y: 3, dir: 'down' as Dir };

@@ -3,7 +3,7 @@ import { playTheme, sfx } from './audio.js';
 import { heldDir, releaseAll } from './input.js';
 import { MAPS, START, SOLID, charAt, type GameMap, type MapObject } from './maps.js';
 import { T, bigTree, dish, dog, frozenTrain, hash, hero, radioTower, shuttleWreck, solarTower, tile, type Dir } from './sprites.js';
-import { CLUES, ITEMS, QUESTIONS, RADIO_FREQ, SCRIPTS, type Api } from './story.js';
+import { CLUES, FINALE, ITEMS, QUESTIONS, RADIO_FREQ, RESTART_ORDER, SCRIPTS, SIGNAL_KEY, SWITCHES, type Api } from './story.js';
 import * as ui from './ui.js';
 
 /** Taille de la vue en pixels de jeu ; recalculée selon l'écran (voir main.ts). */
@@ -267,6 +267,15 @@ export class Game {
     if (this.busy || this.moving) return;
     const [fx, fy] = this.facing();
     const obj = this.anyObjAt(fx, fy);
+    if (obj?.id === 'capsule07' && this.flags.has('plansRead')) return this.podInteract();
+    if (this.pixel && this.pixel.x === fx && this.pixel.y === fy && this.flags.has('podNeedsPrime') && this.map.id === 'lab') {
+      ui.confirm(
+        'Débrancher la batterie de Pixel ?',
+        () => this.finale(),
+        () => ui.say(['Pixel te regarde, la tête penchée.']),
+      );
+      return;
+    }
     if (obj?.script) {
       SCRIPTS[obj.script]?.(this.api);
       return;
@@ -332,6 +341,95 @@ export class Game {
     }
     const it = ITEMS[id];
     ui.say([it ? it.text : '…']);
+  }
+
+  // ---------- le transporteur (capsule 07) ----------
+  private podInteract() {
+    const f = this.flags;
+    if (!f.has('heliosOn')) return ui.say(['La capsule 07 est éteinte. Pour un transfert, il faudrait énormément d’énergie… Hélios ?']);
+    if (!f.has('podAssembled')) {
+      const parts: [string, string][] = [['matrice', 'la Matrice neuronale'], ['noyau', 'le Noyau de transfert'], ['antenne', 'l’antenne de synchronisation']];
+      const missing = parts.filter(([id]) => !this.items.has(id)).map(([, name]) => name);
+      if (missing.length) return ui.say(['D’après les plans, il me manque encore :', `${missing.join(', ')}.`]);
+      ui.say(
+        ['Tu poses la Matrice neuronale dans son logement.', 'Tu insères le Noyau de transfert. Il s’illumine.', 'Tu fixes l’antenne de synchronisation sur le capot.', 'La capsule 07 s’éveille dans un bourdonnement.'],
+        () => {
+          for (const id of ['matrice', 'noyau', 'antenne']) this.items.delete(id);
+          f.add('podAssembled');
+          sfx.success();
+          this.save();
+        },
+      );
+      return;
+    }
+    if (!f.has('podTuned')) {
+      if (!this.items.has('capteur')) return ui.say(['L’antenne doit être accordée sur la balise d’Azura. Il me faudrait le récepteur.']);
+      ui.say(['L’antenne doit être accordée sur la balise d’Azura.', 'Avec le récepteur, cherche le signal.'], () => {
+        ui.openRadio(RADIO_FREQ, () => {
+          f.add('podTuned');
+          sfx.success();
+          this.save();
+          ui.say(['L’antenne capte la balise d’Azura. Synchronisation possible.']);
+        });
+      });
+      return;
+    }
+    if (!f.has('podKeyed')) {
+      ui.say(['« SAISIR LA CLÉ DE SYNCHRONISATION ».'], () =>
+        ui.openKeypad(
+          'CLÉ DE SYNCHRONISATION',
+          (code) => {
+            if (code !== SIGNAL_KEY) {
+              sfx.wrong();
+              return ui.say(['« CLÉ REFUSÉE. »', 'La clé est cachée dans le signal d’Azura…']);
+            }
+            f.add('podKeyed');
+            f.add('podNeedsPrime');
+            sfx.success();
+            this.save();
+            ui.say(['« CLÉ ACCEPTÉE. »', '« TRANSFERT PRÊT. »', '« AMORCE : SOURCE ISOLÉE REQUISE — TYPE BS-1. »']);
+          },
+          'Clé à 4 chiffres',
+        ),
+      );
+      return;
+    }
+    if (f.has('primeHint')) return ui.say(['« AMORCE : SOURCE ISOLÉE REQUISE — TYPE BS-1. »']);
+    f.add('primeHint');
+    ui.say([
+      '« AMORCE : SOURCE ISOLÉE REQUISE — TYPE BS-1. »',
+      'Une BS-1… Il n’en existe qu’une.',
+      'Elle est dans Pixel.',
+    ]);
+  }
+
+  private finale() {
+    this.locked = true;
+    releaseAll();
+    ui.say(
+      [
+        'Tu t’agenouilles près de Pixel.',
+        'Il s’assoit de lui-même, et tend son dos.',
+        'Tu débranches doucement la batterie BS-1.',
+        'Ses yeux bleus faiblissent… puis s’éteignent.',
+      ],
+      () => {
+        this.flags.delete('pixelOn');
+        this.flags.add('pixelSleep');
+        this.pixel = null;
+        playTheme('none');
+        ui.say(
+          ['Tu glisses la batterie dans le logement de l’amorce. La capsule ronronne.', 'Tu t’allonges dans la capsule 07. Pixel est couché à son pied.', ...FINALE],
+          async () => {
+            this.blackout = true;
+            sfx.success();
+            await ui.playFinale(tile('dogOff', 0));
+            this.locked = false;
+            this.onFinished();
+          },
+        );
+      },
+    );
   }
 
   private onSignal() {
@@ -422,7 +520,16 @@ export class Game {
       ui.openKeypad(title, cb);
     },
     sfx: (name) => sfx[name](),
+    ui: (kind, then) => {
+      releaseAll();
+      if (kind === 'switches') ui.openSwitches(SWITCHES, RESTART_ORDER, () => then?.());
+      else if (kind === 'orbit') ui.openViewer('Carte des orbites', ui.orbitChart(), then);
+      else ui.openViewer('Grille de décodage', ui.codebookTable(), then);
+    },
   };
+
+  /** Appelé quand la scène finale est terminée (main.ts revient à l'écran titre). */
+  onFinished: () => void = () => {};
 
   startMusic() {
     playTheme(this.map.outdoor ? 'outdoor' : 'lab');

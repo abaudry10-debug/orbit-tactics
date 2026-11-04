@@ -25,6 +25,14 @@ Sur iPhone : ouvre le lien dans Safari, puis **Partager → Sur l'écran d'accue
 - **La colline de l'observatoire** : relevé de l'orbite, journal de veille de la mission Aurore.
 - **La tour radio** : une molette de fréquence pour capter un signal lointain et indéchiffrable.
 
+## Étape 3 — la fin
+
+- **La salle des turbines** : Pixel prête son énergie pour ouvrir la porte ; le tableau de dérivation se rallume dans l'ordre inverse de l'arrêt noté par le technicien.
+- **L'observatoire** (déblayé à la pelle) : la carte animée des orbites, où l'étoile errante frôle l'orbite de Vesper.
+- **Le spatioport** : tableau des missions (la planète Azura), plans du pod, journal du Dr Varn, grille de décodage du signal.
+- **La navette écrasée** : l'antenne de transmission.
+- **La capsule 07** : assemblage, réglage sur le signal, clé de synchronisation, puis l'amorce… et la scène finale.
+
 Commandes : croix pour marcher, **A** pour examiner, **Sac** pour tes objets, **Journal** pour tes découvertes.
 Au clavier : flèches ou ZQSD, Espace pour A, I pour le sac, J pour le journal, Échap pour le menu.
 

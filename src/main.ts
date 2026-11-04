@@ -73,9 +73,17 @@ function askNewGame() {
   } else startNew();
 }
 
+function wireGame() {
+  game.onFinished = () => {
+    Game.clearSave();
+    showTitle();
+  };
+}
+
 function startNew() {
   Game.clearSave();
   game = new Game(ctx);
+  wireGame();
   title.hidden = true;
   stopTitleScene();
   game.blackout = true;
@@ -97,6 +105,7 @@ function startNew() {
 function continueGame() {
   sfx.select();
   game = new Game(ctx);
+  wireGame();
   if (!game.load()) return startNew();
   title.hidden = true;
   stopTitleScene();
@@ -144,6 +153,8 @@ $('pause-quit').addEventListener('click', () => {
 // ---------- autres boutons ----------
 $('journal-close').addEventListener('click', () => ui.setJournal(false));
 $('bag-close').addEventListener('click', () => ui.setBag(false));
+$('viewer-close').addEventListener('click', () => ui.closeViewer());
+$('switches-close').addEventListener('click', () => ui.closeSwitches());
 $('dialog').addEventListener('pointerdown', (ev) => {
   ev.preventDefault();
   ui.advanceDialog();
@@ -162,6 +173,15 @@ onPress((b) => {
   }
   if (ui.bagOpen()) {
     if (b === 'bag' || b === 'b' || b === 'menu') ui.setBag(false);
+    return;
+  }
+  if (!$('finale').hidden) return;
+  if (!$('viewer').hidden) {
+    if (b === 'a' || b === 'b' || b === 'menu') ui.closeViewer();
+    return;
+  }
+  if (!$('switches').hidden) {
+    if (b === 'b' || b === 'menu') ui.closeSwitches();
     return;
   }
   if (ui.keypadOpen()) return ui.keypadInput(b);

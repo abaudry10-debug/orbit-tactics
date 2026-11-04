@@ -206,8 +206,9 @@ function renderKeypad() {
   });
 }
 
-export function openKeypad(title: string, cb: (code: string) => void) {
+export function openKeypad(title: string, cb: (code: string) => void, subtitle = 'Code de mission') {
   $('keypad-title').textContent = title;
+  $('keypad-sub').textContent = subtitle;
   digits = [0, 0, 0, 0];
   cursor = 0;
   onCode = cb;
@@ -267,10 +268,13 @@ export function showPlace(name: string) {
 }
 
 // ---------- fenêtres pause / confirmation ----------
-export const overlayOpen = () => !$('pause').hidden || !$('confirm').hidden;
+export const overlayOpen = () =>
+  !$('pause').hidden || !$('confirm').hidden || !$('viewer').hidden || !$('switches').hidden || !$('finale').hidden;
 
-export function confirm(question: string, onYes: () => void) {
+export function confirm(question: string, onYes: () => void, onNo?: () => void, labels?: [string, string]) {
   $('confirm-text').textContent = question;
+  $('confirm-yes').textContent = labels?.[0] ?? 'Oui';
+  $('confirm-no').textContent = labels?.[1] ?? 'Non';
   $('confirm').hidden = false;
   const yes = $('confirm-yes');
   const no = $('confirm-no');
@@ -283,7 +287,10 @@ export function confirm(question: string, onYes: () => void) {
     close();
     onYes();
   };
-  no.onclick = close;
+  no.onclick = () => {
+    close();
+    onNo?.();
+  };
 }
 
 // ---------- récepteur radio (molette de fréquence) ----------
@@ -363,4 +370,200 @@ export function setupRadioTouch() {
     el.addEventListener('pointerleave', stop);
   });
   $('radio-close').addEventListener('click', closeRadio);
+}
+
+
+// ---------- visionneuse (carte des orbites, grille de décodage) ----------
+let viewerClose: (() => void) | undefined;
+let orbitAnim: number | undefined;
+
+export function openViewer(title: string, body: HTMLElement, onClose?: () => void) {
+  $('viewer-title').textContent = title;
+  const holder = $('viewer-body');
+  holder.innerHTML = '';
+  holder.appendChild(body);
+  viewerClose = onClose;
+  $('viewer').hidden = false;
+  sfx.page();
+}
+
+export function closeViewer() {
+  if ($('viewer').hidden) return;
+  $('viewer').hidden = true;
+  cancelAnimationFrame(orbitAnim!);
+  const cb = viewerClose;
+  viewerClose = undefined;
+  cb?.();
+}
+
+/** Carte des orbites, en pixel art animé : Vesper sur son orbite, et l'étoile errante sur la sienne, immense. */
+export function orbitChart(): HTMLElement {
+  const wrap = document.createElement('div');
+  wrap.className = 'orbit-wrap';
+  const cv = document.createElement('canvas');
+  cv.width = 160;
+  cv.height = 120;
+  cv.className = 'orbit-canvas';
+  wrap.appendChild(cv);
+  const legend = document.createElement('div');
+  legend.className = 'orbit-legend';
+  legend.innerHTML =
+    '<span><i style="background:#ffe08a"></i>Notre soleil</span>' +
+    '<span><i style="background:#6fb8ff"></i>Vesper</span>' +
+    '<span><i style="background:#ff5a2d"></i>L’étoile errante</span>' +
+    '<span><i style="background:#ff2a2a"></i>Prochain passage</span>';
+  wrap.appendChild(legend);
+  const c = cv.getContext('2d')!;
+  const px = (x: number, y: number, col: string, w = 1, h = 1) => {
+    c.fillStyle = col;
+    c.fillRect(Math.round(x), Math.round(y), w, h);
+  };
+  const sunX = 64, sunY = 60, rV = 22; // soleil et orbite de Vesper
+  const ex = 128, ey = 60, ea = 90, eb = 30, tilt = 0; // ellipse de l'étoile errante
+  const ell = (a: number): [number, number] => {
+    const x = Math.cos(a) * ea, y = Math.sin(a) * eb;
+    return [ex + x * Math.cos(tilt) - y * Math.sin(tilt), ey + x * Math.sin(tilt) + y * Math.cos(tilt)];
+  };
+  const close = Math.PI; // point de l'ellipse qui frôle l'orbite de Vesper
+  const draw = (t: number) => {
+    px(0, 0, '#0b1324', 160, 120);
+    for (let x = 0; x < 160; x += 16) for (let y = 0; y < 120; y += 2) px(x, y, '#13203a');
+    for (let y = 0; y < 120; y += 16) for (let x = 0; x < 160; x += 2) px(x, y, '#13203a');
+    // orbite de l'étoile errante (pointillés orange)
+    for (let a = 0; a < Math.PI * 2; a += 0.045) { const [x, y] = ell(a); if (Math.floor(a * 22) % 2 === 0) px(x, y, '#8a3a20'); }
+    // orbite de Vesper (pointillés bleus)
+    for (let a = 0; a < Math.PI * 2; a += 0.09) px(sunX + Math.cos(a) * rV, sunY + Math.sin(a) * rV, '#2f5a8a');
+    // zone de passage, qui clignote
+    const cx = sunX - rV - 3, cy = sunY; // juste à côté de l'orbite de Vesper
+    if (Math.floor(t * 2) % 2 === 0) for (let a = 0; a < 6.3; a += 0.4) px(cx + Math.cos(a) * 6, cy + Math.sin(a) * 6, '#ff2a2a');
+    // soleil
+    for (let y = -3; y <= 3; y++) for (let x = -3; x <= 3; x++) if (x * x + y * y <= 9) px(sunX + x, sunY + y, x * x + y * y <= 3 ? '#fff3c4' : '#ffe08a');
+    // Vesper, qui tourne lentement
+    const va = t * 0.5;
+    px(sunX + Math.cos(va) * rV - 1, sunY + Math.sin(va) * rV - 1, '#6fb8ff', 3, 3);
+    // l'étoile errante, qui approche du point de passage
+    const sa = close + 0.55 - ((t * 0.04) % 0.5);
+    const [sx, sy] = ell(sa);
+    for (let y = -4; y <= 4; y++) for (let x = -4; x <= 4; x++) if (x * x + y * y <= 16) px(sx + x, sy + y, x * x + y * y <= 6 ? '#ffb070' : '#ff5a2d');
+    // traînée
+    for (let k = 1; k < 6; k++) { const [tx, ty] = ell(sa + k * 0.04); px(tx, ty, '#ff7a3d'); }
+    orbitAnim = requestAnimationFrame((ms) => draw(ms / 1000));
+  };
+  orbitAnim = requestAnimationFrame((ms) => draw(ms / 1000));
+  return wrap;
+}
+
+export function codebookTable(): HTMLElement {
+  const el = document.createElement('div');
+  el.className = 'codebook';
+  const rows: [string, string][] = [
+    ['···', '0'], ['··–', '1'], ['·–·', '2'], ['·––', '3'], ['–··', '4'], ['–·–', '5'], ['––·', '6'], ['–––', '7'],
+  ];
+  el.innerHTML =
+    '<p>« Balise de synchronisation — mission Aurore. Chaque groupe de trois bips (· court, – long) code un chiffre. »</p>' +
+    '<table>' + rows.map(([a, b]) => `<tr><td class="sym">${a}</td><td>${b}</td></tr>`).join('') + '</table>';
+  return el;
+}
+
+// ---------- tableau d'interrupteurs (salle des turbines) ----------
+export function openSwitches(labels: string[], order: string[], onSuccess: () => void) {
+  const grid = $('switches-grid');
+  grid.innerHTML = '';
+  let step = 0;
+  const buttons: HTMLButtonElement[] = [];
+  const reset = () => {
+    step = 0;
+    buttons.forEach((b) => b.classList.remove('on'));
+  };
+  for (const label of labels) {
+    const b = document.createElement('button');
+    b.className = 'switch';
+    b.innerHTML = '<span class="lever"></span><span class="name"></span>';
+    b.querySelector('.name')!.textContent = label;
+    b.addEventListener('click', () => {
+      if (b.classList.contains('on')) return;
+      if (label === order[step]) {
+        b.classList.add('on');
+        sfx.key();
+        step += 1;
+        if (step === order.length) {
+          $('switches-status').textContent = 'Tous les circuits sont rétablis.';
+          window.setTimeout(() => {
+            $('switches').hidden = true;
+            onSuccess();
+          }, 700);
+        }
+      } else {
+        sfx.wrong();
+        $('switches-box').classList.add('tripped');
+        $('switches-status').textContent = 'Clac ! Le tableau disjoncte. Tout est retombé.';
+        window.setTimeout(() => $('switches-box').classList.remove('tripped'), 500);
+        reset();
+      }
+    });
+    buttons.push(b);
+    grid.appendChild(b);
+  }
+  $('switches-status').textContent = 'Les cinq circuits sont coupés.';
+  $('switches').hidden = false;
+}
+
+export function closeSwitches() {
+  $('switches').hidden = true;
+}
+
+// ---------- scène finale ----------
+const wait = (ms: number) => new Promise((res) => window.setTimeout(res, ms));
+
+export async function playFinale(pixelSprite: HTMLCanvasElement) {
+  const el = $('finale');
+  const cv = $('finale-canvas') as HTMLCanvasElement;
+  const text = $('finale-text');
+  const c = cv.getContext('2d')!;
+  cv.width = 120;
+  cv.height = 200;
+  c.imageSmoothingEnabled = false;
+  text.textContent = '';
+  el.hidden = false;
+  el.className = 'finale white';
+  // 1. l'éclair blanc ; Pixel endormi, à peine visible… son œil clignote une fois
+  const drawWhite = (blink: boolean) => {
+    c.fillStyle = '#ffffff';
+    c.fillRect(0, 0, 120, 200);
+    c.globalAlpha = 0.18;
+    c.drawImage(pixelSprite, 52, 150);
+    c.globalAlpha = 1;
+    if (blink) {
+      c.fillStyle = '#5ef0ff';
+      c.fillRect(52 + 12, 150 + 5, 1, 1);
+    }
+  };
+  drawWhite(false);
+  await wait(1600);
+  drawWhite(true);
+  await wait(180);
+  drawWhite(false);
+  await wait(1400);
+  // 2. une seconde de ciel bleu
+  el.className = 'finale';
+  for (let y = 0; y < 200; y++) {
+    const k = y / 200;
+    c.fillStyle = `rgb(${Math.round(90 + 90 * k)},${Math.round(160 + 60 * k)},${Math.round(235 + 15 * k)})`;
+    c.fillRect(0, y, 120, 1);
+  }
+  const cloud = (x: number, y: number) => {
+    c.fillStyle = '#ffffff';
+    c.fillRect(x, y, 22, 4); c.fillRect(x + 4, y - 3, 12, 3); c.fillRect(x + 8, y - 5, 6, 2);
+  };
+  cloud(14, 60); cloud(70, 92); cloud(30, 140);
+  await wait(1800);
+  // 3. le noir, puis le dernier texte
+  c.fillStyle = '#000000';
+  c.fillRect(0, 0, 120, 200);
+  await wait(900);
+  text.textContent = 'Transfert du sujet 07 : 4 212 / 4 212.';
+  await wait(4200);
+  text.textContent = '';
+  await wait(700);
+  el.hidden = true;
 }

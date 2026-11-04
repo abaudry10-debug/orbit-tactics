@@ -904,3 +904,145 @@ h1 {
   padding: 10px 0;
   font-size: 22px;
 }
+
+/* visionneuse */
+.viewer-box {
+  max-width: 460px;
+}
+#viewer-title {
+  font-size: 30px;
+}
+.orbit-wrap {
+  margin-top: 10px;
+}
+.orbit-canvas {
+  width: 100%;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  border: 3px solid var(--ink);
+  border-radius: 6px;
+}
+.orbit-legend {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 12px;
+  margin-top: 8px;
+  font-size: 19px;
+}
+.orbit-legend i {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 6px;
+  border: 1px solid var(--ink);
+}
+.codebook p {
+  font-size: 20px;
+  line-height: 1.1;
+}
+.codebook table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 26px;
+}
+.codebook td {
+  border-bottom: 2px dashed #c9b48a;
+  padding: 4px 8px;
+}
+.codebook td.sym {
+  letter-spacing: 6px;
+  font-size: 30px;
+}
+
+/* tableau d'interrupteurs */
+#switches-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
+  gap: 6px;
+  margin: 10px 0;
+}
+.switch {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 2px;
+  background: #1a1e26;
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  color: #9aa3b3;
+  font-family: var(--font);
+  font-size: 15px;
+}
+.switch .lever {
+  width: 12px;
+  height: 34px;
+  border-radius: 6px;
+  background: #3a2020;
+  position: relative;
+}
+.switch .lever::after {
+  content: '';
+  position: absolute;
+  left: -4px;
+  bottom: 0;
+  width: 20px;
+  height: 14px;
+  border-radius: 4px;
+  background: #d04a42;
+  transition: bottom 0.15s;
+}
+.switch.on .lever {
+  background: #1f3a2a;
+}
+.switch.on .lever::after {
+  bottom: 20px;
+  background: #46e08a;
+}
+.switch.on {
+  color: #46e08a;
+}
+#switches-box.tripped {
+  animation: tripped 0.5s;
+}
+@keyframes tripped {
+  20%, 60% { box-shadow: inset 0 0 0 3px #d04a42, 0 0 24px rgba(208, 74, 66, 0.8); transform: translateX(-3px); }
+  40%, 80% { transform: translateX(3px); }
+}
+#switches-status {
+  min-height: 22px;
+  color: #e6d0a8;
+}
+
+/* scène finale */
+.finale {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  transition: background 1.2s;
+}
+.finale.white {
+  background: #fff;
+}
+#finale-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  object-fit: cover;
+}
+#finale-text {
+  position: relative;
+  z-index: 1;
+  padding: 0 24px;
+  text-align: center;
+  font-size: 30px;
+  color: #e6ecff;
+  letter-spacing: 1px;
+}

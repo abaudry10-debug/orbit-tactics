@@ -72,7 +72,7 @@ test('la batterie est enterrée dans le sable, sur une case accessible', () => {
 
 test('chaque objet a un script existant, chaque objet du sac est décrit', () => {
   for (const m of Object.values(MAPS)) for (const o of m.objects) if (o.script) assert.ok(SCRIPTS[o.script], o.script);
-  for (const id of ['badge', 'sonde', 'pelle', 'battery', 'matrice', 'lampe', 'capteur', 'noyau']) assert.ok(ITEMS[id], id);
+  for (const id of ['badge', 'sonde', 'pelle', 'battery', 'matrice', 'lampe', 'capteur', 'noyau', 'antenne']) assert.ok(ITEMS[id], id);
 });
 
 test('chaque indice, objet et réponse est obtenable', () => {
@@ -90,6 +90,7 @@ test('chaque indice, objet et réponse est obtenable', () => {
         say: (_l: string[], then?: () => void) => then?.(),
         keypad: (_t: string, cb: (c: string) => void) => cb(MISSION_CODE),
         sfx: () => {},
+        ui: (_k: string, then?: () => void) => then?.(),
       };
       run(api);
     }
@@ -125,10 +126,14 @@ test('la progression complète est possible : chaque porte finit par s’ouvrir'
         say: (_l: string[], then?: () => void) => then?.(),
         keypad: (_t: string, cb: (c: string) => void) => cb(MISSION_CODE),
         sfx: () => {},
+        ui: (_k: string, then?: () => void) => then?.(),
       });
     }
     if (flags.size + items.size > before) grew = true;
   }
+  // tous les objets nécessaires au transporteur s'obtiennent au fil de la progression
+  for (const id of ['badge', 'sonde', 'pelle', 'matrice', 'lampe', 'capteur', 'noyau', 'antenne']) assert.ok(items.has(id), `objet jamais obtenu : ${id}`);
+  for (const f of ['heliosOn', 'plansRead', 'codebookRead']) assert.ok(flags.has(f), `étape jamais atteinte : ${f}`);
   for (const m of Object.values(MAPS)) {
     for (const o of m.objects) {
       if (o.door?.needs) assert.ok(flags.has(o.door.needs), `${o.id} : ${o.door.needs} jamais posé`);

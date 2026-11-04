@@ -22,7 +22,7 @@ export interface Clue {
 export const CLUES: Clue[] = [
   // Qui suis-je ?
   { id: 'self1', thread: 'self', title: 'Capsule 07', text: 'Sur ma capsule, une plaque : « SUJET 07 ». Le reste est rayé, comme effacé exprès.' },
-  { id: 'self2', thread: 'self', title: 'Le terminal', text: '« TRANSFERT COLLECTIF : TERMINÉ. 4 211 / 4 212. ANOMALIE : CAPSULE 07. » Transfert de quoi ? Vers où ?' },
+  { id: 'self2', thread: 'self', title: 'Le terminal', text: '« TRANSFERT COLLECTIF : TERMINÉ. 4 211 / 4 212. » Transfert de quoi ? Vers où ? Et pourquoi pas moi ?' },
   { id: 'self3', thread: 'self', title: 'Photo d’équipe', text: 'L’équipe du programme Lazare. Au centre, une femme au badge « Dr I. Varn ». Au dos : « Merci à tous les volontaires. »' },
   // Les capsules
   { id: 'cap1', thread: 'capsules', title: 'Le registre', text: 'Des centaines de noms, tous barrés d’un trait net. Sauf le dernier : « Sujet 07 ».' },
@@ -43,7 +43,7 @@ export const CLUES: Clue[] = [
   { id: 'mis5', thread: 'missions', title: 'Capacité des navettes', text: 'Une place pour 400 habitants. 212 ans de voyage. Dans la marge, au crayon : « Il faut trouver autre chose. »' },
   // Pistes à suivre
   { id: 'lead1', thread: 'leads', title: 'La vitrine vide', text: '« Sonde Lumen — détecteur de sources d’énergie. » Un mot scotché : « Prêtée au labo 2. Bureau du fond. — M. »' },
-  { id: 'lead2', thread: 'leads', title: 'Le prototype BS-1', text: 'Une batterie solaire expérimentale, perdue pendant l’évacuation de la centrale Hélios. « Sûrement enfouie sous le sable, quelque part près des ruines. »' },
+  { id: 'lead2', thread: 'leads', title: 'Le prototype BS-1', text: 'Une batterie solaire expérimentale, conçue pour « amorcer les pods mobiles », perdue pendant l’évacuation de la centrale Hélios. « Sûrement enfouie sous le sable, quelque part près des ruines. »' },
   { id: 'lead3', thread: 'leads', title: 'Pixel', text: 'Un chien robot éteint. Sur son collier : « PIXEL ». Le petit panneau solaire sur son dos est fendu.' },
   { id: 'lead4', thread: 'leads', title: 'Le radioamateur', text: '« J’ai oublié mon récepteur dans la rame de la ligne 2. Il doit être aux objets trouvés de la station Marée. »' },
   // Étape 2 — Betti
@@ -55,7 +55,15 @@ export const CLUES: Clue[] = [
   { id: 'cap7', thread: 'capsules', title: 'Le caisson de maintenance', text: '« LAZARE — noyau de transfert de rechange, pour pod mobile. » Un pod mobile… on pourrait donc en construire un ailleurs qu’au laboratoire ?' },
   { id: 'heat5', thread: 'heat', title: 'Le relevé de l’observatoire', text: 'Chaque année, Vesper se rapproche de son étoile. Une courbe descend jusqu’à une ligne rouge : « seuil de survie ». La date est entourée trois fois.' },
   { id: 'mis6', thread: 'missions', title: 'Le dernier contact', text: '« Mission Aurore : monde habitable confirmé. Dernier contact sur 47,2. Ensuite, plus rien. »' },
-  { id: 'mis7', thread: 'missions', title: 'Un signal', text: 'Au sommet de la tour radio, sur 47,2 : un signal régulier, venu de la planète d’Aurore. Il n’est pas vide… mais il est indéchiffrable.' },
+  { id: 'mis7', thread: 'missions', title: 'Un signal', text: 'Au sommet de la tour radio, sur 47,2 : un signal venu de la planète d’Aurore. Une suite de bips qui se répète : –··  ··–  –––  ·–·  Indéchiffrable… pour l’instant.' },
+  // Étape 3
+  { id: 'heat6', thread: 'heat', title: 'La carte des orbites', text: 'Une seconde étoile, brûlante, suit une orbite immense et très allongée. Une fois par cycle, elle frôle l’orbite de Vesper. Son prochain passage est marqué en rouge : tout près de nous, et bientôt.' },
+  { id: 'heat7', thread: 'heat', title: 'Le journal de l’observatoire', text: '« L’étoile errante revient. Ce passage-ci sera plus proche que tous les autres. Plus rien ne survivra en surface. Le programme LAZARE est notre seule chance. »' },
+  { id: 'mis8', thread: 'missions', title: 'Le tableau des missions', text: 'HÉLIADE : aucun monde viable. KAIROS : perdue. ONDINE : monde gelé. AURORE : monde habitable confirmé, baptisé Azura.' },
+  { id: 'mis9', thread: 'missions', title: 'La grille de décodage', text: 'La grille de la mission Aurore associe chaque groupe de trois bips à un chiffre : ··· 0 · ··– 1 · ·–· 2 · ·–– 3 · –·· 4 · –·– 5 · ––· 6 · ––– 7.' },
+  { id: 'cap9', thread: 'capsules', title: 'Le journal du Dr Varn', text: '« Les navettes ne suffiront jamais. Alors nous enverrons nos esprits. Sur Azura, la mission Aurore cultive un corps neuf pour chacun de nous. Les capsules transfèrent chaque esprit vers son double et protègent nos anciens corps de la chaleur. 4 212 habitants, 4 212 capsules. Tout le monde part. »' },
+  { id: 'lead5', thread: 'leads', title: 'Le carnet du technicien', text: '« Arrêt d’urgence à la troisième cloche : j’ai coupé la pompe, puis l’onduleur, puis la ventilation, puis la turbine, et enfin le régulateur. » — R. Ilunga' },
+  { id: 'lead6', thread: 'leads', title: 'Les plans du pod mobile', text: '1. Matrice neuronale. 2. Noyau de transfert. 3. Antenne de synchronisation, accordée sur la balise d’Azura. 4. Clé de synchronisation. 5. Amorce : source isolée, type BS-1.' },
 ];
 
 /** Questions du journal : elles s'ouvrent avec un indice et se résolvent plus tard. */
@@ -90,6 +98,16 @@ export const QUESTIONS: Question[] = [
     answer: 'Les corps des habitants. Leur esprit est parti ailleurs. Le mien, non.',
   },
   {
+    id: 'q-signal', thread: 'missions', opensWith: ['mis7'], answeredBy: 'codebookRead',
+    ask: 'Que dit le signal ?',
+    answer: 'Ses quatre groupes de bips se traduisent avec la grille de la mission Aurore : c’est une clé à quatre chiffres.',
+  },
+  {
+    id: 'q-power', thread: 'leads', opensWith: ['lead5'], answeredBy: 'heliosOn',
+    ask: 'Comment redémarrer Hélios ?',
+    answer: 'En reprenant la procédure d’arrêt du technicien dans l’ordre inverse.',
+  },
+  {
     id: 'q-cabin', thread: 'lea', opensWith: ['lea1'], answeredBy: 'hasLamp',
     ask: 'Où est la cabane de Betti ?',
     answer: 'Sous le potager, à deux pas à droite du grand arbre, cachée sous une trappe. La lampe de son père y était.',
@@ -110,7 +128,20 @@ export const ITEMS: Record<string, { name: string; text: string; usable?: boolea
   lampe: { name: 'Lampe torche', text: 'La lampe du père de Betti. Elle s’allume d’elle-même dans le noir.' },
   capteur: { name: 'Récepteur radio', text: 'Le récepteur du radioamateur. Il capte les ondes, à condition d’être assez haut.', usable: true },
   noyau: { name: 'Noyau de transfert', text: 'Un cylindre lumineux, « pour pod mobile ». Une pièce pour voyager ?' },
+  antenne: { name: 'Antenne de synchronisation', text: 'Démontée de la navette écrasée. Elle doit être accordée sur la balise d’Azura.' },
 };
+
+export const SIGNAL_KEY = '4172';
+export const SWITCHES = ['Turbine', 'Pompe', 'Régulateur', 'Onduleur', 'Ventilation']; // ordre d'affichage
+export const RESTART_ORDER = ['Régulateur', 'Turbine', 'Ventilation', 'Onduleur', 'Pompe']; // l'arrêt, à l'envers
+
+export const FINALE = [
+  'Système LAZARE : transfert du sujet 07.',
+  'Constantes vitales : stables.',
+  'Mémoire : prête.',
+  'Destination : Azura.',
+  'Bonne chance.',
+];
 
 export const RADIO_FREQ = 47.2;
 
@@ -135,6 +166,7 @@ export interface Api {
   say(lines: string[], then?: () => void): void;
   keypad(title: string, onCode: (code: string) => void): void;
   sfx(name: 'success' | 'wrong' | 'door' | 'item'): void;
+  ui(kind: 'switches' | 'orbit' | 'codebook', then?: () => void): void;
 }
 
 export const SCRIPTS: Record<string, (api: Api) => void> = {
@@ -151,7 +183,7 @@ export const SCRIPTS: Record<string, (api: Api) => void> = {
 
   terminal: (api) =>
     api.say(
-      ['Le terminal grésille.', '« TRANSFERT COLLECTIF : TERMINÉ. »', '« 4 211 / 4 212. ANOMALIE : CAPSULE 07. »', 'Transfert ? De quoi ?'],
+      ['Le terminal grésille.', '« TRANSFERT COLLECTIF : TERMINÉ. »', '« 4 211 / 4 212. »', 'Transfert ? De quoi ? Et pourquoi pas moi ?'],
       () => api.clue('self2'),
     ),
 
@@ -232,8 +264,12 @@ export const SCRIPTS: Record<string, (api: Api) => void> = {
     api.say(['Un escalier descend vers le métro.', 'En bas, le noir complet. Il me faudrait une lampe.']);
   },
 
-  spatioport: (api) =>
-    api.say(['Le hangar des navettes du spatioport. Les portes sont soudées.', 'Au-dessus, un panneau : « DÉPARTS — TOUS VOLS ANNULÉS ».'], () => api.clue('mis3')),
+  spatioport: (api) => {
+    if (api.has('heliosOn')) return api.say(['Le courant est revenu : les portes du hangar se sont rouvertes.']);
+    api.say(['Le hangar des navettes du spatioport. Les portes motorisées sont bloquées, sans courant.', 'Au-dessus, un panneau : « DÉPARTS — TOUS VOLS ANNULÉS ».'], () =>
+      api.clue('mis3'),
+    );
+  },
 
   researchDoor: (api) => {
     if (api.has('researchOpen')) return api.say(['La porte du centre de recherche est ouverte.']);
@@ -346,6 +382,7 @@ export const SCRIPTS: Record<string, (api: Api) => void> = {
         'Journal du labo 2 :',
         '« Le prototype de batterie solaire BS-1 a été perdu pendant l’évacuation de la centrale Hélios. »',
         '« Sûrement enfoui sous le sable, quelque part près des ruines. Sans détecteur, inutile de chercher. »',
+        '« Dommage : la BS-1 était conçue pour amorcer les pods mobiles. »',
       ],
       () => {
         api.set('knowsBattery');
@@ -481,7 +518,65 @@ export const SCRIPTS: Record<string, (api: Api) => void> = {
   },
 
   // ----- étape 2 : colline et tour radio -----
-  obsDoor: (api) => api.say(['La porte de l’observatoire est bloquée par des gravats.']),
+  obsDoor: (api) => {
+    if (api.has('obsOpen')) return api.say(['La porte de l’observatoire est dégagée.']);
+    if (!api.hasItem('pelle')) return api.say(['La porte de l’observatoire est bloquée par des gravats.']);
+    api.say(['Des gravats bloquent la porte. Avec la pelle, tu les dégages un à un.', 'La porte de l’observatoire s’ouvre.'], () => {
+      api.sfx('door');
+      api.set('obsOpen');
+    });
+  },
+
+  telescope: (api) => api.say(['Le grand télescope est pointé vers le bas du ciel, sur une étoile énorme et rougeoyante.']),
+
+  orbitChart: (api) => api.ui('orbit', () => api.clue('heat6')),
+
+  obsJournal: (api) =>
+    api.say(
+      ['Le journal de l’observatoire, dernière page :', '« L’étoile errante revient. Ce passage-ci sera plus proche que tous les autres. »', '« Plus rien ne survivra en surface. Le programme LAZARE est notre seule chance. »'],
+      () => api.clue('heat7'),
+    ),
+
+  // ----- étape 3 : spatioport -----
+  missionBoard: (api) =>
+    api.say(
+      ['Le tableau des missions, encore allumé :', 'HÉLIADE : aucun monde viable. KAIROS : perdue. ONDINE : monde gelé.', 'AURORE : monde habitable confirmé, baptisé « Azura ».'],
+      () => api.clue('mis8'),
+    ),
+
+  podPlans: (api) =>
+    api.say(
+      [
+        'Des plans épinglés : « POD MOBILE — transfert hors laboratoire ».',
+        '1. Matrice neuronale. 2. Noyau de transfert. 3. Antenne de synchronisation, accordée sur la balise d’Azura.',
+        '4. Clé de synchronisation. 5. Amorce : source isolée, type BS-1.',
+        'Un pod mobile… La capsule 07 pourrait servir de base.',
+      ],
+      () => {
+        api.set('plansRead');
+        api.clue('lead6');
+      },
+    ),
+
+  varnDesk: (api) =>
+    api.say(
+      [
+        'Le bureau du Dr Ilse Varn. Son journal est ouvert.',
+        '« Les navettes ne suffiront jamais. Alors nous enverrons nos esprits. »',
+        '« Sur Azura, la mission Aurore cultive un corps neuf pour chacun de nous. »',
+        '« Les capsules transfèrent chaque esprit vers son double, et protègent nos anciens corps de la chaleur. »',
+        '« 4 212 habitants, 4 212 capsules. Tout le monde part. »',
+      ],
+      () => api.clue('cap9'),
+    ),
+
+  codebook: (api) =>
+    api.ui('codebook', () => {
+      api.set('codebookRead');
+      api.clue('mis9');
+    }),
+
+  hangarNote: (api) => api.say(['Un mot scotché sur une navette : « Dernier vol annulé. On nous envoie tous au labo Lazare. » — un pilote']),
 
   obsConsole: (api) =>
     api.say(
@@ -507,11 +602,61 @@ export const SCRIPTS: Record<string, (api: Api) => void> = {
   heliosSign: (api) =>
     api.say(['« CENTRALE SOLAIRE HÉLIOS — Zone évacuée. »', 'Les dunes ont recouvert la moitié des panneaux.']),
 
-  heliosDoor: (api) =>
-    api.say(['« CENTRALE HÉLIOS — SALLE DES TURBINES. »', 'Une porte blindée, scellée. Le voyant est mort : plus aucune énergie ici.']),
+  heliosDoor: (api) => {
+    if (api.has('turbinesOpen')) return api.say(['La porte de la salle des turbines est ouverte.']);
+    if (!api.has('pixelOn'))
+      return api.say(['« CENTRALE HÉLIOS — SALLE DES TURBINES. »', 'Une porte blindée, scellée. Le voyant est mort : il faudrait un peu d’énergie pour le verrou.']);
+    api.say(
+      ['Le verrou est mort, faute d’énergie.', 'Pixel s’approche, colle son dos contre le boîtier… et lui prête un peu de l’énergie de sa batterie.', 'Le voyant passe au vert. La porte s’ouvre !'],
+      () => {
+        api.sfx('door');
+        api.set('turbinesOpen');
+      },
+    );
+  },
 
-  shuttle: (api) =>
-    api.say(['Une navette écrasée sur l’aire d’envol. Son nez est arraché.', 'Sur la carlingue, à moitié effacé : « NAVETTE CIVILE — 120 PASSAGERS ».']),
+  switchPanel: (api) => {
+    if (api.has('heliosOn')) return api.say(['Le tableau de dérivation est au vert. Hélios tourne.']);
+    api.ui('switches', () =>
+      api.say(
+        ['Les turbines toussent… puis tournent, de plus en plus vite.', 'Un grondement remonte du sol. Hélios redémarre !', 'Au loin, dans toute la ville, des moteurs se réveillent.'],
+        () => api.set('heliosOn'),
+      ),
+    );
+  },
+
+  restartPlaque: (api) => api.say(['Une plaque gravée : « Redémarrage d’urgence : reprendre la procédure d’arrêt, dans l’ordre inverse. »']),
+
+  turbine: (api) =>
+    api.say([api.has('heliosOn') ? 'La turbine tourne dans un grondement profond.' : 'Une turbine immobile, couverte de sable.']),
+
+  techNote: (api) =>
+    api.say(
+      [
+        'Un carnet taché de cambouis : « R. Ilunga, technicien ».',
+        '« Arrêt d’urgence à la troisième cloche. J’ai coupé la pompe, puis l’onduleur, puis la ventilation, puis la turbine, et enfin le régulateur. »',
+        '« Si quelqu’un lit ça un jour : bonne chance. »',
+      ],
+      () => api.clue('lead5'),
+    ),
+
+  shuttle: (api) => {
+    if (api.has('antennaTaken')) return api.say(['La navette écrasée, sans son antenne.']);
+    if (api.has('heliosOn')) {
+      return api.say(
+        ['Le courant est revenu : le panneau motorisé sous le cockpit se rouvre en grinçant.', 'Tu démontes l’antenne de synchronisation de la navette.'],
+        () => {
+          api.set('antennaTaken');
+          api.item('antenne');
+        },
+      );
+    }
+    api.say([
+      'Une navette écrasée sur l’aire d’envol. Son nez est arraché.',
+      'Sur la carlingue : « NAVETTE CIVILE — 120 PASSAGERS ».',
+      'Sous le cockpit, une antenne, coincée derrière un panneau motorisé. Sans courant, impossible de l’ouvrir.',
+    ]);
+  },
 
   controlPanel: (api) => api.say(['Un pupitre de commande fondu par la chaleur. Les boutons ont coulé comme de la cire.']),
 };

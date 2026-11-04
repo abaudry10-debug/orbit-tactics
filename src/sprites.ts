@@ -677,6 +677,56 @@ const trapdoor: Painter = (c, v) => {
   r(c, 7, 6, 2, 2, P.metalDark); r(c, 7, 6, 2, 1, P.metalLight); // anneau
 };
 
+// ---------- étape 3 ----------
+const turbine: Painter = (c) => {
+  platform(c, 0);
+  r(c, 1, 2, 14, 13, P.ink); r(c, 2, 3, 12, 11, '#6a7280'); r(c, 2, 3, 12, 2, '#8a93a2');
+  r(c, 4, 6, 8, 6, '#3a3f48'); r(c, 7, 6, 2, 6, '#8a93a2'); r(c, 4, 8, 8, 2, '#8a93a2'); // pales
+  r(c, 12, 4, 1, 1, P.red);
+};
+const switchPanel = (on: boolean): Painter => (c) => {
+  metroWallFront(c, 0);
+  r(c, 1, 1, 14, 12, P.ink); r(c, 2, 2, 12, 10, '#3a3f48');
+  for (let i = 0; i < 5; i++) { r(c, 3 + i * 2, 4, 1, 5, on ? '#46e08a' : '#8a3a3a'); r(c, 3 + i * 2, on ? 4 : 7, 1, 2, '#e6ecff'); }
+  r(c, 3, 10, 10, 1, on ? '#46e08a' : P.hazard);
+};
+const plaque: Painter = (c, v) => {
+  metroWallFront(c, v);
+  r(c, 2, 2, 12, 8, P.ink); r(c, 3, 3, 10, 6, '#c9a24a'); r(c, 4, 5, 8, 1, '#5a4626'); r(c, 4, 7, 5, 1, '#5a4626');
+};
+const telescope: Painter = (c) => {
+  labFloor(c, 0);
+  r(c, 6, 9, 4, 6, P.metalDark); r(c, 3, 14, 10, 1, P.ink);
+  r(c, 2, 3, 12, 5, P.ink); r(c, 3, 4, 10, 3, '#d9dde4'); r(c, 3, 4, 10, 1, '#f2f4f7'); r(c, 12, 3, 3, 5, '#24406a');
+  r(c, 7, 7, 2, 3, P.metal);
+};
+const orbitChart: Painter = (c) => {
+  labWallFront(c, 0);
+  r(c, 1, 1, 14, 10, P.ink); r(c, 2, 2, 12, 8, '#0f1a30');
+  c.fillStyle = '#9ad8ff'; for (let a = 0; a < 6.28; a += 0.35) c.fillRect(Math.round(8 + Math.cos(a) * 3), Math.round(6 + Math.sin(a) * 2), 1, 1);
+  c.fillStyle = '#ff7a3d'; for (let a = 0; a < 6.28; a += 0.25) c.fillRect(Math.round(6 + Math.cos(a) * 5), Math.round(6 + Math.sin(a) * 1.5), 1, 1);
+  r(c, 8, 6, 1, 1, '#ffe08a'); r(c, 3, 5, 2, 2, '#ff5a2d');
+};
+const missionBoard: Painter = (c, v) => {
+  labWallFront(c, v);
+  r(c, 0, 1, 16, 10, P.ink); r(c, 1, 2, 14, 8, '#10202a');
+  for (let i = 0; i < 4; i++) { r(c, 2, 3 + i * 2, 6, 1, '#9aa3b3'); r(c, 10, 3 + i * 2, 3, 1, i === 0 ? '#46e08a' : '#d04a42'); }
+};
+const varnDesk: Painter = (c) => {
+  desk(c, 0);
+  r(c, 9, 4, 5, 3, '#7a2a2a'); r(c, 10, 5, 3, 1, '#c9a24a'); // carnet relié
+};
+const podPlans: Painter = (c) => {
+  labFloor(c, 0);
+  r(c, 1, 3, 14, 11, P.ink); r(c, 2, 4, 12, 9, '#2a4a8a');
+  r(c, 4, 6, 8, 5, '#9ad8ff'); r(c, 5, 7, 6, 3, '#2a4a8a'); r(c, 7, 6, 2, 5, '#9ad8ff'); // schéma de capsule
+  r(c, 3, 5, 2, 1, '#9ad8ff'); r(c, 11, 11, 2, 1, '#9ad8ff');
+};
+const dogSleep: Painter = (c) => {
+  labFloor(c, 0);
+  drawDog(c, 0, true);
+};
+
 const antennaBase: Painter = (c) => {
   grating(c, 0);
   r(c, 3, 11, 10, 4, P.ink); r(c, 4, 12, 8, 2, P.metalDark);
@@ -819,6 +869,11 @@ const ICONS: Record<string, Painter> = {
     r(c, 7, 5, 2, 6, P.neon); r(c, 7, 7, 2, 2, '#ffffff'); r(c, 5, 2, 6, 1, '#f2f5f8');
     r(c, 3, 6, 1, 4, P.metalDark); r(c, 12, 6, 1, 4, P.metalDark);
   },
+  antenne: (c) => {
+    r(c, 7, 6, 2, 9, P.metalDark); r(c, 7, 6, 1, 9, P.metalLight); r(c, 4, 14, 8, 2, P.ink);
+    r(c, 2, 2, 12, 5, P.ink); r(c, 3, 3, 10, 3, '#c9ced6'); r(c, 3, 3, 10, 1, '#e6e9ee');
+    r(c, 7, 0, 2, 3, P.red); r(c, 11, 8, 2, 2, '#46e08a');
+  },
   matrice: (c) => {
     r(c, 3, 3, 10, 10, P.ink); r(c, 4, 4, 8, 8, '#4a2a7a'); r(c, 5, 5, 6, 6, '#b48cff'); r(c, 7, 7, 2, 2, '#f0e0ff');
     for (const i of [4, 7, 10]) { r(c, i, 1, 1, 2, P.metalLight); r(c, i, 13, 1, 2, P.metalLight); r(c, 1, i, 2, 1, P.metalLight); r(c, 13, i, 2, 1, P.metalLight); }
@@ -857,6 +912,9 @@ const REGISTRY: Record<string, Painter[]> = {
   counter: [counter], caisson: [caisson(true)], caissonEmpty: [caisson(false)], ladder: [ladder], towerBase: [towerBase],
   metroStairsUp: [metroStairsUp], lazarePoster: [lazarePoster], networkMap: [networkMap],
   obsTop: [obsTop], obsFront: [obsFront], obsDoor: [obsDoor], console: [console_], antennaBase: [antennaBase], trapdoor: [trapdoor],
+  turbine: [turbine], switchPanel: [switchPanel(false)], switchPanelOn: [switchPanel(true)], plaque: [plaque],
+  telescope: [telescope], orbitChart: [orbitChart], missionBoard: [missionBoard], varnDesk: [varnDesk],
+  podPlans: [podPlans], dogSleep: [dogSleep],
   dust: [dust], grass: [grass], asphalt: [asphalt], road: [road], labFloor: [labFloor],
   toxic0: [toxicFrame(0)], toxic1: [toxicFrame(1)], rubble: [rubble], fence: [fence],
   wallTop: [wallTop], wallFront: [wallFront], labWallTop: [labWallTop], labWallFront: [labWallFront],

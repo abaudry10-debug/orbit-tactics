@@ -111,11 +111,39 @@
         </div>
       </section>
 
+      <!-- visionneuse : carte des orbites, grille de décodage -->
+      <section id="viewer" class="overlay" hidden>
+        <div class="journal-box viewer-box">
+          <header>
+            <h2 id="viewer-title"></h2>
+            <button id="viewer-close" class="close" aria-label="Fermer">✕</button>
+          </header>
+          <div id="viewer-body"></div>
+        </div>
+      </section>
+
+      <!-- tableau d'interrupteurs -->
+      <section id="switches" class="overlay" hidden>
+        <div id="switches-box" class="keypad-box">
+          <h2>DÉRIVATION</h2>
+          <p>Centrale Hélios — circuits principaux</p>
+          <div id="switches-grid"></div>
+          <p id="switches-status"></p>
+          <button id="switches-close" class="menu">Laisser le tableau</button>
+        </div>
+      </section>
+
+      <!-- scène finale -->
+      <section id="finale" class="finale" hidden>
+        <canvas id="finale-canvas"></canvas>
+        <p id="finale-text"></p>
+      </section>
+
       <!-- clavier à code -->
       <section id="keypad" class="overlay" hidden>
         <div class="keypad-box">
           <h2 id="keypad-title">ACCÈS</h2>
-          <p>Code de mission</p>
+          <p id="keypad-sub">Code de mission</p>
           <div id="keypad-digits">
             <div class="digit"><button class="up">▲</button><span>0</span><button class="down">▼</button></div>
             <div class="digit"><button class="up">▲</button><span>0</span><button class="down">▼</button></div>
