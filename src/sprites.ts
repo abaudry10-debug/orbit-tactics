@@ -257,6 +257,27 @@ const sign: Painter = (c, v) => {
   r(c, 11, 3, 3, 2, P.rust);
 };
 
+
+// panneaux de direction aux sorties : un poteau, une planche, une grosse flèche
+const signArrow = (dir: 'left' | 'right' | 'up' | 'down', ground: Painter): Painter => (c, v) => {
+  ground(c, v);
+  r(c, 7, 10, 2, 6, P.woodDark); r(c, 7, 10, 1, 6, P.wood);
+  r(c, 1, 2, 14, 9, P.ink); r(c, 2, 3, 12, 7, '#2f5d6b'); r(c, 2, 3, 12, 1, '#3f7585');
+  const a = P.paper;
+  if (dir === 'left' || dir === 'right') {
+    r(c, 4, 6, 8, 1, a);
+    const tip = dir === 'left' ? 3 : 12;
+    const s = dir === 'left' ? 1 : -1;
+    r(c, tip, 6, 1, 1, a); r(c, tip + s, 5, 1, 3, a); r(c, tip + 2 * s, 4, 1, 5, a);
+  } else {
+    r(c, 7, 4, 2, 5, a);
+    const tip = dir === 'up' ? 4 : 8;
+    const s = dir === 'up' ? 1 : -1;
+    r(c, 7, tip, 2, 1, a); r(c, 6, tip + s, 4, 1, a); r(c, 5, tip + 2 * s, 6, 1, a);
+  }
+  r(c, 12, 9, 2, 1, P.rust);
+};
+
 const monument: Painter = (c) => {
   road(c, 2);
   r(c, 2, 13, 12, 3, P.wallTopDark); r(c, 2, 13, 12, 1, P.wallTopLight);
@@ -953,6 +974,7 @@ const REGISTRY: Record<string, Painter[]> = {
   turbine: [turbine], switchPanel: [switchPanel(false)], switchPanelOn: [switchPanel(true)], plaque: [plaque],
   telescope: [telescope], orbitChart: [orbitChart], missionBoard: [missionBoard], varnDesk: [varnDesk],
   podPlans: [podPlans], dogSleep: [dogSleep],
+  signLeft: [signArrow('left', dust)], signRight: [signArrow('right', dust)], signDown: [signArrow('down', dust)], signUpSand: [signArrow('up', sand)],
   cultureTank: [cultureTank('full')], cultureTankEmpty: [cultureTank('empty')], cultureTankBroken: [cultureTank('broken')],
   whiteboard: [whiteboard], archiveTerm: [archiveTerm],
   dust: [dust], grass: [grass], asphalt: [asphalt], road: [road], labFloor: [labFloor],

@@ -283,6 +283,9 @@ export const SCRIPTS: Record<string, (api: Api) => void> = {
   labEntrance: (api) => api.say(['L’entrée du laboratoire Lazare.']),
 
   // ----- ruines de Vesper -----
+  signToQuartier: (api) => api.say(['Un panneau tordu : « ← Quartier résidentiel ».']),
+  signToCentrale: (api) => api.say(['Un panneau couvert de sable : « ↓ Centrale solaire Hélios ».']),
+  signToVesper: (api) => api.say(['Un panneau délavé : « Centre-ville de Vesper ».']),
   signVesper: (api) => api.say(['Un panneau rouillé : « Bienvenue à Vesper. Ensemble, plus loin. »']),
 
   thermometer: (api) =>

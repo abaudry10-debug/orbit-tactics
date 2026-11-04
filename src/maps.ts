@@ -159,10 +159,10 @@ function buildVesper(): GameMap {
   b.rect(25, 25, 4, 2, 'N'); // navette écrasée
 
   b.border('*');
-  b.rect(0, 10, 1, 1, '-'); // sortie ouest
-  b.rect(19, 29, 3, 1, ','); // sortie sud
+  b.rect(0, 9, 1, 3, ',').set(0, 10, '-'); // sortie ouest : toute la largeur de l'avenue
+  b.rect(19, 29, 3, 1, ','); // sortie sud : toute la largeur de la rue
   b.points('T', [[1, 1], [2, 1], [13, 1], [38, 7], [1, 14], [1, 27], [12, 23], [22, 26], [38, 13], [16, 7], [33, 8]]);
-  b.points('*', [[12, 1], [22, 1], [23, 1], [17, 13], [23, 14], [9, 22], [14, 23], [26, 18], [37, 18], [1, 18], [19, 29], [21, 29]]);
+  b.points('*', [[12, 1], [22, 1], [23, 1], [17, 13], [23, 14], [9, 22], [14, 23], [26, 18], [37, 18], [1, 18], [17, 28], [23, 27]]); // gravats sur les bas-côtés, jamais sur la route
   b.points('C', [[14, 10], [27, 9], [20, 14], [6, 11], [34, 11]]);
 
   return {
@@ -191,8 +191,10 @@ function buildVesper(): GameMap {
         id: 'researchDoor', x: 34, y: 15, sprite: 'bunkerDoor', spriteWhen: ['researchOpen', 'bunkerDoorOpen'], script: 'researchDoor',
         door: { to: 'research', x: 10, y: 12, dir: 'up', needs: 'researchOpen' },
       },
-      exit('toQuartier', 0, 10, { to: 'quartier', x: 34, y: 12, dir: 'left' }),
-      exit('toCentrale', 20, 29, { to: 'centrale', x: 15, y: 1, dir: 'down' }),
+      ...[9, 10, 11].map((y) => exit(`toQuartier${y}`, 0, y, { to: 'quartier', x: 34, y: y + 2, dir: 'left' })),
+      ...[19, 20, 21].map((x) => exit(`toCentrale${x}`, x, 29, { to: 'centrale', x: x - 5, y: 1, dir: 'down' })),
+      { id: 'signToQuartier', x: 1, y: 8, sprite: 'signLeft', script: 'signToQuartier' },
+      { id: 'signToCentrale', x: 22, y: 28, sprite: 'signDown', script: 'signToCentrale' },
     ],
     skins: [
       { x: 3, y: 1, w: 9, h: 5, style: 'lab' },
@@ -231,7 +233,7 @@ function buildQuartier(): GameMap {
   b.rect(23, 23, 2, 1, 'N'); // le grand arbre, sous le potager
 
   b.border('*');
-  b.rect(35, 12, 1, 1, '-'); // sortie est
+  b.rect(35, 11, 1, 3, ',').set(35, 12, '-'); // sortie est : toute la largeur de la rue
   b.points('T', [[1, 1], [11, 1], [22, 6], [33, 3], [1, 22], [9, 23], [20, 23], [34, 23], [10, 8]]);
   b.points('C', [[8, 12], [26, 11]]);
   b.points('*', [[19, 9], [2, 14], [29, 13]]);
@@ -264,7 +266,8 @@ function buildQuartier(): GameMap {
         id: 'cabinHatch', x: 26, y: 23, sprite: 'trapdoor', script: 'cabinHatch', hiddenUntil: 'knowsCabin',
         door: { to: 'cabane', x: 4, y: 4, dir: 'up', needs: 'knowsCabin' },
       },
-      exit('toVesper', 35, 12, { to: 'vesper', x: 1, y: 10, dir: 'right' }),
+      ...[11, 12, 13].map((y) => exit(`toVesper${y}`, 35, y, { to: 'vesper', x: 1, y: y - 2, dir: 'right' })),
+      { id: 'signToVesperE', x: 34, y: 10, sprite: 'signRight', script: 'signToVesper' },
     ],
     skins: [
       { x: 3, y: 2, w: 7, h: 5, style: 'house' },
@@ -320,7 +323,7 @@ function buildCentrale(): GameMap {
   b.points('*', [[17, 12], [25, 9], [12, 18], [6, 17], [27, 4]]);
   b.set(26, 8, 'N'); // tour solaire
   b.border('*');
-  b.rect(15, 0, 1, 1, '.'); // sortie nord
+  b.rect(14, 0, 3, 1, '.'); // sortie nord : toute la largeur de la piste
   return {
     id: 'centrale',
     name: 'Centrale solaire Hélios',
@@ -335,7 +338,8 @@ function buildCentrale(): GameMap {
         id: 'heliosDoor', x: 21, y: 10, sprite: 'heliosDoor', spriteWhen: ['turbinesOpen', 'bunkerDoorOpen'], script: 'heliosDoor',
         door: { to: 'turbines', x: 6, y: 6, dir: 'up', needs: 'turbinesOpen' },
       },
-      exit('toVesperN', 15, 0, { to: 'vesper', x: 20, y: 28, dir: 'up' }),
+      ...[14, 15, 16].map((x) => exit(`toVesperN${x}`, x, 0, { to: 'vesper', x: x + 5, y: 28, dir: 'up' })),
+      { id: 'signToVesperN', x: 17, y: 1, sprite: 'signUpSand', script: 'signToVesper' },
     ],
     energy: [{ x: 22, y: 13, goneWhen: 'batteryFound' }],
     skins: [{ x: 18, y: 7, w: 7, h: 4, style: 'helios' }],
