@@ -490,11 +490,33 @@ function buildSpatioportInt(): GameMap {
       { id: 'varnDesk', x: 19, y: 4, sprite: 'varnDesk', script: 'varnDesk' },
       { id: 'codebook', x: 18, y: 8, sprite: 'book', script: 'codebook' },
       { id: 'hangarNote', x: 8, y: 5, sprite: 'note', script: 'hangarNote' },
+      { id: 'archiveTerm', x: 15, y: 8, sprite: 'archiveTerm', script: 'archiveTerm' },
+      { id: 'cultureDoor', x: 8, y: 1, sprite: 'labDoorOpen', door: { to: 'culture', x: 6, y: 7, dir: 'up' } },
       { id: 'spatioExit', x: 11, y: 11, sprite: 'labDoorOpen', door: { to: 'vesper', x: 34, y: 24, dir: 'down' } },
     ],
     decals: [
       { x: 2, y: 3, w: 4, h: 2, kind: 'shuttle' },
       { x: 2, y: 7, w: 4, h: 2, kind: 'shuttle' },
+    ],
+  };
+}
+
+// ---------- Laboratoire de culture, derrière le hangar ----------
+function buildCulture(): GameMap {
+  const b = new Builder(12, 9, '=');
+  b.border('X').rect(1, 1, 10, 1, 'X');
+  return {
+    id: 'culture', name: 'Laboratoire de culture', outdoor: false, width: b.width, height: b.height, rows: b.rows,
+    objects: [
+      { id: 'tankA', x: 2, y: 2, sprite: 'cultureTank', script: 'tankFull' },
+      { id: 'tankB', x: 4, y: 2, sprite: 'cultureTankEmpty', script: 'tankEmpty' },
+      { id: 'tankC', x: 6, y: 2, sprite: 'cultureTank', script: 'tankFull' },
+      { id: 'tankD', x: 8, y: 2, sprite: 'cultureTankBroken', script: 'tankBroken' },
+      { id: 'cultureBoard', x: 10, y: 1, sprite: 'whiteboard', script: 'cultureBoard' },
+      { id: 'cultureCrateA', x: 2, y: 6, sprite: 'crate', script: 'cultureCrates' },
+      { id: 'cultureCrateB', x: 3, y: 6, sprite: 'crate', script: 'cultureCrates' },
+      { id: 'cultureDesk', x: 9, y: 5, sprite: 'desk', script: 'cultureDesk' },
+      { id: 'cultureExit', x: 6, y: 8, sprite: 'labDoorOpen', door: { to: 'spatioportInt', x: 8, y: 2, dir: 'down' } },
     ],
   };
 }
@@ -513,6 +535,7 @@ export const MAPS: Record<string, GameMap> = {
   turbines: buildTurbines(),
   observatoire: buildObservatoire(),
   spatioportInt: buildSpatioportInt(),
+  culture: buildCulture(),
 };
 
 export const START = { map: 'lab', x: 2, y: 3, dir: 'down' as Dir };

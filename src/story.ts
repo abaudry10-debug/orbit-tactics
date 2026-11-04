@@ -21,11 +21,11 @@ export interface Clue {
 
 export const CLUES: Clue[] = [
   // Qui suis-je ?
-  { id: 'self1', thread: 'self', title: 'Capsule 07', text: 'Sur ma capsule, une plaque : « SUJET 07 ». Le reste est rayé, comme effacé exprès.' },
+  { id: 'self1', thread: 'self', title: 'Capsule 07', text: 'Sur ma capsule, une plaque : « SUJET 07 ». Pas de nom, juste ce numéro.' },
   { id: 'self2', thread: 'self', title: 'Le terminal', text: '« TRANSFERT COLLECTIF : TERMINÉ. 4 211 / 4 212. » Transfert de quoi ? Vers où ? Et pourquoi pas moi ?' },
   { id: 'self3', thread: 'self', title: 'Photo d’équipe', text: 'L’équipe du programme Lazare. Au centre, une femme au badge « Dr I. Varn ». Au dos : « Merci à tous les volontaires. »' },
   // Les capsules
-  { id: 'cap1', thread: 'capsules', title: 'Le registre', text: 'Des centaines de noms, tous barrés d’un trait net. Sauf le dernier : « Sujet 07 ».' },
+  { id: 'cap1', thread: 'capsules', title: 'Le registre', text: 'Des centaines de noms, chacun suivi d’une coche : « transféré ». Le dernier, « Sujet 07 », n’a pas de coche.' },
   { id: 'cap2', thread: 'capsules', title: 'Capsules givrées', text: 'Les autres capsules sont scellées. Sous le givre, on devine des formes immobiles.' },
   { id: 'cap3', thread: 'capsules', title: 'Le robot', text: '« … DERNIER APPEL… TOUS LES CITOYENS… AUX CAPSULES… AVANT LA GRANDE CHALEUR… »' },
   { id: 'cap4', thread: 'capsules', title: 'Une lettre jamais envoyée', text: '« Ils disent que nos corps resteront ici, endormis. Que ce n’est pas grave, puisque nous serons là-bas. Mais là-bas, c’est où ? »' },
@@ -60,6 +60,11 @@ export const CLUES: Clue[] = [
   { id: 'heat6', thread: 'heat', title: 'La carte des orbites', text: 'Une seconde étoile, brûlante, suit une orbite immense et très allongée. Une fois par cycle, elle frôle l’orbite de Vesper. Son prochain passage est marqué en rouge : tout près de nous, et bientôt.' },
   { id: 'heat7', thread: 'heat', title: 'Le journal de l’observatoire', text: '« L’étoile errante revient. Ce passage-ci sera plus proche que tous les autres. Plus rien ne survivra en surface. Le programme LAZARE est notre seule chance. »' },
   { id: 'mis8', thread: 'missions', title: 'Le tableau des missions', text: 'HÉLIADE : aucun monde viable. KAIROS : perdue. ONDINE : monde gelé. AURORE : monde habitable confirmé, baptisé Azura.' },
+  { id: 'cap10', thread: 'capsules', title: 'Les cuves d’essai', text: 'Des cuves semblables à nos capsules, remplies d’un liquide ambré. « Essai 14 : forme stable. Aucune activité cérébrale. Normal : personne n’y est encore entré. »' },
+  { id: 'cap11', thread: 'capsules', title: 'Le tableau blanc', text: 'Un schéma : une capsule à gauche, une cuve à droite, une flèche entre les deux. « ESPRIT → ». Dessous, entouré deux fois : « Même mémoire. Même visage. »' },
+  { id: 'cap12', thread: 'capsules', title: 'Les caisses d’Aurore', text: '« AURORE — matériel de culture — 4 212 unités. » Les caisses sont parties avec la mission. Il ne reste ici que les cuves d’essai.' },
+  { id: 'mis10', thread: 'missions', title: 'Les archives du spatioport', text: 'Les dossiers des missions : Héliade a trouvé un monde de roche fondue, Kairos s’est perdue dans une tempête, Ondine n’a trouvé que de la glace.' },
+  { id: 'mis11', thread: 'missions', title: 'Le dossier Azura', text: '« AURORE / AZURA — ACCÈS REFUSÉ. Dossier classé confidentiel : direction du programme LAZARE. » Qu’y a-t-il à cacher sur le seul monde habitable ?' },
   { id: 'mis9', thread: 'missions', title: 'La grille de décodage', text: 'La grille de la mission Aurore associe chaque groupe de trois bips à un chiffre : ··· 0 · ··– 1 · ·–· 2 · ·–– 3 · –·· 4 · –·– 5 · ––· 6 · ––– 7.' },
   { id: 'cap9', thread: 'capsules', title: 'Le journal du Dr Varn', text: '« Les navettes ne suffiront jamais. Alors nous enverrons nos esprits. Sur Azura, la mission Aurore cultive un corps neuf pour chacun de nous. Les capsules transfèrent chaque esprit vers son double et protègent nos anciens corps de la chaleur. 4 212 habitants, 4 212 capsules. Tout le monde part. »' },
   { id: 'lead5', thread: 'leads', title: 'Le carnet du technicien', text: '« Arrêt d’urgence à la troisième cloche : j’ai coupé la pompe, puis l’onduleur, puis la ventilation, puis la turbine, et enfin le régulateur. » — R. Ilunga' },
@@ -101,6 +106,11 @@ export const QUESTIONS: Question[] = [
     id: 'q-signal', thread: 'missions', opensWith: ['mis7'], answeredBy: 'codebookRead',
     ask: 'Que dit le signal ?',
     answer: 'Ses quatre groupes de bips se traduisent avec la grille de la mission Aurore : c’est une clé à quatre chiffres.',
+  },
+  {
+    id: 'q-culture', thread: 'capsules', opensWith: ['cap10'], answeredBy: 'cap9',
+    ask: 'Que faisait-on pousser dans ces cuves ?',
+    answer: 'Des corps neufs, un pour chacun. La mission Aurore en a emporté de quoi en faire 4 212 sur Azura.',
   },
   {
     id: 'q-power', thread: 'leads', opensWith: ['lead5'], answeredBy: 'heliosOn',
@@ -145,6 +155,60 @@ export const FINALE = [
 
 export const RADIO_FREQ = 47.2;
 
+/** Mot de passe des archives du spatioport : le code de la mission qui n'a trouvé que de la glace (Ondine). */
+export const ARCHIVE_CODE = '1530';
+
+export interface ArchiveFolder {
+  id: string;
+  name: string;
+  locked?: boolean;
+  lines: string[];
+}
+
+/** Dossiers de l'ordinateur du spatioport. Le dossier d'Azura reste verrouillé. */
+export const ARCHIVES: ArchiveFolder[] = [
+  {
+    id: 'heliade', name: 'MISSION_HELIADE',
+    lines: [
+      'DESTINATION : HÉLIADE b',
+      'VOYAGE : 61 ANS',
+      'SURFACE : roche vitrifiée, 410 °C le jour.',
+      'ATMOSPHÈRE : soufre.',
+      'VERDICT : NON VIABLE.',
+      'Dernier message : « Il fait encore plus chaud qu’à la maison. »',
+    ],
+  },
+  {
+    id: 'kairos', name: 'MISSION_KAIROS',
+    lines: [
+      'DESTINATION : lunes de la géante KAIROS',
+      'VOYAGE : 74 ANS',
+      'Contact perdu à l’approche des anneaux.',
+      'Image ci-dessus : dernière transmission reçue.',
+      'VERDICT : MISSION PERDUE.',
+    ],
+  },
+  {
+    id: 'ondine', name: 'MISSION_ONDINE',
+    lines: [
+      'DESTINATION : ONDINE',
+      'VOYAGE : 58 ANS',
+      'SURFACE : océan gelé, 3 km de glace. –140 °C.',
+      'Les sondes de forage n’ont jamais atteint l’eau.',
+      'VERDICT : NON VIABLE.',
+    ],
+  },
+  {
+    id: 'azura', name: 'MISSION_AURORE', locked: true,
+    lines: [
+      'ACCÈS REFUSÉ.',
+      'Dossier classé CONFIDENTIEL.',
+      'Réservé à la direction du programme LAZARE.',
+      'Cette tentative a été enregistrée.',
+    ],
+  },
+];
+
 export const MISSION_CODE = '2207';
 
 export const INTRO = [
@@ -166,13 +230,13 @@ export interface Api {
   say(lines: string[], then?: () => void): void;
   keypad(title: string, onCode: (code: string) => void): void;
   sfx(name: 'success' | 'wrong' | 'door' | 'item'): void;
-  ui(kind: 'switches' | 'orbit' | 'codebook', then?: () => void): void;
+  ui(kind: 'switches' | 'orbit' | 'codebook' | 'archives', then?: () => void): void;
 }
 
 export const SCRIPTS: Record<string, (api: Api) => void> = {
   // ----- laboratoire -----
   capsule07: (api) =>
-    api.say(['Ma capsule. Le verre est encore tiède.', 'Une plaque : « SUJET 07 ». Le reste est rayé, comme effacé exprès.'], () =>
+    api.say(['Ma capsule. Le verre est encore tiède.', 'Une plaque : « SUJET 07 ». Pas de nom, juste ce numéro.'], () =>
       api.clue('self1'),
     ),
 
@@ -188,11 +252,11 @@ export const SCRIPTS: Record<string, (api: Api) => void> = {
     ),
 
   register: (api) =>
-    api.say(['Un registre ouvert sur un pupitre.', 'Des centaines de noms, tous barrés d’un trait net.', 'Sauf le dernier : « Sujet 07 ».'], () =>
+    api.say(['Un registre ouvert sur un pupitre.', 'Des centaines de noms, chacun suivi d’une petite coche : « transféré ».', 'Le dernier, « Sujet 07 », n’a pas de coche.'], () =>
       api.clue('cap1'),
     ),
 
-  deadTerminal: (api) => api.say(['Écran éteint. Quelqu’un a arraché les câbles.']),
+  deadTerminal: (api) => api.say(['Écran éteint. Ses câbles ont fondu dans la chaleur.']),
 
   locker: (api) => {
     if (api.has('badge')) return api.say(['Le casier est vide maintenant.']);
@@ -575,6 +639,33 @@ export const SCRIPTS: Record<string, (api: Api) => void> = {
       api.set('codebookRead');
       api.clue('mis9');
     }),
+
+  archiveTerm: (api) =>
+    api.ui('archives', () => {
+      if (api.has('archLogin')) api.clue('mis10');
+      if (api.has('archAzura')) api.clue('mis11');
+    }),
+
+  // ----- laboratoire de culture -----
+  tankFull: (api) =>
+    api.say(['Une cuve pleine d’un liquide ambré, tiède.', 'Au fond, une forme recroquevillée, trop floue pour être reconnue.', 'Étiquette : « Essai 12 — croissance accélérée. »']),
+  tankEmpty: (api) =>
+    api.say(
+      ['Une cuve qui ressemble beaucoup à ta capsule.', 'Étiquette : « Essai 14 — forme stable. Aucune activité cérébrale. »', 'Et, à la main : « Normal : personne n’y est encore entré. »'],
+      () => api.clue('cap10'),
+    ),
+  tankBroken: (api) => api.say(['Une cuve fendue, sèche depuis longtemps.', 'Étiquette : « Essai 3 — abandonné. »']),
+  cultureBoard: (api) =>
+    api.say(
+      ['Un tableau blanc. Une capsule à gauche, une cuve à droite, une flèche entre les deux.', 'Au-dessus de la flèche : « ESPRIT → ».', 'Dessous, entouré deux fois : « Même mémoire. Même visage. »'],
+      () => api.clue('cap11'),
+    ),
+  cultureCrates: (api) =>
+    api.say(['Des caisses vides, ouvertes. Sur le couvercle : « AURORE — matériel de culture — 4 212 unités ».', 'Le reste est parti avec la mission.'], () =>
+      api.clue('cap12'),
+    ),
+  cultureDesk: (api) =>
+    api.say(['Un cahier de mesures, rempli d’une écriture serrée.', '« Taille : 1,74 m. Yeux : gris. Petite cicatrice au menton : reproduite. »', 'Reproduite… ?']),
 
   hangarNote: (api) => api.say(['Un mot scotché sur une navette : « Dernier vol annulé. On nous envoie tous au labo Lazare. » — un pilote']),
 

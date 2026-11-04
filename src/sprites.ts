@@ -727,6 +727,35 @@ const dogSleep: Painter = (c) => {
   drawDog(c, 0, true);
 };
 
+// cuves de culture (laboratoire Aurore) : même famille que les capsules, mais remplies de liquide
+const cultureTank = (kind: 'full' | 'empty' | 'broken'): Painter => (c) => {
+  labFloor(c, 0);
+  r(c, 2, 1, 12, 15, P.metalDark); r(c, 3, 1, 10, 1, P.metalLight);
+  if (kind === 'broken') {
+    r(c, 4, 3, 8, 9, '#1c2533'); r(c, 5, 5, 3, 1, P.glass); r(c, 8, 8, 2, 1, P.glass); r(c, 4, 10, 8, 2, '#4a3a20');
+  } else {
+    r(c, 4, 3, 8, 9, kind === 'full' ? '#8a6a2a' : '#3a6a5a');
+    r(c, 4, 3, 8, 2, kind === 'full' ? '#a8843a' : '#4a8a76'); // surface du liquide
+    if (kind === 'full') { r(c, 7, 6, 2, 2, '#5a4220'); r(c, 6, 8, 4, 3, '#5a4220'); } // forme recroquevillée
+    r(c, 5, 6, 1, 1, 'rgba(255,240,200,0.6)'); r(c, 10, 9, 1, 1, 'rgba(255,240,200,0.5)'); // bulles
+  }
+  r(c, 4, 13, 8, 2, P.metal); r(c, 6, 13, 1, 1, kind === 'full' ? P.hazard : P.red); r(c, 9, 13, 1, 1, P.neon);
+};
+const whiteboard: Painter = (c, v) => {
+  labWallFront(c, v);
+  r(c, 0, 1, 16, 10, P.metalLight); r(c, 1, 2, 14, 8, '#eef2f4');
+  r(c, 2, 4, 3, 5, '#2f6f8a'); r(c, 11, 4, 3, 5, '#a8843a'); // capsule → cuve
+  r(c, 6, 6, 4, 1, '#d04a42'); r(c, 9, 5, 1, 3, '#d04a42');
+  r(c, 3, 3, 9, 1, '#454c59');
+};
+const archiveTerm: Painter = (c) => {
+  labFloor(c, 0);
+  r(c, 1, 9, 14, 6, P.metalDark); r(c, 1, 9, 14, 1, P.metalLight); // bureau
+  r(c, 3, 2, 10, 8, P.ink); r(c, 4, 3, 8, 5, '#06140a');
+  r(c, 5, 4, 4, 1, '#46e08a'); r(c, 5, 6, 6, 1, '#2a8a50'); r(c, 10, 4, 1, 1, '#7dff9d');
+  r(c, 4, 11, 8, 2, '#2a2f38'); r(c, 5, 11, 6, 1, '#454c59'); // clavier
+};
+
 const antennaBase: Painter = (c) => {
   grating(c, 0);
   r(c, 3, 11, 10, 4, P.ink); r(c, 4, 12, 8, 2, P.metalDark);
@@ -915,6 +944,8 @@ const REGISTRY: Record<string, Painter[]> = {
   turbine: [turbine], switchPanel: [switchPanel(false)], switchPanelOn: [switchPanel(true)], plaque: [plaque],
   telescope: [telescope], orbitChart: [orbitChart], missionBoard: [missionBoard], varnDesk: [varnDesk],
   podPlans: [podPlans], dogSleep: [dogSleep],
+  cultureTank: [cultureTank('full')], cultureTankEmpty: [cultureTank('empty')], cultureTankBroken: [cultureTank('broken')],
+  whiteboard: [whiteboard], archiveTerm: [archiveTerm],
   dust: [dust], grass: [grass], asphalt: [asphalt], road: [road], labFloor: [labFloor],
   toxic0: [toxicFrame(0)], toxic1: [toxicFrame(1)], rubble: [rubble], fence: [fence],
   wallTop: [wallTop], wallFront: [wallFront], labWallTop: [labWallTop], labWallFront: [labWallFront],

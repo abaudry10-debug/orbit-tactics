@@ -1,7 +1,7 @@
 // Interface HTML par-dessus le canvas : dialogues, journal, clavier à code, notifications.
 import { setStatic, sfx, startStatic, stopStatic } from './audio.js';
 import { iconUrl } from './sprites.js';
-import { CLUES, ITEMS, QUESTIONS, THREADS } from './story.js';
+import { CLUES, ITEMS, QUESTIONS, THREADS, type ArchiveFolder } from './story.js';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -269,7 +269,7 @@ export function showPlace(name: string) {
 
 // ---------- fenêtres pause / confirmation ----------
 export const overlayOpen = () =>
-  !$('pause').hidden || !$('confirm').hidden || !$('viewer').hidden || !$('switches').hidden || !$('finale').hidden;
+  !$('pause').hidden || !$('confirm').hidden || !$('viewer').hidden || !$('switches').hidden || !$('finale').hidden || !$('term').hidden;
 
 export function confirm(question: string, onYes: () => void, onNo?: () => void, labels?: [string, string]) {
   $('confirm-text').textContent = question;
@@ -566,4 +566,216 @@ export async function playFinale(pixelSprite: HTMLCanvasElement) {
   text.textContent = '';
   await wait(700);
   el.hidden = true;
+}
+
+// ---------- ordinateur des archives (écran vert sur fond noir) ----------
+interface TermOpts {
+  folders: ArchiveFolder[];
+  code: string;
+  loggedIn: boolean;
+  onEvent: (ev: string) => void; // 'login', puis l'id de chaque dossier ouvert
+  onClose?: () => void;
+}
+let term: TermOpts | undefined;
+let termState: 'login' | 'menu' | 'file' = 'login';
+let termSel = 0;
+let termFile: ArchiveFolder | undefined;
+let termDigits = [0, 0, 0, 0];
+let termCursor = 0;
+let termMsg = '';
+let termNoise: number | undefined;
+
+export const termOpen = () => !$('term').hidden;
+
+export function openTerminal(opts: TermOpts) {
+  term = opts;
+  termState = opts.loggedIn ? 'menu' : 'login';
+  termSel = 0;
+  termDigits = [0, 0, 0, 0];
+  termCursor = 0;
+  termMsg = '';
+  $('term').hidden = false;
+  sfx.blip();
+  renderTerm();
+}
+
+export function closeTerminal() {
+  if ($('term').hidden) return;
+  $('term').hidden = true;
+  cancelAnimationFrame(termNoise!);
+  const cb = term?.onClose;
+  term = undefined;
+  cb?.();
+}
+
+const termItems = (): string[] =>
+  termState === 'menu' ? [...term!.folders.map((f) => f.name + (f.locked ? ' [CONFIDENTIEL]' : '/')), 'DÉCONNEXION'] : termState === 'file' ? ['◀ RETOUR'] : [];
+
+function line(text: string, cls = '') {
+  const p = document.createElement('p');
+  p.className = 'term-line ' + cls;
+  p.textContent = text;
+  return p;
+}
+
+function renderTerm() {
+  if (!term) return;
+  cancelAnimationFrame(termNoise!);
+  const scr = $('term-screen');
+  scr.innerHTML = '';
+  scr.appendChild(line('SPATIOPORT DE VESPER — ARCHIVES v2.07', 'dim'));
+  if (termState === 'login') {
+    scr.appendChild(line('UTILISATEUR : I.VARN'));
+    const row = document.createElement('div');
+    row.className = 'term-pass';
+    row.appendChild(line('MOT DE PASSE :'));
+    termDigits.forEach((d, i) => {
+      const cell = document.createElement('div');
+      cell.className = 'term-digit' + (i === termCursor ? ' sel' : '');
+      cell.innerHTML = `<button class="up">▲</button><span>${d}</span><button class="down">▼</button>`;
+      cell.querySelector('.up')!.addEventListener('click', () => { termCursor = i; termInput('up'); });
+      cell.querySelector('.down')!.addEventListener('click', () => { termCursor = i; termInput('down'); });
+      cell.querySelector('span')!.addEventListener('click', () => { termCursor = i; sfx.key(); renderTerm(); });
+      row.appendChild(cell);
+    });
+    scr.appendChild(row);
+    scr.appendChild(line('Indice : « la mission qui n’a trouvé que de la glace »', 'dim'));
+    if (termMsg) scr.appendChild(line(termMsg, 'warn'));
+    const actions = document.createElement('div');
+    actions.className = 'term-actions';
+    const ok = document.createElement('button');
+    ok.className = 'term-btn';
+    ok.textContent = '[ CONNEXION ]';
+    ok.addEventListener('click', () => termInput('a'));
+    const quit = document.createElement('button');
+    quit.className = 'term-btn';
+    quit.textContent = '[ QUITTER ]';
+    quit.addEventListener('click', closeTerminal);
+    actions.append(ok, quit);
+    scr.appendChild(actions);
+  } else if (termState === 'menu') {
+    scr.appendChild(line('Bienvenue, Dr Varn.'));
+    scr.appendChild(line('> ls /missions', 'dim'));
+  } else if (termFile) {
+    scr.appendChild(line('> open /missions/' + termFile.name, 'dim'));
+    if (!termFile.locked) {
+      const cv = document.createElement('canvas');
+      cv.width = 96;
+      cv.height = 56;
+      cv.className = 'term-photo';
+      scr.appendChild(cv);
+      drawArchivePhoto(termFile.id, cv);
+    }
+    for (const l of termFile.lines) scr.appendChild(line(l, termFile.locked ? 'warn' : ''));
+  }
+  termItems().forEach((label, i) => {
+    const b = document.createElement('button');
+    b.className = 'term-item' + (i === termSel ? ' sel' : '');
+    b.textContent = (i === termSel ? '> ' : '  ') + label;
+    b.addEventListener('click', () => { termSel = i; termInput('a'); });
+    scr.appendChild(b);
+  });
+  const cur = document.createElement('span');
+  cur.className = 'term-cursor';
+  cur.textContent = '█';
+  scr.appendChild(cur);
+}
+
+export function termInput(b: string) {
+  if (!term) return;
+  if (termState === 'login') {
+    if (b === 'up') termDigits[termCursor] = (termDigits[termCursor] + 1) % 10;
+    else if (b === 'down') termDigits[termCursor] = (termDigits[termCursor] + 9) % 10;
+    else if (b === 'left') termCursor = (termCursor + 3) % 4;
+    else if (b === 'right') termCursor = (termCursor + 1) % 4;
+    else if (b === 'b' || b === 'menu') return closeTerminal();
+    else if (b === 'a') {
+      if (termDigits.join('') === term.code) {
+        sfx.success();
+        term.onEvent('login');
+        termState = 'menu';
+        termSel = 0;
+      } else {
+        sfx.wrong();
+        termMsg = 'MOT DE PASSE INCORRECT.';
+      }
+      return renderTerm();
+    }
+    sfx.key();
+    return renderTerm();
+  }
+  const items = termItems();
+  if (b === 'up') termSel = (termSel + items.length - 1) % items.length;
+  else if (b === 'down') termSel = (termSel + 1) % items.length;
+  else if (b === 'b' || b === 'menu') {
+    if (termState === 'file') { termState = 'menu'; termSel = Math.max(0, term.folders.indexOf(termFile!)); }
+    else return closeTerminal();
+  } else if (b === 'a') {
+    if (termState === 'file') {
+      termState = 'menu';
+      termSel = Math.max(0, term.folders.indexOf(termFile!));
+    } else if (termSel === items.length - 1) {
+      return closeTerminal();
+    } else {
+      termFile = term.folders[termSel];
+      termState = 'file';
+      termSel = 0;
+      term.onEvent(termFile.id);
+      if (termFile.locked) sfx.wrong();
+      else sfx.page();
+      return renderTerm();
+    }
+  } else return;
+  sfx.key();
+  renderTerm();
+}
+
+/** Photos des missions, en phosphore vert. */
+function drawArchivePhoto(id: string, cv: HTMLCanvasElement) {
+  const c = cv.getContext('2d')!;
+  const G = ['#031006', '#0b3014', '#1a6a2c', '#33b056', '#7dffa0', '#d8ffe4'];
+  const px = (x: number, y: number, k: number, w = 1, h = 1) => { c.fillStyle = G[k]; c.fillRect(Math.round(x), Math.round(y), w, h); };
+  let seed = 7;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const W = 96, H = 56;
+  px(0, 0, 0, W, H);
+  if (id === 'heliade') {
+    // un soleil énorme, une plaine de roche fondue
+    for (let y = 0; y < 34; y++) px(0, y, y < 12 ? 2 : 1, W, 1);
+    for (let y = -30; y <= 30; y++) for (let x = -30; x <= 30; x++) {
+      const d = x * x + y * y;
+      if (d <= 900) px(70 + x, 4 + y, d < 400 ? 5 : 4);
+    }
+    for (let y = 34; y < H; y++) px(0, y, 2, W, 1);
+    for (let i = 0; i < 9; i++) { let x = rnd() * W, y = 36 + rnd() * 18; for (let k = 0; k < 8; k++) { px(x, y, 4); x += 1 + rnd() * 2; y += rnd() * 2 - 1; } }
+    for (let y = 30; y < 36; y += 2) for (let x = (y * 3) % 5; x < W; x += 5) px(x, y, 3); // chaleur qui tremble
+    px(10, 30, 1, 14, 4); px(13, 27, 1, 6, 3); // rocher
+  } else if (id === 'kairos') {
+    // une géante gazeuse et ses anneaux, noyée dans la neige de l'image
+    for (let y = -20; y <= 20; y++) for (let x = -20; x <= 20; x++) if (x * x + y * y <= 400) px(48 + x, 28 + y, [2, 3, 2, 4, 3, 2][Math.floor((y + 20) / 7)]);
+    for (let a = 0; a < 6.28; a += 0.02) { const x = 48 + Math.cos(a) * 36, y = 28 + Math.sin(a) * 6; if (Math.sin(a) > 0 || Math.abs(x - 48) > 20) px(x, y, 4); }
+    const snow = (t: number) => {
+      seed = 11 + Math.floor(t * 12);
+      for (let i = 0; i < 160; i++) px(rnd() * W, rnd() * H, rnd() < 0.5 ? 0 : 3);
+      px(0, Math.floor(rnd() * H), 1, W, 2);
+    };
+    const base = c.getImageData(0, 0, W, H);
+    const tick = (ms: number) => {
+      if ($('term').hidden) return;
+      c.putImageData(base, 0, 0);
+      snow(ms / 1000);
+      termNoise = requestAnimationFrame(tick);
+    };
+    termNoise = requestAnimationFrame(tick);
+  } else {
+    // Ondine : une banquise sans fin
+    for (let y = 0; y < 30; y++) px(0, y, y < 10 ? 0 : 1, W, 1);
+    for (let i = 0; i < 25; i++) px(rnd() * W, rnd() * 24, 3);
+    for (let y = -4; y <= 4; y++) for (let x = -4; x <= 4; x++) if (x * x + y * y <= 16) px(16 + x, 8 + y, 3);
+    for (let i = 0; i < 5; i++) { const x0 = i * 22 - 4, h = 6 + rnd() * 8; for (let k = 0; k < h; k++) px(x0 + k, 30 - k, 2, 22 - 2 * k > 0 ? 22 - 2 * k : 1, 1); }
+    for (let y = 30; y < H; y++) px(0, y, y < 36 ? 4 : 3, W, 1);
+    for (let i = 0; i < 6; i++) { let x = rnd() * W, y = 38 + rnd() * 14; for (let k = 0; k < 12; k++) { px(x, y, 2); x += 1; y += rnd() < 0.3 ? 1 : 0; } }
+    px(56, 36, 1, 8, 4); px(58, 33, 1, 4, 3); px(55, 40, 1, 2, 2); px(63, 40, 1, 2, 2); // atterrisseur
+    px(60, 31, 5); // sa balise
+  }
 }

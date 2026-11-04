@@ -1046,3 +1046,66 @@ h1 {
   color: #e6ecff;
   letter-spacing: 1px;
 }
+
+/* ---------- ordinateur des archives ---------- */
+.term-box {
+  position: relative;
+  width: min(94%, 520px);
+  max-height: 92%;
+  overflow-y: auto;
+  background: #020a04;
+  border: 3px solid #1a6a2c;
+  border-radius: 10px;
+  box-shadow: 0 0 24px rgba(70, 224, 138, 0.25), inset 0 0 40px rgba(0, 0, 0, 0.8);
+  padding: 14px 14px 10px;
+  color: #46e08a;
+  font-family: 'VT323', ui-monospace, Menlo, monospace;
+  font-size: 20px;
+  line-height: 1.15;
+  text-shadow: 0 0 4px rgba(70, 224, 138, 0.6);
+}
+.term-box::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(to bottom, rgba(0, 0, 0, 0.25) 0 1px, transparent 1px 3px);
+}
+.term-line { margin: 0 0 4px; white-space: pre-wrap; }
+.term-line.dim { color: #2a9a4c; }
+.term-line.warn { color: #9dffb8; animation: termBlink 1s steps(2) infinite; }
+.term-item, .term-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  padding: 3px 4px;
+  white-space: pre-wrap;
+  text-shadow: inherit;
+  cursor: pointer;
+}
+.term-item.sel { background: #46e08a; color: #020a04; text-shadow: none; }
+.term-actions { display: flex; gap: 8px; margin-top: 8px; }
+.term-btn { width: auto; border: 1px solid #1a6a2c; padding: 4px 8px; white-space: nowrap; }
+.term-btn:active { background: #46e08a; color: #020a04; }
+.term-pass { display: flex; align-items: center; gap: 6px; margin: 6px 0; flex-wrap: nowrap; }
+.term-pass .term-line { flex-basis: 100%; }
+.term-pass { flex-wrap: wrap; }
+.term-pass .term-digit:first-of-type { margin-left: 0; }
+.term-digit { display: flex; flex-direction: column; align-items: center; }
+.term-digit span { font-size: 30px; padding: 0 6px; border: 1px solid #1a6a2c; }
+.term-digit.sel span { background: #46e08a; color: #020a04; text-shadow: none; }
+.term-digit button { font: inherit; font-size: 16px; color: inherit; background: none; border: 0; padding: 2px 8px; }
+.term-photo {
+  display: block;
+  width: 100%;
+  max-width: 384px;
+  margin: 6px 0 8px;
+  image-rendering: pixelated;
+  border: 1px solid #1a6a2c;
+}
+.term-cursor { animation: termBlink 1s steps(2) infinite; }
+@keyframes termBlink { 50% { opacity: 0; } }

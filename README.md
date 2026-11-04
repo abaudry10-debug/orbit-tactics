@@ -30,6 +30,8 @@ Sur iPhone : ouvre le lien dans Safari, puis **Partager → Sur l'écran d'accue
 - **La salle des turbines** : Pixel prête son énergie pour ouvrir la porte ; le tableau de dérivation se rallume dans l'ordre inverse de l'arrêt noté par le technicien.
 - **L'observatoire** (déblayé à la pelle) : la carte animée des orbites, où l'étoile errante frôle l'orbite de Vesper.
 - **Le spatioport** : tableau des missions (la planète Azura), plans du pod, journal du Dr Varn, grille de décodage du signal.
+- **Le laboratoire de culture**, derrière le hangar : des cuves semblables aux capsules, et ce qu'on y préparait.
+- **L'ordinateur des archives** (vert sur noir) : photos et rapports des missions ratées ; le dossier d'Azura reste confidentiel.
 - **La navette écrasée** : l'antenne de transmission.
 - **La capsule 07** : assemblage, réglage sur le signal, clé de synchronisation, puis l'amorce… et la scène finale.
 

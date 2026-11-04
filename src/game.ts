@@ -3,7 +3,7 @@ import { playTheme, sfx } from './audio.js';
 import { heldDir, releaseAll } from './input.js';
 import { MAPS, START, SOLID, charAt, type GameMap, type MapObject } from './maps.js';
 import { T, bigTree, dish, dog, frozenTrain, hash, hero, radioTower, shuttleWreck, solarTower, tile, type Dir } from './sprites.js';
-import { CLUES, FINALE, ITEMS, QUESTIONS, RADIO_FREQ, RESTART_ORDER, SCRIPTS, SIGNAL_KEY, SWITCHES, type Api } from './story.js';
+import { ARCHIVE_CODE, ARCHIVES, CLUES, FINALE, ITEMS, QUESTIONS, RADIO_FREQ, RESTART_ORDER, SCRIPTS, SIGNAL_KEY, SWITCHES, type Api } from './story.js';
 import * as ui from './ui.js';
 
 /** Taille de la vue en pixels de jeu ; recalculée selon l'écran (voir main.ts). */
@@ -523,6 +523,14 @@ export class Game {
     ui: (kind, then) => {
       releaseAll();
       if (kind === 'switches') ui.openSwitches(SWITCHES, RESTART_ORDER, () => then?.());
+      else if (kind === 'archives')
+        ui.openTerminal({
+          folders: ARCHIVES,
+          code: ARCHIVE_CODE,
+          loggedIn: this.flags.has('archLogin'),
+          onEvent: (ev) => this.flags.add(ev === 'login' ? 'archLogin' : ev === 'azura' ? 'archAzura' : 'arch_' + ev),
+          onClose: then,
+        });
       else if (kind === 'orbit') ui.openViewer('Carte des orbites', ui.orbitChart(), then);
       else ui.openViewer('Grille de décodage', ui.codebookTable(), then);
     },

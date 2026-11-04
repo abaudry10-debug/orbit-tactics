@@ -184,6 +184,7 @@ onPress((b) => {
     if (b === 'b' || b === 'menu') ui.closeSwitches();
     return;
   }
+  if (ui.termOpen()) return ui.termInput(b);
   if (ui.keypadOpen()) return ui.keypadInput(b);
   if (ui.radioOpen()) return ui.radioInput(b);
   if (ui.journalOpen()) {
