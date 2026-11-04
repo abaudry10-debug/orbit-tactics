@@ -1,15 +1,15 @@
 // Cœur du jeu : état du personnage, déplacements case par case, interactions, rendu.
 import { playTheme, sfx } from './audio.js';
 import { heldDir, releaseAll } from './input.js';
-import { MAPS, START, SOLID, charAt, objectAt, type GameMap, type MapObject } from './maps.js';
-import { T, hash, hero, tile, type Dir } from './sprites.js';
-import { CLUES, DEDUCTIONS, ENDING, ITEMS, SCRIPTS, type Api } from './story.js';
+import { MAPS, START, SOLID, charAt, type GameMap, type MapObject } from './maps.js';
+import { T, dog, hash, hero, tile, type Dir } from './sprites.js';
+import { CLUES, ITEMS, QUESTIONS, SCRIPTS, type Api } from './story.js';
 import * as ui from './ui.js';
 
 export const VIEW_W = 12 * T;
 export const VIEW_H = 16 * T;
 const MOVE_TIME = 0.19; // secondes pour traverser une case
-const SAVE_KEY = 'vesper-save-v1';
+const SAVE_KEY = 'vesper-save-v2';
 
 const DELTA: Record<Dir, [number, number]> = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 
@@ -31,6 +31,13 @@ interface Particle {
   a: number;
 }
 
+interface Follower {
+  x: number;
+  y: number;
+  dir: Dir;
+  moving: { fx: number; fy: number } | null;
+}
+
 export class Game {
   map: GameMap = MAPS[START.map];
   x = START.x;
@@ -44,12 +51,18 @@ export class Game {
   fresh = new Set<string>();
   time = 0;
   blackout = false; // écran noir pendant l'introduction
-  locked = false; // bloque le joueur (fondu, fin…)
+  locked = false; // bloque le joueur (fondu…)
   particles: Particle[] = [];
+  pixel: Follower | null = null;
   private saveTimer = 0;
   private bumpCooldown = 0;
+  private beepTimer = 0;
+  private openQ = new Set<string>();
+  private solvedQ = new Set<string>();
+  private ctx: CanvasRenderingContext2D;
 
-  constructor(private ctx: CanvasRenderingContext2D) {
+  constructor(ctx: CanvasRenderingContext2D) {
+    this.ctx = ctx;
     for (let i = 0; i < 40; i++) this.particles.push(this.newParticle(true));
   }
 
@@ -75,6 +88,8 @@ export class Game {
       this.flags = new Set(s.flags);
       this.clues = new Set(s.clues);
       this.items = new Set(s.items);
+      this.refreshQuestions(true);
+      if (this.flags.has('pixelOn')) this.placePixelBehind();
       return true;
     } catch {
       return false;
@@ -88,7 +103,10 @@ export class Game {
       const raw = localStorage.getItem(SAVE_KEY);
       if (!raw) return false;
       const s = JSON.parse(raw) as Save;
-      return s.map === this.map.id && s.x === this.x && s.y === this.y && s.clues.length === this.clues.size;
+      return (
+        s.map === this.map.id && s.x === this.x && s.y === this.y &&
+        s.clues.length === this.clues.size && s.items.length === this.items.size && s.flags.length === this.flags.size
+      );
     } catch {
       return false;
     }
@@ -114,10 +132,19 @@ export class Game {
     }
   }
 
-  // ---------- règles de déplacement ----------
+  // ---------- objets et règles de déplacement ----------
+  /** Objet visible sur une case (les objets masqués par un drapeau sont ignorés). */
+  objAt(x: number, y: number): MapObject | undefined {
+    return this.map.objects.find((o) => o.x === x && o.y === y && !(o.hideWhen && this.flags.has(o.hideWhen)));
+  }
+
   blocked(x: number, y: number): boolean {
-    const obj = objectAt(this.map, x, y);
-    if (obj) return !this.doorOpen(obj);
+    const obj = this.objAt(x, y);
+    if (obj) {
+      if (obj.door) return !this.doorOpen(obj);
+      if (obj.passWhen) return !this.flags.has(obj.passWhen);
+      return true;
+    }
     return SOLID.has(charAt(this.map, x, y));
   }
 
@@ -126,7 +153,9 @@ export class Game {
   }
 
   get busy(): boolean {
-    return this.locked || this.blackout || ui.dialogOpen() || ui.journalOpen() || ui.keypadOpen() || ui.overlayOpen();
+    return (
+      this.locked || this.blackout || ui.dialogOpen() || ui.journalOpen() || ui.keypadOpen() || ui.overlayOpen() || ui.bagOpen()
+    );
   }
 
   update(dt: number) {
@@ -138,11 +167,13 @@ export class Game {
       this.saveTimer = 0;
       if (!this.blackout) this.save();
     }
+    this.updateDetector(dt);
 
     if (this.moving) {
       this.moving.t += dt / MOVE_TIME;
       if (this.moving.t < 1) return;
       this.moving = null;
+      if (this.pixel) this.pixel.moving = null;
     }
     if (this.busy) return;
     const d = heldDir();
@@ -151,7 +182,7 @@ export class Game {
     const [dx, dy] = DELTA[d];
     const nx = this.x + dx;
     const ny = this.y + dy;
-    const obj = objectAt(this.map, nx, ny);
+    const obj = this.objAt(nx, ny);
     if (obj?.door && this.doorOpen(obj)) {
       sfx.door();
       this.warp(obj.door.to, obj.door.x, obj.door.y, obj.door.dir);
@@ -163,6 +194,16 @@ export class Game {
         this.bumpCooldown = 0.35;
       }
       return;
+    }
+    if (this.pixel) {
+      // Pixel prend la place que le joueur vient de quitter
+      const p = this.pixel;
+      if (p.x !== this.x || p.y !== this.y) {
+        p.dir = this.x > p.x ? 'right' : this.x < p.x ? 'left' : this.y > p.y ? 'down' : 'up';
+      }
+      p.moving = { fx: p.x, fy: p.y };
+      p.x = this.x;
+      p.y = this.y;
     }
     this.moving = { fx: this.x, fy: this.y, t: 0 };
     this.x = nx;
@@ -181,18 +222,26 @@ export class Game {
       this.dir = dir;
       this.moving = null;
       this.locked = false;
+      if (this.flags.has('pixelOn')) this.placePixelBehind();
       ui.showPlace(this.map.name);
       this.startMusic();
       this.save();
       if (mapId === 'vesper' && !this.flags.has('firstOutside')) {
         this.flags.add('firstOutside');
-        ui.say([
-          'Le ciel… il est orange.',
-          'La ville est en ruine. Il n’y a personne.',
-          'Il faut que je comprenne ce qui s’est passé ici.',
-        ]);
+        ui.say(['Le ciel… il est orange.', 'La ville est en ruine. Il n’y a personne.', 'Il faut que je comprenne ce qui s’est passé ici.']);
       }
     });
+  }
+
+  private placePixelBehind() {
+    const [dx, dy] = DELTA[this.dir];
+    let px = this.x - dx;
+    let py = this.y - dy;
+    if (this.blocked(px, py)) {
+      px = this.x;
+      py = this.y;
+    }
+    this.pixel = { x: px, y: py, dir: this.dir, moving: null };
   }
 
   facing(): [number, number] {
@@ -203,15 +252,107 @@ export class Game {
   interact() {
     if (this.busy || this.moving) return;
     const [fx, fy] = this.facing();
-    const obj = objectAt(this.map, fx, fy);
+    const obj = this.objAt(fx, fy);
     if (obj?.script) {
       SCRIPTS[obj.script]?.(this.api);
+      return;
+    }
+    if (this.pixel && this.pixel.x === fx && this.pixel.y === fy) {
+      ui.say(['Pixel remue la queue. Ses yeux brillent d’un bleu vif.']);
       return;
     }
     const ch = charAt(this.map, fx, fy);
     if (ch === '~') ui.say(['Une eau verte, tiède, qui sent le métal brûlé.', 'Mieux vaut ne pas y toucher.']);
     else if (ch === 'C') ui.say(['Une épave de voiture, mangée par la rouille. Vide.']);
-    else if (ch === 'T') ui.say(['Un arbre mort. Pas une feuille.']);
+    else if (ch === 'T') ui.say(['Un arbre mort, calciné d’un seul côté.']);
+    else if (ch === 'P') ui.say(['Un panneau solaire brisé, à moitié enfoui dans le sable.']);
+    else if (ch === 'v') ui.say(['Des plants desséchés.']);
+  }
+
+  // ---------- sac à dos ----------
+  useItem(id: string) {
+    ui.setBag(false);
+    if (id === 'sonde') {
+      if (this.flags.has('sondeOn')) {
+        this.flags.delete('sondeOn');
+        ui.toast('Sonde éteinte');
+      } else {
+        this.flags.add('sondeOn');
+        ui.toast('Sonde allumée');
+      }
+      sfx.select();
+      this.save();
+      return;
+    }
+    if (id === 'pelle') return this.dig();
+    if (id === 'battery') {
+      const target = this.map.objects.find(
+        (o) => o.id === 'pixelOff' && !this.flags.has('pixelOn') && Math.max(Math.abs(o.x - this.x), Math.abs(o.y - this.y)) <= 1,
+      );
+      if (!target) return ui.say(['Il faudrait la brancher sur quelque chose qui manque d’énergie.']);
+      ui.say(
+        ['Tu branches la batterie BS-1 sur le dos de Pixel.', 'Un ronronnement… ses yeux s’allument d’un bleu vif.', 'Pixel se lève, s’étire, et vient se coller à tes jambes.'],
+        () => {
+          this.items.delete('battery');
+          this.flags.add('pixelOn');
+          this.pixel = { x: target.x, y: target.y, dir: 'down', moving: null };
+          sfx.success();
+          this.refreshQuestions(false);
+          this.save();
+        },
+      );
+      return;
+    }
+    const it = ITEMS[id];
+    ui.say([it ? it.text : '…']);
+  }
+
+  private dig() {
+    const ch = charAt(this.map, this.x, this.y);
+    if (ch !== 'S') return ui.say(['Le sol est trop dur ici. Il faudrait du sable.']);
+    const key = `dug:${this.map.id}:${this.x},${this.y}`;
+    if (this.flags.has(key)) return ui.say(['J’ai déjà creusé ici.']);
+    this.flags.add(key);
+    sfx.page();
+    const src = this.nearestSource();
+    const found = src && src.d <= 1 && this.flags.has('sondeOn') && this.flags.has('knowsBattery');
+    if (found) {
+      ui.say(['Tu creuses… La pelle heurte quelque chose de dur.', 'Une batterie solaire, enveloppée dans une bâche : le prototype BS-1 !'], () => {
+        this.flags.add('batteryFound');
+        this.api.item('battery');
+        this.save();
+      });
+    } else {
+      ui.say(['Tu creuses… rien que du sable.', this.flags.has('sondeOn') ? 'La Sonde n’indique rien de précis ici.' : 'Creuser au hasard ne mènera nulle part.']);
+      this.save();
+    }
+  }
+
+  // ---------- Sonde Lumen ----------
+  private nearestSource(): { d: number } | null {
+    let best: number | null = null;
+    for (const e of this.map.energy ?? []) {
+      if (this.flags.has(e.goneWhen)) continue;
+      const d = Math.max(Math.abs(e.x - this.x), Math.abs(e.y - this.y));
+      if (best === null || d < best) best = d;
+    }
+    return best === null ? null : { d: best };
+  }
+
+  private updateDetector(dt: number) {
+    const on = this.flags.has('sondeOn') && !this.blackout;
+    let level = 0;
+    if (on) {
+      const src = this.nearestSource();
+      if (src) level = src.d <= 1 ? 3 : src.d <= 4 ? 2 : src.d <= 10 ? 1 : 0;
+      this.beepTimer -= dt;
+      const every = [0, 1.4, 0.6, 0.22][level];
+      if (level > 0 && this.beepTimer <= 0) {
+        sfx.key();
+        this.beepTimer = every;
+      }
+    }
+    ui.setDetector(on, level);
   }
 
   // ---------- API offerte aux scripts de l'histoire ----------
@@ -219,6 +360,7 @@ export class Game {
     has: (f) => this.flags.has(f),
     set: (f) => {
       this.flags.add(f);
+      this.refreshQuestions(false);
       this.save();
     },
     hasItem: (id) => this.items.has(id),
@@ -227,20 +369,24 @@ export class Game {
       this.items.add(id);
       ui.toast(`Objet obtenu : ${ITEMS[id]?.name ?? id}`);
       sfx.item();
+      document.getElementById('btn-bag')?.classList.add('fresh');
       this.save();
     },
     clue: (id) => this.addClue(id),
     say: (lines, then) => ui.say(lines, then),
-    keypad: (cb) => {
+    keypad: (title, cb) => {
       releaseAll();
-      ui.openKeypad(cb);
+      ui.openKeypad(title, cb);
     },
     sfx: (name) => sfx[name](),
-    finish: () => this.finish(),
   };
 
   startMusic() {
     playTheme(this.map.outdoor ? 'outdoor' : 'lab');
+  }
+
+  known(id: string) {
+    return this.clues.has(id) || this.flags.has(id);
   }
 
   addClue(id: string) {
@@ -251,31 +397,46 @@ export class Game {
     ui.toast(`Journal mis à jour : ${c?.title ?? id}`);
     sfx.clue();
     document.getElementById('btn-journal')?.classList.add('fresh');
+    this.refreshQuestions(false);
     this.save();
-    for (const d of DEDUCTIONS) {
-      if (!this.clues.has(d.clue) && d.needs.every((n) => this.clues.has(n))) {
-        ui.say([d.line], () => this.addClue(d.clue));
+  }
+
+  /** Ouvre ou résout les questions du journal selon ce qui est connu. */
+  refreshQuestions(silent: boolean) {
+    for (const q of QUESTIONS) {
+      const open = q.opensWith.some((c) => this.clues.has(c));
+      const solved = open && this.known(q.answeredBy);
+      if (open && !this.openQ.has(q.id)) {
+        this.openQ.add(q.id);
+        if (!silent && !solved) {
+          this.fresh.add(q.id);
+          window.setTimeout(() => ui.toast(`Nouvelle question : ${q.ask}`), 1400);
+        }
+      }
+      if (solved && !this.solvedQ.has(q.id)) {
+        this.solvedQ.add(q.id);
+        if (!silent) {
+          this.fresh.add(q.id);
+          window.setTimeout(() => ui.toast(`Question résolue : ${q.ask}`), 1400);
+          document.getElementById('btn-journal')?.classList.add('fresh');
+        }
       }
     }
   }
 
-  finish() {
-    this.locked = true;
-    ui.say(ENDING, () => {
-      this.locked = false;
-      const el = document.getElementById('ending')!;
-      const found = CLUES.filter((c) => this.clues.has(c.id)).length;
-      document.getElementById('ending-stats')!.textContent = `${found} / ${CLUES.length} découvertes · ${this.steps} pas`;
-      el.hidden = false;
-    });
-  }
-
   openJournal() {
-    ui.renderJournal(this.clues, this.items, this.fresh);
+    ui.renderJournal(this.clues, this.items, this.fresh, this.openQ, this.solvedQ);
     ui.setJournal(true);
     releaseAll();
     this.fresh.clear();
     document.getElementById('btn-journal')?.classList.remove('fresh');
+  }
+
+  openBag() {
+    ui.renderBag([...this.items], (id) => this.useItem(id), this.flags.has('sondeOn'));
+    ui.setBag(true);
+    releaseAll();
+    document.getElementById('btn-bag')?.classList.remove('fresh');
   }
 
   // ---------- rendu ----------
@@ -292,6 +453,9 @@ export class Game {
       case '|': return 'fence';
       case 'T': return 'tree';
       case 'C': return 'car';
+      case 'S': return this.flags.has(`dug:${this.map.id}:${x},${y}`) ? 'hole' : 'sand';
+      case 'P': return 'panel';
+      case 'v': return 'deadPlants';
       case '=': return 'labFloor';
       case '#': return below === '#' ? 'wallTop' : 'wallFront';
       case 'X': return below === 'X' ? 'labWallTop' : 'labWallFront';
@@ -303,6 +467,13 @@ export class Game {
     if (!this.moving) return [this.x * T, this.y * T];
     const t = Math.min(1, this.moving.t);
     return [(this.moving.fx + (this.x - this.moving.fx) * t) * T, (this.moving.fy + (this.y - this.moving.fy) * t) * T];
+  }
+
+  private pixelPixel(): [number, number] {
+    const p = this.pixel!;
+    if (!p.moving || !this.moving) return [p.x * T, p.y * T];
+    const t = Math.min(1, this.moving.t);
+    return [(p.moving.fx + (p.x - p.moving.fx) * t) * T, (p.moving.fy + (p.y - p.moving.fy) * t) * T];
   }
 
   render() {
@@ -325,8 +496,9 @@ export class Game {
     for (let y = y0; y <= y0 + VIEW_H / T + 2; y++) {
       for (let x = x0; x <= x0 + VIEW_W / T + 2; x++) {
         if (x < 0 || y < 0 || x >= this.map.width || y >= this.map.height) continue;
-        const obj = objectAt(this.map, x, y);
-        const name = obj ? this.objSprite(obj) : this.tileName(x, y);
+        const obj = this.objAt(x, y);
+        const sprite = obj ? this.objSprite(obj) : '';
+        const name = sprite || this.tileName(x, y);
         c.drawImage(tile(name, hash(x, y)), x * T - ox, y * T - oy);
       }
     }
@@ -334,7 +506,7 @@ export class Game {
     // indicateur au-dessus de l'objet regardé
     if (!this.busy && !this.moving) {
       const [fx, fy] = this.facing();
-      const obj = objectAt(this.map, fx, fy);
+      const obj = this.objAt(fx, fy);
       if (obj?.script) {
         const bob = Math.round(Math.sin(this.time * 6) * 1.5);
         const px = fx * T - ox + 6;
@@ -349,10 +521,22 @@ export class Game {
       }
     }
 
-    // héros
     let frame = 0;
     if (this.moving && this.moving.t < 0.75) frame = this.steps % 2 ? 1 : 2;
-    c.drawImage(hero(this.dir, frame), Math.round(hx - ox), Math.round(hy - oy) - 3);
+    const drawHero = () => c.drawImage(hero(this.dir, frame), Math.round(hx - ox), Math.round(hy - oy) - 3);
+    if (this.pixel) {
+      const [px, py] = this.pixelPixel();
+      const pframe = this.moving && this.pixel.moving && this.moving.t < 0.6 ? 1 : 0;
+      const pdir = this.pixel.dir === 'left' ? 'left' : 'right';
+      const drawDog = () => c.drawImage(dog(pdir, pframe), Math.round(px - ox), Math.round(py - oy) - 1);
+      if (py <= hy) {
+        drawDog();
+        drawHero();
+      } else {
+        drawHero();
+        drawDog();
+      }
+    } else drawHero();
 
     this.renderAtmosphere();
   }
@@ -384,7 +568,6 @@ export class Game {
   private renderAtmosphere() {
     const c = this.ctx;
     if (this.map.outdoor) {
-      // lumière orange du ciel brûlé
       const g = c.createLinearGradient(0, 0, 0, VIEW_H);
       g.addColorStop(0, 'rgba(255,110,40,0.22)');
       g.addColorStop(1, 'rgba(120,30,60,0.12)');
@@ -395,7 +578,6 @@ export class Game {
         c.fillRect(Math.round(p.x), Math.round(p.y), 1, 1);
       }
     } else {
-      // néons fatigués du laboratoire
       const flicker = Math.sin(this.time * 23) > 0.96 ? 0.12 : 0;
       c.fillStyle = `rgba(20,40,80,${0.18 + flicker})`;
       c.fillRect(0, 0, VIEW_W, VIEW_H);

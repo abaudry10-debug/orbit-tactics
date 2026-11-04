@@ -129,9 +129,7 @@ $('pause-quit').addEventListener('click', () => {
 
 // ---------- autres boutons ----------
 $('journal-close').addEventListener('click', () => ui.setJournal(false));
-$('ending-close').addEventListener('click', () => {
-  $('ending').hidden = true;
-});
+$('bag-close').addEventListener('click', () => ui.setBag(false));
 $('dialog').addEventListener('pointerdown', (ev) => {
   ev.preventDefault();
   ui.advanceDialog();
@@ -148,9 +146,8 @@ onPress((b) => {
     if (b === 'menu' || b === 'b') closePause();
     return;
   }
-  const ending = $('ending');
-  if (!ending.hidden) {
-    if (b === 'a' || b === 'b') ending.hidden = true;
+  if (ui.bagOpen()) {
+    if (b === 'bag' || b === 'b' || b === 'menu') ui.setBag(false);
     return;
   }
   if (ui.keypadOpen()) return ui.keypadInput(b);
@@ -164,6 +161,7 @@ onPress((b) => {
   }
   if (b === 'a') game.interact();
   else if (b === 'journal') game.openJournal();
+  else if (b === 'bag') game.openBag();
   else if (b === 'menu') openPause();
 });
 

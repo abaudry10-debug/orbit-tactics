@@ -1,6 +1,7 @@
 // Interface HTML par-dessus le canvas : dialogues, journal, clavier à code, notifications.
 import { sfx } from './audio.js';
-import { CLUES, ITEMS, THREADS } from './story.js';
+import { iconUrl } from './sprites.js';
+import { CLUES, ITEMS, QUESTIONS, THREADS } from './story.js';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -84,16 +85,21 @@ export function toast(text: string) {
 // ---------- journal ----------
 export const journalOpen = () => !$('journal').hidden;
 
-export function renderJournal(clues: Set<string>, items: Set<string>, fresh: Set<string>) {
+export function renderJournal(
+  clues: Set<string>, items: Set<string>, fresh: Set<string>, openQ: Set<string>, solvedQ: Set<string>,
+) {
   const body = $('journal-body');
   body.innerHTML = '';
   const found = CLUES.filter((c) => clues.has(c.id)).length;
+  const pending = QUESTIONS.filter((q) => openQ.has(q.id) && !solvedQ.has(q.id)).length;
   $('journal-progress').textContent =
-    found === 0 ? 'Rien encore. Examine ce qui t’entoure.' : `${found} découverte${found > 1 ? 's' : ''}`;
+    found === 0
+      ? 'Rien encore. Examine ce qui t’entoure.'
+      : `${found} découverte${found > 1 ? 's' : ''}` + (pending ? ` · ${pending} question${pending > 1 ? 's' : ''} en suspens` : '');
 
-  const card = (title: string, text: string, isFresh: boolean) => {
+  const card = (title: string, text: string, cls: string) => {
     const el = document.createElement('div');
-    el.className = 'clue' + (isFresh ? ' fresh' : '');
+    el.className = 'clue ' + cls;
     el.innerHTML = '<strong></strong><p></p>';
     el.querySelector('strong')!.textContent = title;
     el.querySelector('p')!.textContent = text;
@@ -102,27 +108,84 @@ export function renderJournal(clues: Set<string>, items: Set<string>, fresh: Set
 
   for (const th of THREADS) {
     const got = CLUES.filter((c) => c.thread === th.id && clues.has(c.id));
-    if (got.length === 0) continue; // un fil n'apparaît qu'une fois entamé
+    const qs = QUESTIONS.filter((q) => q.thread === th.id && openQ.has(q.id));
+    if (got.length === 0 && qs.length === 0) continue; // un fil n'apparaît qu'une fois entamé
     const section = document.createElement('section');
     section.className = 'thread';
     const h = document.createElement('h3');
     h.innerHTML = `<span class="icon">${th.icon}</span><span></span>`;
     (h.lastElementChild as HTMLElement).textContent = th.title;
     section.appendChild(h);
-    for (const c of got) section.appendChild(card(c.title, c.text, fresh.has(c.id)));
+    for (const q of qs) {
+      const solved = solvedQ.has(q.id);
+      section.appendChild(
+        card(solved ? q.ask : `? ${q.ask}`, solved ? q.answer : 'Pas encore de réponse.', (solved ? 'answer' : 'question') + (fresh.has(q.id) ? ' fresh' : '')),
+      );
+    }
+    for (const c of got) section.appendChild(card(c.title, c.text, fresh.has(c.id) ? 'fresh' : ''));
     body.appendChild(section);
   }
+}
 
-  if (items.size > 0) {
-    const inv = document.createElement('section');
-    inv.className = 'thread';
-    inv.innerHTML = '<h3><span class="icon">✦</span><span>Sac</span></h3>';
-    for (const id of items) {
-      const it = ITEMS[id];
-      if (it) inv.appendChild(card(it.name, it.text, false));
-    }
-    body.appendChild(inv);
+// ---------- sac à dos ----------
+export const bagOpen = () => !$('bag').hidden;
+
+export function setBag(open: boolean) {
+  if (open) sfx.page();
+  $('bag').hidden = !open;
+}
+
+export function renderBag(items: string[], onUse: (id: string) => void, sondeOn: boolean) {
+  const grid = $('bag-grid');
+  const detail = $('bag-detail');
+  grid.innerHTML = '';
+  detail.innerHTML = '';
+  if (items.length === 0) {
+    detail.textContent = 'Ton sac est vide.';
+    return;
   }
+  const select = (id: string, cell: HTMLElement) => {
+    grid.querySelectorAll('.slot').forEach((s) => s.classList.remove('selected'));
+    cell.classList.add('selected');
+    sfx.key();
+    const it = ITEMS[id];
+    detail.innerHTML = '<strong></strong><p></p>';
+    detail.querySelector('strong')!.textContent = it?.name ?? id;
+    detail.querySelector('p')!.textContent = it?.text ?? '';
+    if (it?.usable) {
+      const btn = document.createElement('button');
+      btn.className = 'menu primary';
+      btn.textContent = id === 'sonde' ? (sondeOn ? 'Éteindre' : 'Allumer') : 'Utiliser';
+      btn.addEventListener('click', () => onUse(id));
+      detail.appendChild(btn);
+    }
+  };
+  items.forEach((id, i) => {
+    const cell = document.createElement('button');
+    cell.className = 'slot';
+    const img = document.createElement('img');
+    img.src = iconUrl(id);
+    img.alt = ITEMS[id]?.name ?? id;
+    cell.appendChild(img);
+    cell.addEventListener('click', () => select(id, cell));
+    grid.appendChild(cell);
+    if (i === 0) select(id, cell);
+  });
+}
+
+// ---------- jauge de la Sonde ----------
+const LEVELS = ['Aucune source aux environs', 'Signal faible', 'Signal proche', 'Tout près !'];
+let lastDetector = '';
+export function setDetector(on: boolean, level: number) {
+  const key = on ? String(level) : 'off';
+  if (key === lastDetector) return;
+  lastDetector = key;
+  const el = $('detector');
+  el.hidden = !on;
+  if (!on) return;
+  el.dataset.level = String(level);
+  el.querySelector('.bars')!.innerHTML = [1, 2, 3].map((i) => `<i class="${i <= level ? 'on' : ''}"></i>`).join('');
+  el.querySelector('.label')!.textContent = LEVELS[level];
 }
 
 export function setJournal(open: boolean) {
@@ -143,7 +206,8 @@ function renderKeypad() {
   });
 }
 
-export function openKeypad(cb: (code: string) => void) {
+export function openKeypad(title: string, cb: (code: string) => void) {
+  $('keypad-title').textContent = title;
   digits = [0, 0, 0, 0];
   cursor = 0;
   onCode = cb;
@@ -203,7 +267,7 @@ export function showPlace(name: string) {
 }
 
 // ---------- fenêtres pause / confirmation ----------
-export const overlayOpen = () => !$('pause').hidden || !$('confirm').hidden || !$('ending').hidden;
+export const overlayOpen = () => !$('pause').hidden || !$('confirm').hidden;
 
 export function confirm(question: string, onYes: () => void) {
   $('confirm-text').textContent = question;

@@ -8,16 +8,17 @@ Chaque indice trouvé remplit ton **journal**, jusqu'à comprendre ce qui s'est 
 
 Sur iPhone : ouvre le lien dans Safari, puis **Partager → Sur l'écran d'accueil** pour jouer en plein écran.
 
-## Chapitre 1 — Le Réveil
+## Contenu actuel (étape 1)
 
-- **Laboratoire Lazare** : capsules, terminal, casier (badge pour sortir).
-- **Ruines de Vesper** : panneau, robot de patrouille, carnet, Monument, lac toxique.
-- **Abri Delta** : une porte à code. Le code se déduit des indices trouvés en ville.
-- 10 découvertes réparties en 3 fils : *Qui suis-je ?*, *Que s'est-il passé à Vesper ?*, *L'Abri Delta*.
-- Sauvegarde automatique dans le navigateur.
+- **Cinq lieux** : laboratoire Lazare, ruines de Vesper, quartier des Tilleuls, centre de recherche, centrale solaire Hélios.
+- **Le code de mission** : croiser le journal d'une mère et la plaque des missions pour ouvrir le centre de recherche.
+- **La Sonde Lumen** : une jauge et un bip guident vers une source d'énergie enfouie.
+- **La pelle** : on ne trouve la batterie qu'en creusant au bon endroit, Sonde allumée.
+- **Pixel**, le chien robot : réactivé avec la batterie, il suit le joueur et passe par les conduits.
+- **Sac à dos illustré** et **journal à questions**, qui se résolvent au fil des découvertes.
 
-Commandes : croix pour marcher, **A** pour examiner, **Journal** pour tes découvertes.
-Au clavier : flèches ou ZQSD, Espace pour A, J pour le journal.
+Commandes : croix pour marcher, **A** pour examiner, **Sac** pour tes objets, **Journal** pour tes découvertes.
+Au clavier : flèches ou ZQSD, Espace pour A, I pour le sac, J pour le journal, Échap pour le menu.
 
 ## Technique
 
@@ -28,7 +29,8 @@ TypeScript + Canvas 2D, **aucune dépendance** à l'exécution. Tout le pixel ar
 | `src/sprites.ts` | Pixel art : héros animé (4 directions), tuiles, objets |
 | `src/maps.ts` | Cartes (laboratoire, ville) et objets placés dessus |
 | `src/story.ts` | Histoire : indices du journal, objets, scripts d'interaction, énigme |
-| `src/game.ts` | Déplacements case par case, caméra, interactions, rendu, sauvegarde |
+| `src/game.ts` | Déplacements, caméra, interactions, Pixel, Sonde, fouille, rendu, sauvegarde |
+| `src/audio.ts` | Musique et bruitages synthétisés (Web Audio) |
 | `src/ui.ts` | Dialogues, journal, clavier à code, notifications |
 | `src/input.ts` | Clavier et croix tactile |
 | `tests/` | Vérifie que chaque objet est accessible et chaque indice obtenable |

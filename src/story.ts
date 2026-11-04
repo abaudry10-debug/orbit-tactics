@@ -1,12 +1,14 @@
-// Histoire du chapitre 1 : indices du journal, objets et scripts d'interaction.
+// Histoire — étape 1 : indices du journal, questions, objets et scripts d'interaction.
 // Pour ajouter du contenu : une entrée dans CLUES, puis un script qui appelle api.clue().
 
-export type ThreadId = 'self' | 'city' | 'delta';
+export type ThreadId = 'self' | 'capsules' | 'heat' | 'missions' | 'leads';
 
 export const THREADS: { id: ThreadId; title: string; icon: string }[] = [
   { id: 'self', title: 'Qui suis-je ?', icon: '◉' },
-  { id: 'city', title: 'Que s’est-il passé à Vesper ?', icon: '▲' },
-  { id: 'delta', title: 'L’Abri Delta', icon: '■' },
+  { id: 'capsules', title: 'Les capsules', icon: '▣' },
+  { id: 'heat', title: 'Le ciel brûlant', icon: '☀' },
+  { id: 'missions', title: 'Où sont-ils partis ?', icon: '▲' },
+  { id: 'leads', title: 'Pistes à suivre', icon: '➜' },
 ];
 
 export interface Clue {
@@ -17,54 +19,81 @@ export interface Clue {
 }
 
 export const CLUES: Clue[] = [
+  // Qui suis-je ?
+  { id: 'self1', thread: 'self', title: 'Capsule 07', text: 'Sur ma capsule, une plaque : « SUJET 07 ». Le reste est rayé, comme effacé exprès.' },
+  { id: 'self2', thread: 'self', title: 'Le terminal', text: '« TRANSFERT COLLECTIF : TERMINÉ. 4 211 / 4 212. ANOMALIE : CAPSULE 07. » Transfert de quoi ? Vers où ?' },
+  { id: 'self3', thread: 'self', title: 'Photo d’équipe', text: 'L’équipe du programme Lazare. Au centre, une femme au badge « Dr I. Varn ». Au dos : « Merci à tous les volontaires. »' },
+  // Les capsules
+  { id: 'cap1', thread: 'capsules', title: 'Le registre', text: 'Des centaines de noms, tous barrés d’un trait net. Sauf le dernier : « Sujet 07 ».' },
+  { id: 'cap2', thread: 'capsules', title: 'Capsules givrées', text: 'Les autres capsules sont scellées. Sous le givre, on devine des formes immobiles.' },
+  { id: 'cap3', thread: 'capsules', title: 'Le robot', text: '« … DERNIER APPEL… TOUS LES CITOYENS… AUX CAPSULES… AVANT LA GRANDE CHALEUR… »' },
+  { id: 'cap4', thread: 'capsules', title: 'Une lettre jamais envoyée', text: '« Ils disent que nos corps resteront ici, endormis. Que ce n’est pas grave, puisque nous serons là-bas. Mais là-bas, c’est où ? »' },
+  { id: 'cap5', thread: 'capsules', title: 'La note du Dr Varn', text: '« L’esprit part. Le corps reste dans sa capsule, à l’abri de la chaleur. Il ne se réveillera pas. Il ne devrait pas. » — I. Varn' },
+  // Le ciel brûlant
+  { id: 'heat1', thread: 'heat', title: 'Le thermomètre', text: 'L’aiguille d’un thermomètre public est tordue contre la butée, au-delà du dernier chiffre.' },
+  { id: 'heat2', thread: 'heat', title: 'L’affiche', text: '« Restez à l’ombre après la troisième cloche. » La troisième cloche de quoi ?' },
+  { id: 'heat3', thread: 'heat', title: 'Le potager', text: 'Des plants brûlés, tous du même côté : celui qui fait face au ciel.' },
+  { id: 'heat4', thread: 'heat', title: 'Le bouclier solaire', text: 'Rapport : le bouclier solaire protège 3 % de la surface. L’étendre à toute la planète est impossible. Conclusion : « l’orbite ne se corrigera pas d’elle-même ».' },
+  // Où sont-ils partis ?
+  { id: 'mis1', thread: 'missions', title: 'La plaque des missions', text: '« À ceux qui sont partis chercher un ciel plus doux. » AURORE 2207 · HÉLIADE 0911 · KAIROS 4416 · ONDINE 1530.' },
+  { id: 'mis2', thread: 'missions', title: 'Le journal d’une mère', text: '« Mon Théo a été le tout premier à partir. Sa mission portait le nom de l’aube. Il a envoyé un seul message : là-bas, le ciel est bleu. »' },
+  { id: 'mis3', thread: 'missions', title: 'Vols annulés', text: 'Au-dessus des portes soudées du spatioport : « DÉPARTS — TOUS VOLS ANNULÉS ».' },
+  { id: 'mis4', thread: 'missions', title: 'Un ticket', text: 'Un ticket de navette tamponné « ANNULÉ ». La destination est effacée.' },
+  { id: 'mis5', thread: 'missions', title: 'Capacité des navettes', text: 'Une place pour 400 habitants. 212 ans de voyage. Dans la marge, au crayon : « Il faut trouver autre chose. »' },
+  // Pistes à suivre
+  { id: 'lead1', thread: 'leads', title: 'La vitrine vide', text: '« Sonde Lumen — détecteur de sources d’énergie. » Un mot scotché : « Prêtée au labo 2. Bureau du fond. — M. »' },
+  { id: 'lead2', thread: 'leads', title: 'Le prototype BS-1', text: 'Une batterie solaire expérimentale, perdue pendant l’évacuation de la centrale Hélios. « Sûrement enfouie sous le sable, quelque part près des ruines. »' },
+  { id: 'lead3', thread: 'leads', title: 'Pixel', text: 'Un chien robot éteint. Sur son collier : « PIXEL ». Le petit panneau solaire sur son dos est fendu.' },
+  { id: 'lead4', thread: 'leads', title: 'Le radioamateur', text: '« J’ai oublié mon récepteur dans la rame de la ligne 2. Il doit être aux objets trouvés de la station Marée. »' },
+];
+
+/** Questions du journal : elles s'ouvrent avec un indice et se résolvent plus tard. */
+export interface Question {
+  id: string;
+  thread: ThreadId;
+  ask: string;
+  answer: string;
+  opensWith: string[]; // un de ces indices suffit à poser la question
+  answeredBy: string; // drapeau (ou indice) qui y répond
+}
+
+export const QUESTIONS: Question[] = [
   {
-    id: 'self1', thread: 'self', title: 'Capsule 07',
-    text: 'Sur ma capsule : « SUJET 07 — Programme LAZARE. Réveil prévu : J+30. » Vu la poussière, j’ai dormi bien plus longtemps.',
+    id: 'q-heat', thread: 'heat', opensWith: ['heat1', 'heat2', 'heat3'], answeredBy: 'heat4',
+    ask: 'Pourquoi tout semble-t-il brûlé ?',
+    answer: 'La planète se rapproche de son étoile. Le bouclier solaire ne pouvait protéger qu’une infime partie de la surface.',
   },
   {
-    id: 'self2', thread: 'self', title: 'Le dernier message',
-    text: '« Si personne ne revient, le système réveillera les sujets seul. Pardonnez-nous. » — Dr Ilse Varn.',
+    id: 'q-first', thread: 'missions', opensWith: ['mis1', 'mis2'], answeredBy: 'researchOpen',
+    ask: 'Quelle mission est partie la première ?',
+    answer: 'Aurore, « le nom de l’aube ». Son code, 2207, ouvre le centre de recherche.',
   },
   {
-    id: 'self3', thread: 'self', title: 'Photo d’équipe',
-    text: 'Une équipe en blouse devant le labo. Au dos : « Promo Lazare, 2131 ». Un des visages me ressemble trait pour trait.',
+    id: 'q-depart', thread: 'missions', opensWith: ['mis3', 'mis4'], answeredBy: 'mis5',
+    ask: 'Pourquoi tous les départs ont-ils été annulés ?',
+    answer: 'Les navettes ne pouvaient emmener qu’un habitant sur 400, pour plus de deux siècles de voyage.',
   },
   {
-    id: 'city1', thread: 'city', title: 'Panneau de Vesper',
-    text: '« Bienvenue à Vesper. Sous le Bouclier depuis 2094, le ciel est à nous. »',
+    id: 'q-capsules', thread: 'capsules', opensWith: ['cap1', 'cap2'], answeredBy: 'cap5',
+    ask: 'Que contiennent vraiment les capsules ?',
+    answer: 'Les corps des habitants. Leur esprit est parti ailleurs. Le mien, non.',
   },
   {
-    id: 'city2', thread: 'city', title: 'Robot de patrouille',
-    text: 'Le robot répète en boucle : « BOUCLIER HORS LIGNE. ÉVACUATION VERS L’ABRI DELTA. »',
-  },
-  {
-    id: 'city3', thread: 'city', title: 'Carnet abandonné',
-    text: '« Jour 12 après la Brûlure. Le Bouclier est tombé, le ciel est devenu orange. On part pour l’Abri Delta demain. »',
-  },
-  {
-    id: 'city4', thread: 'city', title: 'Le Monument',
-    text: '« Le Bouclier de Vesper veilla sur nous 47 années, sans faillir, jusqu’au jour de la Brûlure. »',
-  },
-  {
-    id: 'delta1', thread: 'delta', title: 'Une porte scellée',
-    text: 'Un clavier à 4 chiffres. Gravé dessous : « Entrez l’année où le ciel a brûlé. »',
-  },
-  {
-    id: 'delta2', thread: 'delta', title: 'Déduction',
-    text: 'Bouclier allumé en 2094, tombé 47 ans plus tard : la Brûlure a eu lieu en 2141.',
-  },
-  {
-    id: 'delta3', thread: 'delta', title: 'Ceux qui attendent',
-    text: 'Dans l’abri, des centaines de noms gravés au mur. Le dernier, encore frais : « Sujet 07 — nous t’attendrons en haut. »',
+    id: 'q-pixel', thread: 'leads', opensWith: ['lead3'], answeredBy: 'pixelOn',
+    ask: 'Comment réveiller Pixel ?',
+    answer: 'Avec la batterie solaire BS-1 déterrée près de la centrale Hélios.',
   },
 ];
 
-export const ITEMS: Record<string, { name: string; text: string }> = {
+export const ITEMS: Record<string, { name: string; text: string; usable?: boolean }> = {
   badge: { name: 'Badge Lazare', text: 'Badge d’accès du laboratoire. La photo est effacée.' },
-  battery: { name: 'Pile usée', text: 'Une pile encore un peu chargée. Ça pourrait servir.' },
+  sonde: { name: 'Sonde Lumen', text: 'Détecte les sources d’énergie proches. Utilise-la pour l’allumer ou l’éteindre.', usable: true },
+  pelle: { name: 'Pelle', text: 'Une pelle de jardin, solide. Utilise-la pour creuser là où tu te tiens.', usable: true },
+  battery: { name: 'Batterie BS-1', text: 'Prototype de batterie solaire, encore chargée. Il faudrait la brancher sur quelque chose.', usable: true },
+  matrice: { name: 'Matrice neuronale', text: 'Une puce qui luit doucement. Une pièce de transfert ? Le Dr Varn en parlait.' },
 };
 
-export const DELTA_CODE = '2141';
+export const MISSION_CODE = '2207';
 
 export const INTRO = [
   '…',
@@ -72,14 +101,6 @@ export const INTRO = [
   'Constantes vitales : stables. Mémoire : fragmentée.',
   'Durée du sommeil : ERREUR — valeur hors limites.',
   'Bonne chance.',
-];
-
-export const ENDING = [
-  'La porte de l’Abri Delta s’ouvre dans un souffle d’air froid.',
-  'Les lumières s’allument une à une. L’abri est vide.',
-  'Sur le mur, des centaines de noms. Et tout en bas, le mien.',
-  '« Sujet 07 — nous t’attendrons en haut. »',
-  'En haut ? Un escalier s’enfonce… vers le ciel.',
 ];
 
 // ---------- scripts ----------
@@ -91,29 +112,31 @@ export interface Api {
   item(id: string): void;
   hasItem(id: string): boolean;
   say(lines: string[], then?: () => void): void;
-  keypad(onCode: (code: string) => void): void;
-  sfx(name: 'success' | 'wrong' | 'door'): void;
-  finish(): void;
+  keypad(title: string, onCode: (code: string) => void): void;
+  sfx(name: 'success' | 'wrong' | 'door' | 'item'): void;
 }
 
 export const SCRIPTS: Record<string, (api: Api) => void> = {
+  // ----- laboratoire -----
   capsule07: (api) =>
-    api.say(
-      ['Ma capsule. Le verre est encore tiède.', 'Une plaque gravée : « SUJET 07 — Programme LAZARE. Réveil prévu : J+30. »'],
-      () => api.clue('self1'),
+    api.say(['Ma capsule. Le verre est encore tiède.', 'Une plaque : « SUJET 07 ». Le reste est rayé, comme effacé exprès.'], () =>
+      api.clue('self1'),
     ),
 
-  capsuleEmpty: (api) =>
-    api.say(['Une capsule vide. Le verre a été brisé… de l’intérieur.']),
+  capsuleFrost: (api) =>
+    api.say(['Une capsule scellée, couverte de givre.', 'À l’intérieur… une forme immobile. Elle ne respire pas. Ou si lentement…'], () =>
+      api.clue('cap2'),
+    ),
 
   terminal: (api) =>
     api.say(
-      [
-        'Le terminal grésille. Un seul message, daté d’un jour illisible.',
-        '« Si personne ne revient, le système réveillera les sujets seul. »',
-        '« Pardonnez-nous. — Dr Ilse Varn »',
-      ],
+      ['Le terminal grésille.', '« TRANSFERT COLLECTIF : TERMINÉ. »', '« 4 211 / 4 212. ANOMALIE : CAPSULE 07. »', 'Transfert ? De quoi ?'],
       () => api.clue('self2'),
+    ),
+
+  register: (api) =>
+    api.say(['Un registre ouvert sur un pupitre.', 'Des centaines de noms, tous barrés d’un trait net.', 'Sauf le dernier : « Sujet 07 ».'], () =>
+      api.clue('cap1'),
     ),
 
   deadTerminal: (api) => api.say(['Écran éteint. Quelqu’un a arraché les câbles.']),
@@ -122,10 +145,10 @@ export const SCRIPTS: Record<string, (api: Api) => void> = {
     if (api.has('badge')) return api.say(['Le casier est vide maintenant.']);
     api.say(
       [
-        'Un casier entrouvert. Dedans : un badge et une vieille photo.',
-        'Au dos de la photo : « Promo Lazare, 2131 ».',
-        'Un des visages… c’est le mien ?',
-        'Tu obtiens le Badge Lazare.',
+        'Un casier entrouvert. Dedans : un badge et une photo.',
+        'L’équipe du programme Lazare. Au centre, une femme : « Dr I. Varn ».',
+        'Au dos : « Merci à tous les volontaires. »',
+        'Tu prends le Badge Lazare.',
       ],
       () => {
         api.set('badge');
@@ -136,79 +159,216 @@ export const SCRIPTS: Record<string, (api: Api) => void> = {
   },
 
   labDoor: (api) => {
-    if (api.has('badge')) return api.say(['La porte s’est ouverte. Dehors, une lumière orange.']);
+    if (api.has('badge')) return api.say(['La porte est ouverte. Dehors, une lumière orange.']);
     api.say(['La porte est verrouillée.', 'Un lecteur de badge clignote en rouge.']);
   },
 
   labEntrance: (api) => api.say(['L’entrée du laboratoire Lazare.']),
 
-  signVesper: (api) =>
-    api.say(['Un panneau rouillé :', '« Bienvenue à Vesper. Sous le Bouclier depuis 2094, le ciel est à nous. »'], () =>
-      api.clue('city1'),
-    ),
+  // ----- ruines de Vesper -----
+  signVesper: (api) => api.say(['Un panneau rouillé : « Bienvenue à Vesper. Ensemble, plus loin. »']),
 
-  poster: (api) =>
-    api.say(['Une affiche déchirée : « RESTEZ SOUS LE BOUCLIER ».', 'Le reste est illisible.']),
+  thermometer: (api) =>
+    api.say(['Un thermomètre public.', 'L’aiguille est tordue contre la butée, au-delà du dernier chiffre.'], () => api.clue('heat1')),
 
-  diary: (api) =>
-    api.say(
-      [
-        'Un carnet abandonné, les pages gondolées.',
-        '« Jour 12 après la Brûlure. Le Bouclier est tombé. Le ciel est devenu orange. »',
-        '« On part pour l’Abri Delta demain. »',
-      ],
-      () => api.clue('city3'),
+  posterShade: (api) =>
+    api.say(['Une affiche délavée : « Restez à l’ombre après la troisième cloche. »', 'La troisième cloche de quoi ?'], () =>
+      api.clue('heat2'),
     ),
 
   robot: (api) =>
     api.say(
-      ['Un robot de patrouille, renversé. Son œil rouge s’allume.', '« BOUCLIER… HORS LIGNE. ÉVACUATION… VERS L’ABRI DELTA. »', 'Puis plus rien.'],
-      () => api.clue('city2'),
+      ['Un robot de patrouille, renversé. Son œil rouge s’allume.', '« … DERNIER APPEL… TOUS LES CITOYENS… AUX CAPSULES… AVANT LA GRANDE CHALEUR… »', 'Puis plus rien.'],
+      () => api.clue('cap3'),
     ),
 
-  monument: (api) =>
+  missionPlaque: (api) =>
     api.say(
-      ['Le Monument du Bouclier. Une plaque, à moitié fondue :', '« Le Bouclier de Vesper veilla sur nous 47 années, sans faillir, jusqu’au jour de la Brûlure. »'],
-      () => api.clue('city4'),
+      [
+        'Une plaque de bronze sur la place.',
+        '« À ceux qui sont partis chercher un ciel plus doux. »',
+        'AURORE — 2207. HÉLIADE — 0911. KAIROS — 4416. ONDINE — 1530.',
+      ],
+      () => api.clue('mis1'),
     ),
 
-  crate: (api) => {
-    if (api.hasItem('battery') || api.has('crateSearched')) return api.say(['Une caisse vide.']);
-    api.say(['Tu fouilles une caisse…', 'Tu trouves une Pile usée.'], () => {
-      api.set('crateSearched');
-      api.item('battery');
-    });
+  pixelOff: (api) => {
+    if (api.hasItem('battery'))
+      return api.say(['Pixel attend, immobile.', 'La batterie BS-1 aurait la bonne prise. Utilise-la depuis ton sac, tout près de lui.']);
+    api.say(
+      ['Un chien robot, couché dans la poussière. Éteint.', 'Sur son collier : « PIXEL ».', 'Le petit panneau solaire sur son dos est fendu. Plus aucune énergie.'],
+      () => api.clue('lead3'),
+    );
   },
 
-  noteDog: (api) =>
-    api.say(['Un mot coincé sous une pierre :', '« Si quelqu’un trouve Pixel, mon chien robot : il adore les piles. — Léa »']),
+  noteLea: (api) =>
+    api.say(['Un mot coincé sous une pierre :', '« Si quelqu’un trouve Pixel, prenez soin de lui. Il a juste besoin de soleil. — Léa »']),
 
-  bunkerDoor: (api) => {
-    if (api.has('deltaOpen')) return api.finish();
-    api.say(['Une porte blindée : ABRI DELTA.', 'Un clavier à 4 chiffres. Gravé dessous : « Entrez l’année où le ciel a brûlé. »'], () => {
-      api.clue('delta1');
-      api.keypad((code) => {
-        if (code === DELTA_CODE) {
+  crate: (api) => api.say(['Une caisse vide. Quelqu’un est passé avant moi.']),
+
+  metro: (api) =>
+    api.say(['Un escalier descend vers le métro.', 'En bas, le noir complet. Impossible d’y voir quoi que ce soit.']),
+
+  spatioport: (api) =>
+    api.say(['Les portes du spatioport sont soudées.', 'Au-dessus, un panneau : « DÉPARTS — TOUS VOLS ANNULÉS ».'], () => api.clue('mis3')),
+
+  researchDoor: (api) => {
+    if (api.has('researchOpen')) return api.say(['La porte du centre de recherche est ouverte.']);
+    api.say(['CENTRE DE RECHERCHE DE VESPER.', 'Un clavier : « Accès réservé. Saisir un code de mission. »'], () =>
+      api.keypad('CENTRE DE RECHERCHE', (code) => {
+        if (code === MISSION_CODE) {
           api.sfx('success');
-          api.say(['Bip. Le voyant passe au vert.', 'La porte se déverrouille dans un grondement.'], () => {
-            api.set('deltaOpen');
-            api.clue('delta3');
-            api.finish();
-          });
+          api.say(['Bip. « Mission Aurore reconnue. Bienvenue. »', 'La porte coulisse.'], () => api.set('researchOpen'));
         } else {
           api.sfx('wrong');
-          api.say(['Bzzt. Code refusé.', 'L’année où le ciel a brûlé… Il me manque des informations.']);
+          api.say(['Bzzt. « Code de mission inconnu. »']);
         }
-      });
+      }),
+    );
+  },
+
+  // ----- quartier des Tilleuls -----
+  leaHouse: (api) => api.say(['Maison Moreau. La porte est coincée, comme gonflée par la chaleur.']),
+
+  leaMailbox: (api) => api.say(['Une boîte aux lettres : « Famille Moreau — Léa, Sam et Pixel ». Pixel a son nom sur la boîte.']),
+
+  motherJournal: (api) =>
+    api.say(
+      [
+        'Un carnet posé sur un banc, devant une maison.',
+        '« Mon Théo a été le tout premier à partir. »',
+        '« Sa mission portait le nom de l’aube. »',
+        '« Il a envoyé un seul message : là-bas, le ciel est bleu. »',
+      ],
+      () => api.clue('mis2'),
+    ),
+
+  pilotHouse: (api) => api.say(['Sur la porte, une étoile peinte à la main et un prénom : « Théo ».']),
+
+  radioNotes: (api) =>
+    api.say(
+      ['Des notes griffonnées, sous une antenne tordue :', '« J’ai oublié mon récepteur dans la rame de la ligne 2. Il doit être aux objets trouvés de la station Marée. »'],
+      () => api.clue('lead4'),
+    ),
+
+  radioHouse: (api) => api.say(['Une maison hérissée d’antennes. Fermée à double tour.']),
+
+  ticket: (api) =>
+    api.say(['Un ticket de navette, abandonné à l’arrêt.', 'Tamponné « ANNULÉ ». La destination est effacée.'], () => api.clue('mis4')),
+
+  letter: (api) =>
+    api.say(
+      [
+        'Une lettre glissée sous une porte, jamais envoyée.',
+        '« Ils disent que nos corps resteront ici, endormis. »',
+        '« Que ce n’est pas grave, puisque nous serons là-bas. Mais là-bas, c’est où ? »',
+      ],
+      () => api.clue('cap4'),
+    ),
+
+  garden: (api) =>
+    api.say(['Un potager clôturé. Les plants sont brûlés, tous du même côté.', 'Celui qui fait face au ciel.'], () => api.clue('heat3')),
+
+  shed: (api) => {
+    if (api.hasItem('pelle')) return api.say(['L’abri de jardin. Il ne reste que des pots fendus.']);
+    api.say(['L’abri de jardin. La porte ne tient plus que par une charnière.', 'Tu trouves une pelle, encore solide.'], () =>
+      api.item('pelle'),
+    );
+  },
+
+  thermometer2: (api) => api.say(['Encore un thermomètre bloqué au maximum. Tous les thermomètres de la ville le sont.']),
+
+  tank: (api) =>
+    api.say(['Les débris du château d’eau effondré.', 'Entre deux plaques de tôle, un passage étroit. Quelqu’un a dessiné une étoile à la craie.']),
+
+  // ----- centre de recherche -----
+  vitrine: (api) =>
+    api.say(
+      ['Une vitrine vide. L’étiquette : « Sonde Lumen — détecteur de sources d’énergie. »', 'Un mot scotché : « Prêtée au labo 2. Bureau du fond. — M. »'],
+      () => {
+        api.set('sondeHint');
+        api.clue('lead1');
+      },
+    ),
+
+  hallTerminal: (api) =>
+    api.say(['« Programme LAZARE — rappel : tous les volontaires doivent rejoindre leur capsule avant la troisième cloche. »']),
+
+  lab2Desk: (api) => {
+    if (api.hasItem('sonde')) return api.say(['Un bureau encombré de câbles.']);
+    if (!api.has('sondeHint')) return api.say(['Un bureau encombré de câbles et de papiers. Rien d’utile à première vue.']);
+    api.say(['« Bureau du fond »… Tu fouilles sous les câbles.', 'Un boîtier avec une petite antenne : la Sonde Lumen !'], () => api.item('sonde'));
+  },
+
+  lab2Terminal: (api) =>
+    api.say(
+      [
+        'Journal du labo 2 :',
+        '« Le prototype de batterie solaire BS-1 a été perdu pendant l’évacuation de la centrale Hélios. »',
+        '« Sûrement enfoui sous le sable, quelque part près des ruines. Sans détecteur, inutile de chercher. »',
+      ],
+      () => {
+        api.set('knowsBattery');
+        api.clue('lead2');
+      },
+    ),
+
+  archiveShelf: (api) =>
+    api.say(['Un classeur d’inventaire, ouvert :', '« Sonde Lumen (1 exemplaire) — exposée dans la vitrine du hall. »'], () =>
+      api.set('sondeHint'),
+    ),
+
+  archiveTerminal: (api) =>
+    api.say(
+      [
+        'Rapport : projet de bouclier solaire.',
+        '« Surface protégée : 3 %. Étendre le bouclier à toute la planète est impossible. »',
+        '« Conclusion : l’orbite ne se corrigera pas d’elle-même. »',
+      ],
+      () => api.clue('heat4'),
+    ),
+
+  archiveBook: (api) =>
+    api.say(
+      ['Un rapport relié : « Capacité des navettes ».', '« Une place pour 400 habitants. Durée du voyage : 212 ans. »', 'Dans la marge, au crayon : « Il faut trouver autre chose. »'],
+      () => api.clue('mis5'),
+    ),
+
+  vent: (api) => {
+    if (api.has('sealedOpen')) return api.say(['Le conduit d’aération, grand ouvert.']);
+    if (!api.has('pixelOn')) return api.say(['Un conduit d’aération. Beaucoup trop étroit pour moi.', 'De l’autre côté, une pièce scellée.']);
+    api.say(['Tu montres le conduit à Pixel. Il s’y faufile sans hésiter.', 'Des bruits métalliques… un déclic.', 'La porte de la salle scellée s’ouvre !'], () => {
+      api.sfx('door');
+      api.set('sealedOpen');
     });
   },
-};
 
-/** Déductions automatiques : quand on a réuni certains indices, le personnage comprend quelque chose. */
-export const DEDUCTIONS: { needs: string[]; clue: string; line: string }[] = [
-  {
-    needs: ['city1', 'city4'],
-    clue: 'delta2',
-    line: 'Attends… Bouclier allumé en 2094, tombé 47 ans plus tard. La Brûlure, c’était en 2141.',
+  sealedDoor: (api) => {
+    if (api.has('sealedOpen')) return;
+    api.say(['« SALLE DE TRANSFERT B — ACCÈS SCELLÉ. »', 'Aucun clavier, aucune poignée. Elle s’ouvre forcément de l’intérieur.']);
   },
-];
+
+  pedestal: (api) => {
+    if (api.hasItem('matrice')) return api.say(['Le socle est vide.']);
+    api.say(
+      [
+        'Sur un socle, une puce qui luit doucement : « Matrice neuronale ».',
+        'Tu la prends. Elle est tiède, presque vivante.',
+        '(Fin du contenu actuel. Le métro, la tour radio et le transporteur arrivent dans la prochaine mise à jour.)',
+      ],
+      () => api.item('matrice'),
+    );
+  },
+
+  varnNote: (api) =>
+    api.say(
+      ['Une note manuscrite, signée I. Varn :', '« L’esprit part. Le corps reste dans sa capsule, à l’abri de la chaleur. »', '« Il ne se réveillera pas. Il ne devrait pas. »'],
+      () => api.clue('cap5'),
+    ),
+
+  // ----- centrale Hélios -----
+  heliosSign: (api) =>
+    api.say(['« CENTRALE SOLAIRE HÉLIOS — Zone évacuée. »', 'Les dunes ont recouvert la moitié des panneaux.']),
+
+  controlPanel: (api) => api.say(['Un pupitre de commande fondu par la chaleur. Les boutons ont coulé comme de la cire.']),
+};

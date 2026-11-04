@@ -26,6 +26,7 @@
         <canvas id="game"></canvas>
         <div id="place"></div>
         <div id="toast"></div>
+        <div id="detector" hidden><span class="name">SONDE</span><span class="bars"></span><span class="label"></span></div>
         <div id="dialog" hidden>
           <p id="dialog-text"></p>
           <span id="dialog-more" hidden>▼</span>
@@ -34,17 +35,18 @@
       </div>
 
       <div id="controls">
-        <div class="dpad">
-          <button data-btn="up" class="d up" aria-label="Haut"></button>
-          <button data-btn="left" class="d left" aria-label="Gauche"></button>
-          <span class="d center"></span>
-          <button data-btn="right" class="d right" aria-label="Droite"></button>
-          <button data-btn="down" class="d down" aria-label="Bas"></button>
+        <div class="pills">
+          <button data-btn="menu" id="btn-menu" class="pill small" aria-label="Menu">☰</button>
+          <button data-btn="bag" id="btn-bag" class="pill" aria-label="Sac">Sac</button>
+          <button data-btn="journal" id="btn-journal" class="pill" aria-label="Journal">Journal</button>
         </div>
-        <div class="buttons">
-          <div class="pills">
-            <button data-btn="menu" id="btn-menu" class="pill small" aria-label="Menu">☰</button>
-            <button data-btn="journal" id="btn-journal" class="pill" aria-label="Journal">Journal</button>
+        <div class="pad-row">
+          <div class="dpad">
+            <button data-btn="up" class="d up" aria-label="Haut"></button>
+            <button data-btn="left" class="d left" aria-label="Gauche"></button>
+            <span class="d center"></span>
+            <button data-btn="right" class="d right" aria-label="Droite"></button>
+            <button data-btn="down" class="d down" aria-label="Bas"></button>
           </div>
           <button data-btn="a" class="round a" aria-label="Examiner">A</button>
         </div>
@@ -59,7 +61,7 @@
           <button id="btn-continue" class="menu">Continuer</button>
           <button id="btn-new" class="menu primary">Nouvelle partie</button>
           <button id="btn-sound" class="menu small">Son : activé</button>
-          <p class="hint">Croix pour marcher · A pour examiner · Journal pour tes découvertes</p>
+          <p class="hint">Croix pour marcher · A pour examiner · Sac pour tes objets · Journal pour tes découvertes</p>
         </div>
       </section>
 
@@ -75,11 +77,23 @@
         </div>
       </section>
 
+      <!-- sac à dos -->
+      <section id="bag" class="overlay" hidden>
+        <div class="journal-box bag-box">
+          <header>
+            <h2>Sac à dos</h2>
+            <button id="bag-close" class="close" aria-label="Fermer">✕</button>
+          </header>
+          <div id="bag-grid"></div>
+          <div id="bag-detail"></div>
+        </div>
+      </section>
+
       <!-- clavier à code -->
       <section id="keypad" class="overlay" hidden>
         <div class="keypad-box">
-          <h2>ABRI DELTA</h2>
-          <p>Code d’accès</p>
+          <h2 id="keypad-title">ACCÈS</h2>
+          <p>Code de mission</p>
           <div id="keypad-digits">
             <div class="digit"><button class="up">▲</button><span>0</span><button class="down">▼</button></div>
             <div class="digit"><button class="up">▲</button><span>0</span><button class="down">▼</button></div>
@@ -113,15 +127,6 @@
         </div>
       </section>
 
-      <!-- fin du chapitre -->
-      <section id="ending" class="overlay" hidden>
-        <div class="title-box">
-          <p class="kicker">Fin du chapitre 1</p>
-          <h1>À suivre…</h1>
-          <p id="ending-stats" class="tagline"></p>
-          <button id="ending-close" class="menu primary">Continuer à explorer</button>
-        </div>
-      </section>
     </main>
     <script type="module" src="js/main.js"></script>
   </body>

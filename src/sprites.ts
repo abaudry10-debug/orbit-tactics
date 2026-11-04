@@ -280,9 +280,202 @@ const crate: Painter = (c, v) => {
   r(c, 2, 4, 12, 11, P.woodDark); r(c, 3, 5, 10, 9, P.wood); r(c, 3, 9, 10, 1, P.woodDark); r(c, 2, 4, 12, 1, '#7a604a');
 };
 
+// ---------- étape 1 : dunes, quartier, centre de recherche ----------
+const sand: Painter = (c, v) => {
+  speckle(c, 71 + v * 9, '#c9945a', [['#b07c48', 9], ['#e0b27a', 8]]);
+  if (v === 0) { r(c, 2, 5, 5, 1, '#b07c48'); r(c, 6, 4, 3, 1, '#e0b27a'); } // ride de vent
+  if (v === 2) { r(c, 8, 11, 6, 1, '#b07c48'); r(c, 9, 10, 3, 1, '#e0b27a'); }
+};
+
+const hole: Painter = (c, v) => {
+  sand(c, v);
+  r(c, 3, 5, 10, 7, '#8a5f36'); r(c, 4, 6, 8, 5, '#5e3e22'); r(c, 5, 7, 6, 3, '#3e2814');
+  r(c, 2, 11, 3, 2, '#e0b27a'); r(c, 11, 4, 3, 2, '#e0b27a'); // sable rejeté
+};
+
+const panel: Painter = (c, v) => {
+  sand(c, v);
+  r(c, 1, 12, 14, 2, 'rgba(0,0,0,0.25)');
+  r(c, 7, 10, 2, 4, P.metalDark);
+  r(c, 1, 3, 14, 8, P.ink); r(c, 2, 4, 12, 6, '#24406a');
+  r(c, 2, 6, 12, 1, '#335a8c'); r(c, 7, 4, 1, 6, '#335a8c');
+  if (v !== 1) { r(c, 9, 5, 4, 1, P.glass); r(c, 4, 8, 2, 1, '#9ad8ff'); } // reflets
+  else { r(c, 4, 5, 6, 1, P.ink); r(c, 6, 6, 1, 3, P.ink); } // fêlure
+};
+
+const deadPlants: Painter = (c, v) => {
+  speckle(c, 23 + v * 3, '#6e4a30', [['#5a3a24', 12], ['#82583a', 6]]);
+  for (const x of [2, 7, 12]) {
+    r(c, x, 6, 1, 7, '#3e2a1c'); r(c, x + 1, 5, 2, 1, '#2a1c12'); r(c, x - 1, 8, 1, 1, '#4a3626');
+    r(c, x + 1, 9, 1, 1, '#7a5a2a');
+  }
+};
+
+const shed: Painter = (c, v) => {
+  dust(c, v);
+  r(c, 1, 13, 14, 2, 'rgba(0,0,0,0.3)');
+  r(c, 2, 5, 12, 9, P.wood); r(c, 2, 5, 12, 1, '#7a604a');
+  r(c, 1, 3, 14, 3, P.rust); r(c, 1, 3, 14, 1, P.rustLight);
+  r(c, 6, 8, 4, 6, P.woodDark); r(c, 9, 10, 1, 1, P.hazard);
+  for (const x of [3, 5, 11, 13]) r(c, x, 6, 1, 7, P.woodDark);
+};
+
+const thermometer: Painter = (c, v) => {
+  dust(c, v);
+  r(c, 7, 9, 2, 6, P.metalDark);
+  r(c, 4, 1, 8, 9, P.ink); r(c, 5, 2, 6, 7, P.paper);
+  r(c, 7, 3, 2, 4, '#e8e0d0'); r(c, 7, 3, 2, 4, P.red); r(c, 7, 7, 2, 1, P.red);
+  r(c, 6, 2, 4, 1, P.red); // aiguille collée en haut
+};
+
+const stairs: Painter = (c) => {
+  r(c, 0, 0, T, T, P.wallFront);
+  for (let i = 0; i < 5; i++) { r(c, 1 + i, 3 + i * 2, 14 - i * 2, 2, i % 2 ? '#2c2832' : '#3a3540'); }
+  r(c, 0, 0, T, 2, P.hazard); r(c, 0, 0, 2, 2, P.ink); r(c, 4, 0, 2, 2, P.ink); r(c, 8, 0, 2, 2, P.ink); r(c, 12, 0, 2, 2, P.ink);
+  r(c, 5, 12, 6, 4, P.ink);
+};
+
+const vitrine: Painter = (c) => {
+  labFloor(c, 0);
+  r(c, 2, 8, 12, 7, P.metalDark); r(c, 2, 8, 12, 1, P.metalLight);
+  r(c, 3, 2, 10, 7, 'rgba(160,240,255,0.18)'); r(c, 3, 2, 10, 1, P.metalLight); r(c, 3, 2, 1, 7, P.metalLight); r(c, 12, 2, 1, 7, P.metalLight);
+  r(c, 5, 6, 6, 2, P.ink); r(c, 6, 11, 4, 2, P.paper); // socle vide + étiquette
+  r(c, 4, 3, 1, 3, 'rgba(255,255,255,0.5)');
+};
+
+const desk: Painter = (c) => {
+  labFloor(c, 0);
+  r(c, 1, 6, 14, 8, P.woodDark); r(c, 1, 6, 14, 2, P.wood);
+  r(c, 3, 3, 5, 4, P.ink); r(c, 4, 4, 3, 2, '#1d3a2a'); // vieux moniteur
+  r(c, 9, 4, 4, 2, P.paper); r(c, 10, 5, 4, 2, '#d8ccb0'); // papiers
+  r(c, 2, 9, 6, 1, '#3a2a1e'); r(c, 9, 10, 4, 3, '#2a1f17');
+  r(c, 5, 7, 7, 1, '#1a1a1a'); r(c, 11, 7, 3, 1, '#c04a2a'); // câbles
+};
+
+const shelf: Painter = (c) => {
+  labFloor(c, 0);
+  r(c, 1, 1, 14, 14, P.woodDark);
+  for (const y of [4, 9]) r(c, 1, y, 14, 1, P.wood);
+  const books = ['#8a3a3a', '#3a5a8a', '#6a7a3a', '#a08a4a', '#5a3a6a'];
+  for (let i = 0; i < 6; i++) { r(c, 2 + i * 2, 1, 2, 3, books[i % 5]); r(c, 2 + i * 2, 5 + (i % 2), 2, 4 - (i % 2), books[(i + 2) % 5]); }
+  r(c, 3, 10, 9, 4, P.paper); r(c, 4, 11, 7, 1, '#9a8c70'); // classeur ouvert
+};
+
+const vent = (open: boolean): Painter => (c) => {
+  labWallFront(c, 0);
+  r(c, 4, 4, 8, 6, P.ink);
+  if (open) { r(c, 5, 5, 6, 4, '#050508'); r(c, 3, 9, 3, 2, P.metal); }
+  else for (const y of [5, 7]) r(c, 5, y, 6, 1, P.metal);
+};
+
+const pedestal = (full: boolean): Painter => (c) => {
+  labFloor(c, 0);
+  r(c, 4, 9, 8, 6, P.metalDark); r(c, 4, 9, 8, 1, P.metalLight); r(c, 3, 14, 10, 1, P.ink);
+  if (full) {
+    r(c, 5, 3, 6, 5, P.ink); r(c, 6, 4, 4, 3, '#b48cff'); r(c, 7, 5, 2, 1, '#f0e0ff');
+    r(c, 4, 2, 1, 1, '#b48cff'); r(c, 11, 2, 1, 1, '#b48cff'); r(c, 7, 1, 1, 1, '#b48cff');
+  } else r(c, 6, 8, 4, 1, P.neon);
+};
+
+const capsuleFrost: Painter = (c) => {
+  labFloor(c, 0);
+  r(c, 2, 1, 12, 15, P.metalDark); r(c, 3, 1, 10, 1, P.metalLight);
+  r(c, 4, 3, 8, 9, '#b9d4e4'); r(c, 5, 4, 6, 7, '#d8ecf6');
+  r(c, 6, 5, 4, 5, '#9ab4c6'); // silhouette sous le givre
+  r(c, 5, 4, 1, 1, '#ffffff'); r(c, 10, 9, 1, 1, '#ffffff');
+  r(c, 4, 13, 8, 2, P.metal); r(c, 6, 13, 1, 1, P.neon); r(c, 9, 13, 1, 1, P.neon);
+};
+
+const book: Painter = (c) => {
+  labFloor(c, 0);
+  r(c, 2, 5, 12, 9, P.metalDark); r(c, 2, 5, 12, 1, P.metalLight);
+  r(c, 3, 3, 10, 7, P.ink); r(c, 4, 3, 4, 6, P.paper); r(c, 8, 3, 4, 6, '#e0d4b8');
+  for (const y of [4, 6, 8]) { r(c, 5, y, 3, 1, '#7a6c56'); r(c, 9, y, 3, 1, '#7a6c56'); }
+};
+
+const plantsSign: Painter = (c, v) => sign(c, v);
+
+const dogOff: Painter = (c, v) => {
+  dust(c, v);
+  drawDog(c, 0, true);
+};
+
+// ---------- Pixel, le chien robot ----------
+function drawDog(c: Ctx, frame: number, off: boolean) {
+  const body = off ? '#6a6f7a' : '#a9b3c4';
+  const light = off ? '#80868f' : '#d3dbe8';
+  const eye = off ? '#2a2d33' : '#5ef0ff';
+  c.fillStyle = 'rgba(0,0,0,0.28)'; c.fillRect(3, 14, 11, 2);
+  const leg = frame === 1 ? 1 : 0;
+  r(c, 4, 12 - leg, 2, 3, P.ink); r(c, 11, 12 - (1 - leg), 2, 3, P.ink); // pattes
+  r(c, 3, 7, 10, 6, P.ink); r(c, 4, 8, 8, 4, body); r(c, 4, 8, 8, 1, light); // corps
+  r(c, 9, 3, 6, 6, P.ink); r(c, 10, 4, 4, 4, body); r(c, 10, 4, 4, 1, light); // tête
+  r(c, 9, 1, 2, 3, P.ink); r(c, 13, 1, 2, 3, P.ink); // oreilles
+  r(c, 12, 5, 1, 1, eye); r(c, 14, 6, 1, 1, P.ink); // œil, museau
+  r(c, 1, 6, 3, 1, P.ink); r(c, 2, 5, 1, 1, P.ink); // queue
+  r(c, 6, 9, 3, 2, off ? '#4a4d55' : '#ffcf4a'); // panneau solaire sur le dos
+  if (off) r(c, 7, 9, 1, 2, P.ink); // fendu
+}
+
+const dogCache = new Map<string, HTMLCanvasElement>();
+export function dog(dir: Dir, frame: number): HTMLCanvasElement {
+  const id = `${dir}:${frame}`;
+  let cv = dogCache.get(id);
+  if (cv) return cv;
+  const [c, ctx] = canvas();
+  if (dir === 'left') { ctx.translate(T, 0); ctx.scale(-1, 1); }
+  drawDog(ctx, frame, false);
+  dogCache.set(id, c);
+  cv = c;
+  return cv;
+}
+
+// ---------- icônes du sac à dos (16 × 16) ----------
+const ICONS: Record<string, Painter> = {
+  badge: (c) => {
+    r(c, 3, 2, 10, 13, P.ink); r(c, 4, 3, 8, 11, '#e8ecf2'); r(c, 4, 3, 8, 3, P.neon);
+    r(c, 6, 7, 4, 4, '#9aa3b3'); r(c, 5, 12, 6, 1, '#6c7889'); r(c, 7, 0, 2, 3, P.metalDark);
+  },
+  sonde: (c) => {
+    r(c, 3, 4, 10, 11, P.ink); r(c, 4, 5, 8, 9, '#3c4454'); r(c, 5, 6, 6, 4, '#0d1210');
+    r(c, 6, 8, 1, 1, P.screen); r(c, 7, 7, 1, 2, P.screen); r(c, 8, 6, 1, 3, P.screen);
+    r(c, 5, 11, 2, 2, P.red); r(c, 9, 11, 2, 2, P.hazard);
+    r(c, 11, 0, 1, 5, P.metalLight); r(c, 10, 0, 3, 1, P.neon);
+  },
+  pelle: (c) => {
+    r(c, 7, 1, 3, 2, P.woodDark); r(c, 8, 3, 1, 7, P.wood); r(c, 7, 3, 1, 7, P.woodDark);
+    r(c, 5, 10, 6, 1, P.metalDark); r(c, 5, 11, 6, 3, P.metal); r(c, 6, 14, 4, 1, P.metal); r(c, 7, 15, 2, 1, P.metal);
+    r(c, 5, 11, 1, 3, P.metalLight);
+  },
+  battery: (c) => {
+    r(c, 2, 4, 12, 9, P.ink); r(c, 3, 5, 10, 7, '#24406a'); r(c, 3, 8, 10, 1, '#335a8c'); r(c, 8, 5, 1, 7, '#335a8c');
+    r(c, 6, 13, 4, 2, P.metalDark); r(c, 7, 2, 2, 2, P.hazard); r(c, 4, 6, 2, 1, P.glass);
+  },
+  matrice: (c) => {
+    r(c, 3, 3, 10, 10, P.ink); r(c, 4, 4, 8, 8, '#4a2a7a'); r(c, 5, 5, 6, 6, '#b48cff'); r(c, 7, 7, 2, 2, '#f0e0ff');
+    for (const i of [4, 7, 10]) { r(c, i, 1, 1, 2, P.metalLight); r(c, i, 13, 1, 2, P.metalLight); r(c, 1, i, 2, 1, P.metalLight); r(c, 13, i, 2, 1, P.metalLight); }
+  },
+};
+
+const iconCache = new Map<string, string>();
+/** Icône d'objet en image (data URL), affichée en grand avec des pixels nets. */
+export function iconUrl(id: string): string {
+  let url = iconCache.get(id);
+  if (url) return url;
+  const [c, ctx] = canvas();
+  (ICONS[id] ?? ICONS.badge)(ctx, 0);
+  url = c.toDataURL('image/png');
+  iconCache.set(id, url);
+  return url;
+}
+
 // ---------- registre des tuiles ----------
 // Chaque nom donne des variantes (index v) ; l'eau a 2 images d'animation.
 const REGISTRY: Record<string, Painter[]> = {
+  sand: [sand], hole: [hole], panel: [panel], deadPlants: [deadPlants], shed: [shed], thermometer: [thermometer],
+  stairs: [stairs], vitrine: [vitrine], desk: [desk], shelf: [shelf], vent: [vent(false)], ventOpen: [vent(true)],
+  pedestal: [pedestal(true)], pedestalEmpty: [pedestal(false)], capsuleFrost: [capsuleFrost], book: [book],
+  plantsSign: [plantsSign], dogOff: [dogOff],
   dust: [dust], grass: [grass], asphalt: [asphalt], road: [road], labFloor: [labFloor],
   toxic0: [toxicFrame(0)], toxic1: [toxicFrame(1)], rubble: [rubble], fence: [fence],
   wallTop: [wallTop], wallFront: [wallFront], labWallTop: [labWallTop], labWallFront: [labWallFront],
