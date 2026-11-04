@@ -388,7 +388,11 @@ const styles = StyleSheet.create({
   btnText: { color: colors.text, fontWeight: '800', fontSize: 13 },
   handWrap: { paddingTop: 6, paddingBottom: 8, marginHorizontal: -12 },
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: 'rgba(3,6,16,0.82)',
     alignItems: 'center',
     justifyContent: 'center',
