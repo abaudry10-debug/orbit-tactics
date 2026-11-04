@@ -13,6 +13,16 @@
 * {
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
+  /* pas de sélection de texte, de loupe ni de menu « copier » sur appui long (iOS) */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+#controls,
+#controls *,
+#screen {
+  touch-action: none;
 }
 
 html {

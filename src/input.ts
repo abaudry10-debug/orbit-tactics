@@ -59,6 +59,19 @@ export function setupInput() {
   });
   window.addEventListener('blur', releaseAll);
 
+  // iOS : un appui long déclenche la sélection de texte et sa loupe. On l'empêche
+  // sur la manette et l'écran de jeu (le journal et le sac gardent leur défilement).
+  const noSelect = (ev: Event) => ev.preventDefault();
+  document.addEventListener('selectstart', noSelect);
+  document.addEventListener('contextmenu', noSelect);
+  for (const id of ['controls', 'screen']) {
+    const zone = document.getElementById(id);
+    if (!zone) continue;
+    zone.addEventListener('touchstart', noSelect, { passive: false });
+    zone.addEventListener('touchmove', noSelect, { passive: false });
+    zone.addEventListener('touchend', noSelect, { passive: false });
+  }
+
   // Boutons tactiles : data-btn="up|down|left|right|a|journal|menu|b"
   document.querySelectorAll<HTMLElement>('[data-btn]').forEach((el) => {
     const b = el.dataset.btn as Button;
