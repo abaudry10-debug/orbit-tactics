@@ -10,21 +10,20 @@ const canvas = $('game') as HTMLCanvasElement;
 const ctx = canvas.getContext('2d')!;
 let game = new Game(ctx);
 
-// Plein écran : la vue s'adapte à l'écran, avec des pixels nets (échelle entière).
-// On garde environ 12 cases sur le petit côté, quelle que soit l'orientation.
+// La vue remplit la zone de jeu (tout l'écran à l'horizontale, le haut de l'écran
+// à la verticale), avec des pixels nets : environ 12 cases sur le petit côté.
 function resize() {
-  const w = window.innerWidth;
-  const h = window.innerHeight;
+  const screen = $('screen');
+  const w = screen.clientWidth || window.innerWidth;
+  const h = screen.clientHeight || window.innerHeight;
   const scale = Math.max(1, Math.floor(Math.min(w, h) / (11.5 * 16)));
   view.w = Math.ceil(w / scale);
   view.h = Math.ceil(h / scale);
+  view.padBottom = 0;
   canvas.width = view.w;
   canvas.height = view.h;
   canvas.style.width = `${view.w * scale}px`;
   canvas.style.height = `${view.h * scale}px`;
-  // en vertical, les commandes occupent le bas de l'écran : la caméra en tient compte
-  const controls = document.getElementById('controls')!;
-  view.padBottom = h > w ? Math.ceil((controls.offsetHeight + 16) / scale) : 0;
 }
 window.addEventListener('resize', resize);
 window.visualViewport?.addEventListener('resize', resize);
