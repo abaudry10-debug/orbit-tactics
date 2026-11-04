@@ -1,9 +1,16 @@
 import { StatusBar } from 'expo-status-bar';
 import React, { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { GameScreen } from './src/ui/GameScreen';
 import { colors } from './src/ui/theme';
+
+// Version web : fond sombre jusque sous la barre d'état du téléphone.
+const webDocument = Platform.OS === 'web' ? (globalThis as any).document : undefined;
+if (webDocument) {
+  webDocument.documentElement.style.backgroundColor = colors.bg;
+  webDocument.body.style.backgroundColor = colors.bg;
+}
 
 export default function App() {
   const [screen, setScreen] = useState<'menu' | 'game'>('menu');
