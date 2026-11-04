@@ -215,7 +215,7 @@ function buildQuartier(): GameMap {
   b.rect(1, 11, 35, 3, ',').rect(1, 12, 35, 1, '-'); // rue principale
   b.rect(11, 14, 3, 6, ','); // allée vers le sud
 
-  b.rect(3, 2, 7, 5, '#'); // maison Moreau (Léa), porte en (6,6)
+  b.rect(3, 2, 7, 5, '#'); // maison Moreau (Betti), porte en (6,6)
   b.rect(13, 2, 6, 5, '#'); // maison du pilote
   b.rect(24, 2, 7, 5, '#'); // maison du radioamateur
   b.rect(3, 16, 6, 4, '#');
@@ -332,12 +332,12 @@ function buildCentrale(): GameMap {
   };
 }
 
-// ---------- Étape 2 : maison de Léa (intérieur) ----------
+// ---------- Étape 2 : maison de Betti (intérieur) ----------
 function buildMaisonLea(): GameMap {
   const b = new Builder(10, 8, 'w');
   b.border('Y').rect(1, 1, 8, 1, 'Y');
   return {
-    id: 'maisonLea', name: 'Chez Léa', outdoor: false, width: b.width, height: b.height, rows: b.rows,
+    id: 'maisonLea', name: 'Chez Betti', outdoor: false, width: b.width, height: b.height, rows: b.rows,
     objects: [
       { id: 'leaBed', x: 2, y: 2, sprite: 'bed', script: 'leaBed' },
       { id: 'leaDrawings', x: 5, y: 1, sprite: 'drawings', script: 'leaDrawings' },
@@ -348,7 +348,7 @@ function buildMaisonLea(): GameMap {
   };
 }
 
-// ---------- Étape 2 : la cabane secrète de Léa ----------
+// ---------- Étape 2 : la cabane secrète de Betti ----------
 function buildCabane(): GameMap {
   const b = new Builder(8, 6, 'w');
   b.border('K').rect(1, 1, 6, 1, 'K');

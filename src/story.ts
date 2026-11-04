@@ -8,7 +8,7 @@ export const THREADS: { id: ThreadId; title: string; icon: string }[] = [
   { id: 'capsules', title: 'Les capsules', icon: '▣' },
   { id: 'heat', title: 'Le ciel brûlant', icon: '☀' },
   { id: 'missions', title: 'Où sont-ils partis ?', icon: '▲' },
-  { id: 'lea', title: 'Léa', icon: '✿' },
+  { id: 'lea', title: 'Betti', icon: '✿' },
   { id: 'leads', title: 'Pistes à suivre', icon: '➜' },
 ];
 
@@ -46,10 +46,10 @@ export const CLUES: Clue[] = [
   { id: 'lead2', thread: 'leads', title: 'Le prototype BS-1', text: 'Une batterie solaire expérimentale, perdue pendant l’évacuation de la centrale Hélios. « Sûrement enfouie sous le sable, quelque part près des ruines. »' },
   { id: 'lead3', thread: 'leads', title: 'Pixel', text: 'Un chien robot éteint. Sur son collier : « PIXEL ». Le petit panneau solaire sur son dos est fendu.' },
   { id: 'lead4', thread: 'leads', title: 'Le radioamateur', text: '« J’ai oublié mon récepteur dans la rame de la ligne 2. Il doit être aux objets trouvés de la station Marée. »' },
-  // Étape 2 — Léa
-  { id: 'lea1', thread: 'lea', title: 'Les dessins de Léa', text: 'Une cabane perchée dans une tour d’eau, une lampe, et Pixel. Sur un autre dessin : Papa et Maman couchés dans des boîtes de verre, sous des étoiles.' },
-  { id: 'lea2', thread: 'lea', title: 'Le journal de Léa', text: '« Papa m’a prêté sa lampe pour la cabane. Personne ne la trouvera derrière la tôle bleue. »' },
-  { id: 'lea3', thread: 'lea', title: 'Le dernier mot de Léa', text: '« Demain on dort tous dans les capsules. Maman dit qu’on se réveillera ailleurs, sous un ciel bleu. Pixel ne peut pas venir. Pardon Pixel. »' },
+  // Étape 2 — Betti
+  { id: 'lea1', thread: 'lea', title: 'Les dessins de Betti', text: 'Une cabane perchée dans une tour d’eau, une lampe, et Pixel. Sur un autre dessin : Papa et Maman couchés dans des boîtes de verre, sous des étoiles.' },
+  { id: 'lea2', thread: 'lea', title: 'Le journal de Betti', text: '« Papa m’a prêté sa lampe pour la cabane. Personne ne la trouvera derrière la tôle bleue. »' },
+  { id: 'lea3', thread: 'lea', title: 'Le dernier mot de Betti', text: '« Demain on dort tous dans les capsules. Maman dit qu’on se réveillera ailleurs, sous un ciel bleu. Pixel ne peut pas venir. Pardon Pixel. »' },
   // Étape 2 — métro et colline
   { id: 'cap6', thread: 'capsules', title: 'L’affiche du métro', text: '« Programme LAZARE. Votre esprit voyage. Votre corps se repose. » Un visage paisible, les yeux fermés.' },
   { id: 'cap7', thread: 'capsules', title: 'Le caisson de maintenance', text: '« LAZARE — noyau de transfert de rechange, pour pod mobile. » Un pod mobile… on pourrait donc en construire un ailleurs qu’au laboratoire ?' },
@@ -91,7 +91,7 @@ export const QUESTIONS: Question[] = [
   },
   {
     id: 'q-cabin', thread: 'lea', opensWith: ['lea1'], answeredBy: 'hasLamp',
-    ask: 'Où est la cabane de Léa ?',
+    ask: 'Où est la cabane de Betti ?',
     answer: 'Dans le château d’eau effondré, derrière une tôle bleue. La lampe de son père y était.',
   },
   {
@@ -107,7 +107,7 @@ export const ITEMS: Record<string, { name: string; text: string; usable?: boolea
   pelle: { name: 'Pelle', text: 'Une pelle de jardin, solide. Utilise-la pour creuser là où tu te tiens.', usable: true },
   battery: { name: 'Batterie BS-1', text: 'Prototype de batterie solaire, encore chargée. Il faudrait la brancher sur quelque chose.', usable: true },
   matrice: { name: 'Matrice neuronale', text: 'Une puce qui luit doucement. Une pièce de transfert ? Le Dr Varn en parlait.' },
-  lampe: { name: 'Lampe torche', text: 'La lampe du père de Léa. Elle s’allume d’elle-même dans le noir.' },
+  lampe: { name: 'Lampe torche', text: 'La lampe du père de Betti. Elle s’allume d’elle-même dans le noir.' },
   capteur: { name: 'Récepteur radio', text: 'Le récepteur du radioamateur. Il capte les ondes, à condition d’être assez haut.', usable: true },
   noyau: { name: 'Noyau de transfert', text: 'Un cylindre lumineux, « pour pod mobile ». Une pièce pour voyager ?' },
 };
@@ -223,7 +223,7 @@ export const SCRIPTS: Record<string, (api: Api) => void> = {
   },
 
   noteLea: (api) =>
-    api.say(['Un mot coincé sous une pierre :', '« Si quelqu’un trouve Pixel, prenez soin de lui. Il a juste besoin de soleil. — Léa »']),
+    api.say(['Un mot coincé sous une pierre :', '« Si quelqu’un trouve Pixel, prenez soin de lui. Il a juste besoin de soleil. — Betti »']),
 
   crate: (api) => api.say(['Une caisse vide. Quelqu’un est passé avant moi.']),
 
@@ -261,7 +261,7 @@ export const SCRIPTS: Record<string, (api: Api) => void> = {
     });
   },
 
-  leaMailbox: (api) => api.say(['Une boîte aux lettres : « Famille Moreau — Léa, Sam et Pixel ». Pixel a son nom sur la boîte.']),
+  leaMailbox: (api) => api.say(['Une boîte aux lettres : « Famille Moreau — Betti, Sam et Pixel ». Pixel a son nom sur la boîte.']),
 
   motherJournal: (api) =>
     api.say(
@@ -310,7 +310,7 @@ export const SCRIPTS: Record<string, (api: Api) => void> = {
   thermometer2: (api) => api.say(['Encore un thermomètre bloqué au maximum. Tous les thermomètres de la ville le sont.']),
 
   tank: (api) => {
-    if (api.has('knowsCabin')) return api.say(['La tôle bleue est soulevée. La cabane de Léa est juste derrière.']);
+    if (api.has('knowsCabin')) return api.say(['La tôle bleue est soulevée. La cabane de Betti est juste derrière.']);
     if (api.has('readLeaDiary')) {
       return api.say(['« Derrière la tôle bleue »… La voilà, coincée entre les débris.', 'Tu la soulèves : un passage mène à une petite cabane.'], () =>
         api.set('knowsCabin'),
@@ -403,7 +403,7 @@ export const SCRIPTS: Record<string, (api: Api) => void> = {
       () => api.clue('cap5'),
     ),
 
-  // ----- étape 2 : maison et cabane de Léa -----
+  // ----- étape 2 : maison et cabane de Betti -----
   leaBed: (api) => api.say(['Un petit lit, soigneusement fait. Une peluche de chien robot sur l’oreiller.']),
 
   leaDrawings: (api) =>

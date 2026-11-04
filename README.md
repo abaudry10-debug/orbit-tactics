@@ -19,7 +19,7 @@ Sur iPhone : ouvre le lien dans Safari, puis **Partager → Sur l'écran d'accue
 
 ## Étape 2
 
-- **Chez Léa** : Pixel ouvre la maison par la chatière ; ses dessins et son journal mènent à sa cabane secrète.
+- **Chez Betti** : Pixel ouvre la maison par la chatière ; ses dessins et son journal mènent à sa cabane secrète.
 - **La lampe torche**, cachée derrière la tôle bleue du château d'eau.
 - **Le métro dans le noir** : un halo de lumière autour du héros, trois stations et un dépôt (noyau de transfert, récepteur radio).
 - **La colline de l'observatoire** : relevé de l'orbite, journal de veille de la mission Aurore.
