@@ -271,6 +271,9 @@ export class Game {
     if (this.pixel && this.pixel.x === fx && this.pixel.y === fy && this.flags.has('podNeedsPrime') && this.map.id === 'lab') {
       return this.askPrime();
     }
+    if (this.nearCabin() && (!obj || obj.id === 'cabinHatch')) {
+      return ui.say(['« Sous le potager, à deux pas à droite du grand arbre »… C’est par ici.', 'La terre est meuble. Avec la pelle, je pourrais creuser.']);
+    }
     if (obj?.script) {
       SCRIPTS[obj.script]?.(this.api);
       return;
@@ -464,7 +467,26 @@ export class Game {
     this.save();
   }
 
+  /** Près de l'endroit indiqué par le journal de Betti : sous le potager, à deux pas à droite du grand arbre. */
+  private nearCabin() {
+    const hatch = this.map.objects.find((o) => o.id === 'cabinHatch');
+    return (
+      !!hatch &&
+      this.flags.has('readLeaDiary') &&
+      !this.flags.has('knowsCabin') &&
+      Math.max(Math.abs(this.x - hatch.x), Math.abs(this.y - hatch.y)) <= 1
+    );
+  }
+
   private dig() {
+    if (this.nearCabin()) {
+      ui.say(['Tu plantes la pelle dans la terre du potager…', 'Elle heurte du bois. Une trappe !'], () => {
+        sfx.door();
+        this.flags.add('knowsCabin');
+        this.save();
+      });
+      return;
+    }
     const ch = charAt(this.map, this.x, this.y);
     if (ch !== 'S') return ui.say(['Le sol est trop dur ici. Il faudrait du sable.']);
     const key = `dug:${this.map.id}:${this.x},${this.y}`;

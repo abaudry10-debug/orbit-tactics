@@ -414,11 +414,7 @@ export const SCRIPTS: Record<string, (api: Api) => void> = {
 
   cabinHatch: (api) => {
     if (api.has('knowsCabin')) return api.say(['La trappe de la cabane de Betti. Une échelle descend sous la terre.']);
-    if (!api.has('readLeaDiary')) return; // rien à voir ici… tant qu'on ne sait pas quoi chercher
-    api.say(['« Sous le potager, à deux pas à droite du grand arbre »… C’est ici.', 'Tu grattes la terre : une trappe en bois apparaît !'], () => {
-      api.sfx('door');
-      api.set('knowsCabin');
-    });
+    // la trappe se découvre à la pelle (voir Game.dig) ; avant, rien à voir ici
   },
 
   // ----- centre de recherche -----
