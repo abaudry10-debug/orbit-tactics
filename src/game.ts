@@ -2,7 +2,7 @@
 import { playTheme, sfx } from './audio.js';
 import { heldDir, releaseAll } from './input.js';
 import { MAPS, START, SOLID, charAt, type GameMap, type MapObject } from './maps.js';
-import { T, dish, dog, frozenTrain, hash, hero, radioTower, shuttleWreck, solarTower, tile, type Dir } from './sprites.js';
+import { T, bigTree, dish, dog, frozenTrain, hash, hero, radioTower, shuttleWreck, solarTower, tile, type Dir } from './sprites.js';
 import { CLUES, ITEMS, QUESTIONS, RADIO_FREQ, SCRIPTS, type Api } from './story.js';
 import * as ui from './ui.js';
 
@@ -65,6 +65,7 @@ export class Game {
   private decalTower = solarTower();
   private decalRadio = radioTower();
   private decalTrain = frozenTrain();
+  private decalBigTree = bigTree();
 
   constructor(ctx: CanvasRenderingContext2D) {
     this.ctx = ctx;
@@ -140,7 +141,14 @@ export class Game {
   // ---------- objets et règles de déplacement ----------
   /** Objet visible sur une case (les objets masqués par un drapeau sont ignorés). */
   objAt(x: number, y: number): MapObject | undefined {
-    return this.map.objects.find((o) => o.x === x && o.y === y && !(o.hideWhen && this.flags.has(o.hideWhen)));
+    return this.map.objects.find(
+      (o) => o.x === x && o.y === y && !(o.hideWhen && this.flags.has(o.hideWhen)) && !(o.hiddenUntil && !this.flags.has(o.hiddenUntil)),
+    );
+  }
+
+  /** Comme objAt, mais trouve aussi les objets encore cachés (on peut les examiner sans les voir). */
+  private anyObjAt(x: number, y: number): MapObject | undefined {
+    return this.objAt(x, y) ?? this.map.objects.find((o) => o.x === x && o.y === y && o.hiddenUntil && !this.flags.has(o.hiddenUntil));
   }
 
   blocked(x: number, y: number): boolean {
@@ -258,7 +266,7 @@ export class Game {
   interact() {
     if (this.busy || this.moving) return;
     const [fx, fy] = this.facing();
-    const obj = this.objAt(fx, fy);
+    const obj = this.anyObjAt(fx, fy);
     if (obj?.script) {
       SCRIPTS[obj.script]?.(this.api);
       return;
@@ -274,6 +282,7 @@ export class Game {
     else if (ch === 'P') ui.say(['Un panneau solaire brisé, à moitié enfoui dans le sable.']);
     else if (ch === 'v') ui.say(['Des plants desséchés.']);
     else if (ch === 'N' && this.map.id === 'vesper') SCRIPTS.shuttle?.(this.api);
+    else if (ch === 'N' && this.map.id === 'quartier') ui.say(['Un arbre immense, bien plus grand que les autres. Mort, lui aussi.']);
     else if (ch === 'N') ui.say(['Une tour solaire. Son capteur doré fixe encore le ciel.']);
   }
 
@@ -565,7 +574,7 @@ export class Game {
     for (const d of this.map.decals ?? []) {
       const img =
         d.kind === 'shuttle' ? this.decalShuttle : d.kind === 'dish' ? this.decalDish : d.kind === 'radioTower' ? this.decalRadio
-        : d.kind === 'train' ? this.decalTrain : this.decalTower;
+        : d.kind === 'train' ? this.decalTrain : d.kind === 'bigTree' ? this.decalBigTree : this.decalTower;
       c.drawImage(img, d.x * T - ox, (d.y + d.h) * T - img.height - oy);
     }
 

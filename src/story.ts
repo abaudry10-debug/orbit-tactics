@@ -47,8 +47,8 @@ export const CLUES: Clue[] = [
   { id: 'lead3', thread: 'leads', title: 'Pixel', text: 'Un chien robot éteint. Sur son collier : « PIXEL ». Le petit panneau solaire sur son dos est fendu.' },
   { id: 'lead4', thread: 'leads', title: 'Le radioamateur', text: '« J’ai oublié mon récepteur dans la rame de la ligne 2. Il doit être aux objets trouvés de la station Marée. »' },
   // Étape 2 — Betti
-  { id: 'lea1', thread: 'lea', title: 'Les dessins de Betti', text: 'Une cabane perchée dans une tour d’eau, une lampe, et Pixel. Sur un autre dessin : Papa et Maman couchés dans des boîtes de verre, sous des étoiles.' },
-  { id: 'lea2', thread: 'lea', title: 'Le journal de Betti', text: '« Papa m’a prêté sa lampe pour la cabane. Personne ne la trouvera derrière la tôle bleue. »' },
+  { id: 'lea1', thread: 'lea', title: 'Les dessins de Betti', text: 'Une cabane sous la terre, au pied d’un très grand arbre, avec une lampe et Pixel. Sur un autre dessin : Papa et Maman couchés dans des boîtes de verre, sous des étoiles.' },
+  { id: 'lea2', thread: 'lea', title: 'Le journal de Betti', text: '« Ma cabane secrète est sous le potager, à deux pas à droite du grand arbre. Papa m’a prêté sa lampe. Personne ne peut la voir ! »' },
   { id: 'lea3', thread: 'lea', title: 'Le dernier mot de Betti', text: '« Demain on dort tous dans les capsules. Maman dit qu’on se réveillera ailleurs, sous un ciel bleu. Pixel ne peut pas venir. Pardon Pixel. »' },
   // Étape 2 — métro et colline
   { id: 'cap6', thread: 'capsules', title: 'L’affiche du métro', text: '« Programme LAZARE. Votre esprit voyage. Votre corps se repose. » Un visage paisible, les yeux fermés.' },
@@ -92,7 +92,7 @@ export const QUESTIONS: Question[] = [
   {
     id: 'q-cabin', thread: 'lea', opensWith: ['lea1'], answeredBy: 'hasLamp',
     ask: 'Où est la cabane de Betti ?',
-    answer: 'Dans le château d’eau effondré, derrière une tôle bleue. La lampe de son père y était.',
+    answer: 'Sous le potager, à deux pas à droite du grand arbre, cachée sous une trappe. La lampe de son père y était.',
   },
   {
     id: 'q-pixel', thread: 'leads', opensWith: ['lead3'], answeredBy: 'pixelOn',
@@ -309,14 +309,16 @@ export const SCRIPTS: Record<string, (api: Api) => void> = {
 
   thermometer2: (api) => api.say(['Encore un thermomètre bloqué au maximum. Tous les thermomètres de la ville le sont.']),
 
-  tank: (api) => {
-    if (api.has('knowsCabin')) return api.say(['La tôle bleue est soulevée. La cabane de Betti est juste derrière.']);
-    if (api.has('readLeaDiary')) {
-      return api.say(['« Derrière la tôle bleue »… La voilà, coincée entre les débris.', 'Tu la soulèves : un passage mène à une petite cabane.'], () =>
-        api.set('knowsCabin'),
-      );
-    }
-    api.say(['Les débris du château d’eau effondré.', 'Des plaques de tôle de toutes les couleurs. Quelqu’un a dessiné une étoile à la craie.']);
+  tank: (api) =>
+    api.say(['Les débris du château d’eau effondré.', 'Des plaques de tôle de toutes les couleurs. Rien d’autre.']),
+
+  cabinHatch: (api) => {
+    if (api.has('knowsCabin')) return api.say(['La trappe de la cabane de Betti. Une échelle descend sous la terre.']);
+    if (!api.has('readLeaDiary')) return; // rien à voir ici… tant qu'on ne sait pas quoi chercher
+    api.say(['« Sous le potager, à deux pas à droite du grand arbre »… C’est ici.', 'Tu grattes la terre : une trappe en bois apparaît !'], () => {
+      api.sfx('door');
+      api.set('knowsCabin');
+    });
   },
 
   // ----- centre de recherche -----
@@ -410,14 +412,14 @@ export const SCRIPTS: Record<string, (api: Api) => void> = {
     api.say(
       [
         'Des dessins d’enfant punaisés au mur.',
-        'Une cabane perchée dans une tour d’eau, avec une lampe et Pixel.',
+        'Une cabane sous la terre, au pied d’un très grand arbre, avec une lampe et Pixel.',
         'Un autre : Papa et Maman couchés dans des boîtes de verre, sous des étoiles.',
       ],
       () => api.clue('lea1'),
     ),
 
   leaDiary: (api) =>
-    api.say(['Un cahier à spirale, une page cornée :', '« Papa m’a prêté sa lampe pour la cabane. Personne ne la trouvera derrière la tôle bleue. »'], () => {
+    api.say(['Un cahier à spirale, une page cornée :', '« Ma cabane secrète est sous le potager, à deux pas à droite du grand arbre. »', '« Papa m’a prêté sa lampe. Personne ne peut la voir ! »'], () => {
       api.set('readLeaDiary');
       api.clue('lea2');
     }),

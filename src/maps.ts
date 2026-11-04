@@ -33,6 +33,7 @@ export interface MapObject {
   door?: Door; // passer dessus mène à une autre carte
   passWhen?: string; // devient franchissable quand le drapeau est levé (porte, grille)
   hideWhen?: string; // disparaît quand le drapeau est levé
+  hiddenUntil?: string; // invisible et franchissable tant que le drapeau n'est pas levé (on peut quand même l'examiner)
 }
 
 export interface EnergySource {
@@ -56,7 +57,7 @@ export interface Decal {
   y: number;
   w: number;
   h: number;
-  kind: 'shuttle' | 'dish' | 'tower' | 'radioTower' | 'train';
+  kind: 'shuttle' | 'dish' | 'tower' | 'radioTower' | 'train' | 'bigTree';
 }
 
 export interface GameMap {
@@ -223,6 +224,7 @@ function buildQuartier(): GameMap {
   b.rect(22, 16, 6, 4, 'v'); // potager desséché
   b.rect(21, 15, 8, 1, '|').rect(21, 20, 8, 1, '|').rect(21, 16, 1, 4, '|').rect(28, 16, 1, 3, '|');
   b.rect(30, 17, 4, 5, '*'); // château d'eau effondré
+  b.rect(23, 23, 2, 1, 'N'); // le grand arbre, sous le potager
 
   b.border('*');
   b.rect(35, 12, 1, 1, '-'); // sortie est
@@ -249,11 +251,13 @@ function buildQuartier(): GameMap {
       { id: 'radioHouse', x: 27, y: 6, sprite: 'houseDoor', script: 'radioHouse' },
       { id: 'ticket', x: 3, y: 10, sprite: 'note', script: 'ticket' },
       { id: 'letter', x: 6, y: 21, sprite: 'note', script: 'letter' },
-      { id: 'garden', x: 24, y: 21, sprite: 'plantsSign', script: 'garden' },
+      { id: 'garden', x: 27, y: 21, sprite: 'plantsSign', script: 'garden' },
       { id: 'shed', x: 29, y: 19, sprite: 'shed', script: 'shed' },
       { id: 'thermo2', x: 18, y: 14, sprite: 'thermometer', script: 'thermometer2' },
+      { id: 'tank', x: 31, y: 22, sprite: 'crate', script: 'tank' },
+      // la trappe de la cabane : invisible et franchissable tant qu'on ne l'a pas trouvée
       {
-        id: 'tank', x: 31, y: 22, sprite: 'crate', spriteWhen: ['knowsCabin', 'plankFront'], script: 'tank',
+        id: 'cabinHatch', x: 26, y: 23, sprite: 'trapdoor', script: 'cabinHatch', hiddenUntil: 'knowsCabin',
         door: { to: 'cabane', x: 4, y: 4, dir: 'up', needs: 'knowsCabin' },
       },
       exit('toVesper', 35, 12, { to: 'vesper', x: 1, y: 10, dir: 'right' }),
@@ -265,6 +269,8 @@ function buildQuartier(): GameMap {
       { x: 3, y: 16, w: 6, h: 4, style: 'house' },
       { x: 16, y: 16, w: 4, h: 4, style: 'house' },
     ],
+    decals: [{ x: 23, y: 23, w: 2, h: 1, kind: 'bigTree' }],
+    solidBase: 'dust',
   };
 }
 
@@ -357,7 +363,7 @@ function buildCabane(): GameMap {
     objects: [
       { id: 'lampBox', x: 2, y: 2, sprite: 'lampBox', spriteWhen: ['hasLamp', 'lampBoxEmpty'], script: 'lampBox' },
       { id: 'leaLastNote', x: 5, y: 2, sprite: 'note', script: 'leaLastNote' },
-      { id: 'cabaneExit', x: 4, y: 5, sprite: 'plankFront', door: { to: 'quartier', x: 31, y: 23, dir: 'down' } },
+      { id: 'cabaneExit', x: 4, y: 5, sprite: 'plankFront', door: { to: 'quartier', x: 26, y: 24, dir: 'down' } },
     ],
   };
 }

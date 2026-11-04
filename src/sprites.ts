@@ -670,6 +670,13 @@ const console_: Painter = (c, v) => {
   r(c, 4, 7, 8, 4, P.ink); r(c, 5, 8, 4, 1, '#ffb347'); r(c, 5, 10, 2, 1, '#ffb347');
 };
 
+const trapdoor: Painter = (c, v) => {
+  dust(c, v);
+  r(c, 2, 2, 12, 12, P.ink); r(c, 3, 3, 10, 10, P.wood);
+  for (const y of [5, 8, 11]) r(c, 3, y, 10, 1, P.woodDark);
+  r(c, 7, 6, 2, 2, P.metalDark); r(c, 7, 6, 2, 1, P.metalLight); // anneau
+};
+
 const antennaBase: Painter = (c) => {
   grating(c, 0);
   r(c, 3, 11, 10, 4, P.ink); r(c, 4, 12, 8, 2, P.metalDark);
@@ -686,6 +693,18 @@ export function radioTower(): HTMLCanvasElement {
   r(c, 10, 10, 12, 12, m); r(c, 11, 11, 10, 10, '#454c59');
   r(c, 15, 0, 2, 12, m); r(c, 14, 0, 4, 2, P.red);
   r(c, 4, 12, 6, 8, P.ink); r(c, 5, 13, 4, 6, '#c9ced6'); r(c, 22, 14, 6, 6, P.ink); r(c, 23, 15, 4, 4, '#c9ced6'); // paraboles
+  return cv;
+}
+
+export function bigTree(): HTMLCanvasElement {
+  const [cv, c] = canvas(32, 52);
+  c.fillStyle = 'rgba(0,0,0,0.28)'; c.fillRect(2, 46, 28, 5);
+  const bark = P.woodDark;
+  r(c, 12, 22, 8, 28, bark); r(c, 12, 22, 2, 28, P.wood); r(c, 9, 46, 14, 4, bark); // tronc et racines
+  r(c, 6, 47, 4, 2, bark); r(c, 22, 47, 4, 2, bark);
+  r(c, 4, 14, 10, 3, bark); r(c, 3, 8, 3, 8, bark); r(c, 18, 12, 11, 3, bark); r(c, 26, 5, 3, 9, bark); // grosses branches
+  r(c, 14, 2, 3, 22, bark); r(c, 10, 0, 2, 6, bark); r(c, 19, 3, 2, 6, bark); r(c, 0, 6, 4, 2, bark); r(c, 28, 2, 4, 2, bark);
+  r(c, 13, 30, 3, 3, '#2a1c12'); // un creux dans l'écorce
   return cv;
 }
 
@@ -837,7 +856,7 @@ const REGISTRY: Record<string, Painter[]> = {
   bed: [bed], drawings: [drawings], toybox: [toybox], lampBox: [lampBox], lampBoxEmpty: [lampBoxEmpty],
   counter: [counter], caisson: [caisson(true)], caissonEmpty: [caisson(false)], ladder: [ladder], towerBase: [towerBase],
   metroStairsUp: [metroStairsUp], lazarePoster: [lazarePoster], networkMap: [networkMap],
-  obsTop: [obsTop], obsFront: [obsFront], obsDoor: [obsDoor], console: [console_], antennaBase: [antennaBase],
+  obsTop: [obsTop], obsFront: [obsFront], obsDoor: [obsDoor], console: [console_], antennaBase: [antennaBase], trapdoor: [trapdoor],
   dust: [dust], grass: [grass], asphalt: [asphalt], road: [road], labFloor: [labFloor],
   toxic0: [toxicFrame(0)], toxic1: [toxicFrame(1)], rubble: [rubble], fence: [fence],
   wallTop: [wallTop], wallFront: [wallFront], labWallTop: [labWallTop], labWallFront: [labWallFront],
