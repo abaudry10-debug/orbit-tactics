@@ -86,44 +86,89 @@ export function toast(text: string) {
 export const journalOpen = () => !$('journal').hidden;
 
 export function renderJournal(
-  clues: Set<string>, items: Set<string>, fresh: Set<string>, openQ: Set<string>, solvedQ: Set<string>,
+  clues: Set<string>, fresh: Set<string>, openQ: Set<string>, solvedQ: Set<string>, isDone: (id: string) => boolean,
 ) {
   const body = $('journal-body');
   body.innerHTML = '';
   const found = CLUES.filter((c) => clues.has(c.id)).length;
+  const news = [...fresh].filter((id) => clues.has(id) || openQ.has(id)).length;
   const pending = QUESTIONS.filter((q) => openQ.has(q.id) && !solvedQ.has(q.id)).length;
   $('journal-progress').textContent =
     found === 0
       ? 'Rien encore. Examine ce qui t’entoure.'
-      : `${found} découverte${found > 1 ? 's' : ''}` + (pending ? ` · ${pending} question${pending > 1 ? 's' : ''} en suspens` : '');
+      : `${found} découverte${found > 1 ? 's' : ''}` +
+        (pending ? ` · ${pending} question${pending > 1 ? 's' : ''} en suspens` : '') +
+        (news ? ` · ${news} nouveau${news > 1 ? 'x' : ''}` : '');
 
-  const card = (title: string, text: string, cls: string) => {
+  const card = (title: string, text: string, cls: string, isNew: boolean) => {
     const el = document.createElement('div');
-    el.className = 'clue ' + cls;
+    el.className = 'clue ' + cls + (isNew ? ' fresh' : '');
     el.innerHTML = '<strong></strong><p></p>';
     el.querySelector('strong')!.textContent = title;
+    if (isNew) {
+      const tag = document.createElement('span');
+      tag.className = 'new-tag';
+      tag.textContent = 'NOUVEAU';
+      el.querySelector('strong')!.appendChild(tag);
+    }
     el.querySelector('p')!.textContent = text;
     return el;
   };
+  const qCard = (q: (typeof QUESTIONS)[number]) => {
+    const solved = solvedQ.has(q.id);
+    return card(solved ? q.ask : `? ${q.ask}`, solved ? q.answer : 'Pas encore de réponse.', solved ? 'answer' : 'question', fresh.has(q.id));
+  };
+  // les nouveautés d'abord, puis le reste dans l'ordre de découverte
+  const newFirst = <T extends { id: string }>(list: T[]) => [...list.filter((x) => fresh.has(x.id)), ...list.filter((x) => !fresh.has(x.id))];
 
+  // 1. Pour avancer : ce qui reste à faire, bien en vue
+  const lead = THREADS.find((t) => t.id === 'leads')!;
+  const leads = CLUES.filter((c) => c.thread === 'leads' && clues.has(c.id));
+  const leadQs = QUESTIONS.filter((q) => q.thread === 'leads' && openQ.has(q.id) && !solvedQ.has(q.id));
+  const todo = leads.filter((c) => !(c.doneWhen && isDone(c.doneWhen)));
+  const done = leads.filter((c) => c.doneWhen && isDone(c.doneWhen));
+  if (todo.length || leadQs.length || done.length) {
+    const sec = document.createElement('section');
+    sec.className = 'thread todo';
+    sec.innerHTML = `<h3><span class="icon">${lead.icon}</span><span>${lead.title}</span></h3>`;
+    if (!todo.length && !leadQs.length) sec.appendChild(card('Rien en cours', 'Explore, examine, fouille : de nouvelles pistes viendront.', 'unknown', false));
+    for (const q of newFirst(leadQs)) sec.appendChild(qCard(q));
+    for (const c of newFirst(todo)) sec.appendChild(card(c.title, c.text, 'lead', fresh.has(c.id)));
+    if (done.length) {
+      const d = document.createElement('details');
+      d.className = 'done-list';
+      d.innerHTML = `<summary>Pistes terminées (${done.length})</summary>`;
+      for (const c of done) d.appendChild(card(`✓ ${c.title}`, c.text, 'done', false));
+      sec.appendChild(d);
+    }
+    body.appendChild(sec);
+  }
+
+  // 2. Les fils de l'histoire, repliables ; ceux qui ont du nouveau s'ouvrent d'eux-mêmes
   for (const th of THREADS) {
+    if (th.id === 'leads') continue;
     const got = CLUES.filter((c) => c.thread === th.id && clues.has(c.id));
     const qs = QUESTIONS.filter((q) => q.thread === th.id && openQ.has(q.id));
     if (got.length === 0 && qs.length === 0) continue; // un fil n'apparaît qu'une fois entamé
-    const section = document.createElement('section');
-    section.className = 'thread';
-    const h = document.createElement('h3');
-    h.innerHTML = `<span class="icon">${th.icon}</span><span></span>`;
-    (h.lastElementChild as HTMLElement).textContent = th.title;
-    section.appendChild(h);
-    for (const q of qs) {
-      const solved = solvedQ.has(q.id);
-      section.appendChild(
-        card(solved ? q.ask : `? ${q.ask}`, solved ? q.answer : 'Pas encore de réponse.', (solved ? 'answer' : 'question') + (fresh.has(q.id) ? ' fresh' : '')),
-      );
+    const newCount = got.filter((c) => fresh.has(c.id)).length + qs.filter((q) => fresh.has(q.id)).length;
+    const d = document.createElement('details');
+    d.className = 'thread';
+    if (newCount) d.open = true;
+    const sum = document.createElement('summary');
+    sum.innerHTML = `<span class="icon">${th.icon}</span><span class="t"></span><span class="count"></span>`;
+    sum.querySelector('.t')!.textContent = th.title;
+    sum.querySelector('.count')!.textContent = `${got.length}`;
+    if (newCount) {
+      sum.classList.add('has-new');
+      const tag = document.createElement('span');
+      tag.className = 'new-tag';
+      tag.textContent = `+${newCount}`;
+      sum.querySelector('.count')!.appendChild(tag);
     }
-    for (const c of got) section.appendChild(card(c.title, c.text, fresh.has(c.id) ? 'fresh' : ''));
-    body.appendChild(section);
+    d.appendChild(sum);
+    for (const q of newFirst(qs)) d.appendChild(qCard(q));
+    for (const c of newFirst(got)) d.appendChild(card(c.title, c.text, '', fresh.has(c.id)));
+    body.appendChild(d);
   }
 }
 
@@ -653,7 +698,7 @@ export function closeTerminal() {
 }
 
 const termItems = (): string[] =>
-  termState === 'menu' ? [...term!.folders.map((f) => f.name + (f.locked ? ' [CONFIDENTIEL]' : '/')), 'DÉCONNEXION'] : termState === 'file' ? ['◀ RETOUR'] : [];
+  termState === 'menu' ? [...term!.folders.map((f) => f.name + (f.locked ? '/ [VIDE]' : '/')), 'DÉCONNEXION'] : termState === 'file' ? ['◀ RETOUR'] : [];
 
 function line(text: string, cls = '') {
   const p = document.createElement('p');
@@ -711,7 +756,7 @@ function renderTerm() {
       scr.appendChild(cv);
       drawArchivePhoto(termFile.id, cv);
     }
-    for (const l of termFile.lines) scr.appendChild(line(l, termFile.locked ? 'warn' : ''));
+    for (const l of termFile.lines) scr.appendChild(line(l, termFile.locked ? 'dim' : ''));
   }
   termItems().forEach((label, i) => {
     const b = document.createElement('button');
@@ -766,8 +811,7 @@ export function termInput(b: string) {
       termState = 'file';
       termSel = 0;
       term.onEvent(termFile.id);
-      if (termFile.locked) sfx.wrong();
-      else sfx.page();
+      sfx.page();
       return renderTerm();
     }
   } else return;

@@ -9,7 +9,7 @@ export const THREADS: { id: ThreadId; title: string; icon: string }[] = [
   { id: 'heat', title: 'Le ciel brûlant', icon: '☀' },
   { id: 'missions', title: 'Où sont-ils partis ?', icon: '▲' },
   { id: 'lea', title: 'Betti', icon: '✿' },
-  { id: 'leads', title: 'Pistes à suivre', icon: '➜' },
+  { id: 'leads', title: 'Pour avancer', icon: '★' },
 ];
 
 export interface Clue {
@@ -17,6 +17,8 @@ export interface Clue {
   thread: ThreadId;
   title: string;
   text: string;
+  /** Pistes : drapeau ou objet qui montre que la piste est terminée. */
+  doneWhen?: string;
 }
 
 export const CLUES: Clue[] = [
@@ -42,10 +44,10 @@ export const CLUES: Clue[] = [
   { id: 'mis4', thread: 'missions', title: 'Un ticket', text: 'Un ticket de navette tamponné « ANNULÉ ». La destination est effacée.' },
   { id: 'mis5', thread: 'missions', title: 'Capacité des navettes', text: 'Une place pour 400 habitants. 212 ans de voyage. Dans la marge, au crayon : « Il faut trouver autre chose. »' },
   // Pistes à suivre
-  { id: 'lead1', thread: 'leads', title: 'La vitrine vide', text: '« Sonde Lumen — détecteur de sources d’énergie. » Un mot scotché : « Prêtée au labo 2. Bureau du fond. — M. »' },
-  { id: 'lead2', thread: 'leads', title: 'Le prototype BS-1', text: 'Une batterie solaire expérimentale, conçue pour « amorcer les pods mobiles », perdue pendant l’évacuation de la centrale Hélios. « Sûrement enfouie sous le sable, quelque part près des ruines. »' },
-  { id: 'lead3', thread: 'leads', title: 'Pixel', text: 'Un chien robot éteint. Sur son collier : « PIXEL ». Le petit panneau solaire sur son dos est fendu.' },
-  { id: 'lead4', thread: 'leads', title: 'Le radioamateur', text: '« J’ai oublié mon récepteur dans la rame de la ligne 2. Il doit être aux objets trouvés de la station Marée. »' },
+  { id: 'lead1', thread: 'leads', doneWhen: 'sonde', title: 'La vitrine vide', text: '« Sonde Lumen — détecteur de sources d’énergie. » Un mot scotché : « Prêtée au labo 2. Bureau du fond. — M. »' },
+  { id: 'lead2', thread: 'leads', doneWhen: 'batteryFound', title: 'Le prototype BS-1', text: 'Une batterie solaire expérimentale, conçue pour « amorcer les pods mobiles », perdue pendant l’évacuation de la centrale Hélios. « Sûrement enfouie sous le sable, quelque part près des ruines. »' },
+  { id: 'lead3', thread: 'leads', doneWhen: 'pixelOn', title: 'Pixel', text: 'Un chien robot éteint. Sur son collier : « PIXEL ». Le petit panneau solaire sur son dos est fendu.' },
+  { id: 'lead4', thread: 'leads', doneWhen: 'capteur', title: 'Le radioamateur', text: '« J’ai oublié mon récepteur dans la rame de la ligne 2. Il doit être aux objets trouvés de la station Marée. »' },
   // Étape 2 — Betti
   { id: 'lea1', thread: 'lea', title: 'Les dessins de Betti', text: 'Une cabane sous la terre, au pied d’un très grand arbre, avec une lampe et Pixel. Sur un autre dessin : Papa et Maman couchés dans des boîtes de verre, sous des étoiles.' },
   { id: 'lea2', thread: 'lea', title: 'Le journal de Betti', text: '« Ma cabane secrète est sous le potager, à deux pas à droite du grand arbre. Papa m’a prêté sa lampe. Personne ne peut la voir ! »' },
@@ -65,11 +67,11 @@ export const CLUES: Clue[] = [
   { id: 'cap12', thread: 'capsules', title: 'Les caisses d’Aurore', text: '« AURORE — matériel de culture — 4 212 unités. » Les caisses sont parties avec la mission. Il ne reste ici que les cuves d’essai.' },
   { id: 'cap13', thread: 'capsules', title: 'La lettre de Nina', text: '« Maman, on part demain avec le programme. Tu crois que j’aurai encore mes taches de rousseur, là-bas ? »' },
   { id: 'mis10', thread: 'missions', title: 'Les archives du spatioport', text: 'Les dossiers des missions : Héliade a trouvé un monde de roche fondue, Kairos s’est perdue dans une tempête, Ondine n’a trouvé que de la glace.' },
-  { id: 'mis11', thread: 'missions', title: 'Le dossier Azura', text: '« AURORE / AZURA — ACCÈS REFUSÉ. Dossier classé confidentiel : direction du programme LAZARE. » Qu’y a-t-il à cacher sur le seul monde habitable ?' },
+  { id: 'mis11', thread: 'missions', title: 'Le dossier Azura', text: 'Le dossier de la mission Aurore est vide : toutes ses archives ont été supprimées le jour du grand départ.' },
   { id: 'mis9', thread: 'missions', title: 'La grille de décodage', text: 'La grille de la mission Aurore associe chaque groupe de trois bips à un chiffre : ··· 0 · ··– 1 · ·–· 2 · ·–– 3 · –·· 4 · –·– 5 · ––· 6 · ––– 7.' },
   { id: 'cap9', thread: 'capsules', title: 'Le journal du Dr Varn', text: '« Les navettes ne suffiront jamais. Alors nous enverrons nos esprits. Sur Azura, la mission Aurore cultive un corps neuf pour chacun de nous. Les capsules transfèrent chaque esprit vers son double et protègent nos anciens corps de la chaleur. 4 212 habitants, 4 212 capsules. Tout le monde part. »' },
-  { id: 'lead5', thread: 'leads', title: 'Le carnet du technicien', text: '« Arrêt d’urgence à la troisième cloche : j’ai coupé la pompe, puis l’onduleur, puis la ventilation, puis la turbine, et enfin le régulateur. » — R. Ilunga' },
-  { id: 'lead6', thread: 'leads', title: 'Les plans du pod mobile', text: '1. Matrice vierge. 2. Noyau de transfert. 3. Antenne de synchronisation, accordée sur la balise d’Azura. 4. Clé de synchronisation. 5. Amorce : source isolée, type BS-1.' },
+  { id: 'lead5', thread: 'leads', doneWhen: 'heliosOn', title: 'Le carnet du technicien', text: '« Arrêt d’urgence à la troisième cloche : j’ai coupé la pompe, puis l’onduleur, puis la ventilation, puis la turbine, et enfin le régulateur. » — R. Ilunga' },
+  { id: 'lead6', thread: 'leads', doneWhen: 'podAssembled', title: 'Les plans du pod mobile', text: '1. Matrice vierge. 2. Noyau de transfert. 3. Antenne de synchronisation, accordée sur la balise d’Azura. 4. Clé de synchronisation. 5. Amorce : source isolée, type BS-1.' },
 ];
 
 /** Questions du journal : elles s'ouvrent avec un indice et se résolvent plus tard. */
@@ -217,10 +219,9 @@ export const ARCHIVES: ArchiveFolder[] = [
   {
     id: 'azura', name: 'MISSION_AURORE', locked: true,
     lines: [
-      'ACCÈS REFUSÉ.',
-      'Dossier classé CONFIDENTIEL.',
-      'Réservé à la direction du programme LAZARE.',
-      'Cette tentative a été enregistrée.',
+      'DOSSIER VIDE.',
+      'Toutes les archives de cette mission ont été supprimées le jour du grand départ.',
+      'Il ne reste rien à lire ici.',
     ],
   },
 ];

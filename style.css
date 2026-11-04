@@ -1114,3 +1114,51 @@ h1 {
 .digit[hidden] { display: none; }
 .digit.comma { position: relative; margin-right: 14px; }
 .digit.comma::after { content: ','; position: absolute; right: -14px; bottom: 34%; font-size: 34px; color: inherit; }
+
+/* ---------- journal : pistes en cours, fils repliables, nouveautés ---------- */
+.thread.todo {
+  background: #fff4cf;
+  border: 2px solid var(--accent);
+  border-radius: 8px;
+  padding: 2px 10px 6px;
+  margin-bottom: 12px;
+}
+.thread.todo h3 { color: #8a4a12; }
+.clue.lead { border-left-color: var(--accent); background: #fffaf0; }
+.clue.done { border-left-color: #b9ad94; background: transparent; color: #8a7a64; }
+.clue.done strong { color: #8a7a64; text-decoration: line-through; }
+details.done-list summary, details.thread > summary {
+  cursor: pointer;
+  list-style: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+details.done-list summary::-webkit-details-marker, details.thread > summary::-webkit-details-marker { display: none; }
+details.done-list summary { color: #8a7258; margin: 6px 0; font-size: 18px; }
+details.done-list summary::before { content: '▸ '; }
+details.done-list[open] summary::before { content: '▾ '; }
+details.thread > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 6px;
+  font-size: 24px;
+  color: #3a2a1a;
+  padding: 4px 2px;
+  border-bottom: 1px dashed #d6c4a0;
+}
+details.thread > summary::after { content: '▸'; margin-left: 6px; color: #8a7258; }
+details.thread[open] > summary::after { content: '▾'; }
+details.thread > summary .count { margin-left: auto; color: #8a7258; font-size: 18px; white-space: nowrap; }
+details.thread > summary.has-new .count { color: var(--accent-dark); }
+.new-tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 0 5px;
+  font-size: 14px;
+  vertical-align: middle;
+  color: #fff;
+  background: var(--accent);
+  border-radius: 4px;
+  letter-spacing: 1px;
+}

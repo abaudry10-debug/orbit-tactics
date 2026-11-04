@@ -21,6 +21,7 @@ interface Save {
   flags: string[];
   clues: string[];
   items: string[];
+  fresh?: string[];
 }
 
 interface Particle {
@@ -94,7 +95,9 @@ export class Game {
       this.flags = new Set(s.flags);
       this.clues = new Set(s.clues);
       this.items = new Set(s.items);
+      this.fresh = new Set(s.fresh ?? []);
       this.refreshQuestions(true);
+      if (this.fresh.size) document.getElementById('btn-journal')?.classList.add('fresh');
       if (this.flags.has('pixelOn')) this.placePixelBehind();
       return true;
     } catch {
@@ -121,7 +124,7 @@ export class Game {
   save() {
     const s: Save = {
       map: this.map.id, x: this.x, y: this.y, dir: this.dir,
-      flags: [...this.flags], clues: [...this.clues], items: [...this.items],
+      flags: [...this.flags], clues: [...this.clues], items: [...this.items], fresh: [...this.fresh],
     };
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify(s));
@@ -621,11 +624,13 @@ export class Game {
   }
 
   openJournal() {
-    ui.renderJournal(this.clues, this.items, this.fresh, this.openQ, this.solvedQ);
+    ui.renderJournal(this.clues, this.fresh, this.openQ, this.solvedQ, (id) => this.flags.has(id) || this.items.has(id));
     ui.setJournal(true);
     releaseAll();
+    // tout ce qui vient d'être affiché est désormais « lu »
     this.fresh.clear();
     document.getElementById('btn-journal')?.classList.remove('fresh');
+    this.save();
   }
 
   openBag() {
