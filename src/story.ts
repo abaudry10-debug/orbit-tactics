@@ -59,7 +59,7 @@ export const CLUES: Clue[] = [
   { id: 'mis6', thread: 'missions', title: 'Le dernier contact', text: '« Mission Aurore : monde habitable confirmé. Dernier contact sur 47,2. Ensuite, plus rien. »' },
   { id: 'mis7', thread: 'missions', title: 'Un signal', text: 'Au sommet de la tour radio, sur 47,2 : un signal venu de la planète d’Aurore. Une suite de bips qui se répète : –··  ··–  –––  ·–·  Indéchiffrable… pour l’instant.' },
   // Étape 3
-  { id: 'heat6', thread: 'heat', title: 'La carte des orbites', text: 'Une seconde étoile, brûlante, suit une orbite immense et très allongée. Une fois par cycle, elle frôle l’orbite de Vesper. Son prochain passage est marqué en rouge : tout près de nous, et bientôt.' },
+  { id: 'heat6', thread: 'heat', title: 'La carte des orbites', text: 'Une seconde étoile, brûlante, suit une orbite immense et très allongée. Une fois par cycle, elle frôle l’orbite de Vesper. Période de l’étoile errante : 1 184 ans. Son prochain passage est marqué en rouge : tout près de nous, et bientôt.' },
   { id: 'heat7', thread: 'heat', title: 'Le journal de l’observatoire', text: '« L’étoile errante revient. Ce passage-ci sera plus proche que tous les autres. Plus rien ne survivra en surface. Le programme LAZARE est notre seule chance. »' },
   { id: 'mis8', thread: 'missions', title: 'Le tableau des missions', text: 'HÉLIADE : aucun monde viable. KAIROS : perdue. ONDINE : monde gelé. AURORE : monde habitable confirmé, baptisé Azura.' },
   { id: 'cap10', thread: 'capsules', title: 'Les cuves d’essai', text: 'Des cuves semblables à nos capsules, remplies d’un liquide ambré. « Essai 14 : forme stable. Aucune activité cérébrale. Normal : personne n’y est encore entré. »' },
@@ -68,6 +68,7 @@ export const CLUES: Clue[] = [
   { id: 'cap13', thread: 'capsules', title: 'La lettre de Nina', text: '« Maman, on part demain avec le programme. Tu crois que j’aurai encore mes taches de rousseur, là-bas ? »' },
   { id: 'mis10', thread: 'missions', title: 'Les archives du spatioport', text: 'Les dossiers des missions : Héliade a trouvé un monde de roche fondue, Kairos s’est perdue dans une tempête, Ondine n’a trouvé que de la glace.' },
   { id: 'mis11', thread: 'missions', title: 'Le dossier Azura', text: 'Le dossier de la mission Aurore est vide : toutes ses archives ont été supprimées le jour du grand départ.' },
+  { id: 'lead7', thread: 'leads', doneWhen: 'archUnlock_plans', title: 'Le post-it du télescope', text: '« Dossier LAZARE, ordinateur du spatioport. Code d’accès : la période de l’étoile errante, en années. »' },
   { id: 'mis9', thread: 'missions', title: 'La grille de décodage', text: 'La grille de la mission Aurore associe chaque groupe de trois bips à un chiffre : ··· 0 · ··– 1 · ·–· 2 · ·–– 3 · –·· 4 · –·– 5 · ––· 6 · ––– 7.' },
   { id: 'cap9', thread: 'capsules', title: 'Le journal du Dr Varn', text: '« Les navettes ne suffiront jamais. Alors nous enverrons nos esprits. Sur Azura, la mission Aurore cultive un corps neuf pour chacun de nous. Les capsules transfèrent chaque esprit vers son double et protègent nos anciens corps de la chaleur. 4 212 habitants, 4 212 capsules. Tout le monde part. »' },
   { id: 'lead5', thread: 'leads', doneWhen: 'heliosOn', title: 'Le carnet du technicien', text: '« Arrêt d’urgence à la troisième cloche : j’ai coupé la pompe, puis l’onduleur, puis la ventilation, puis la turbine, et enfin le régulateur. » — R. Ilunga' },
@@ -165,13 +166,17 @@ export interface ArchiveFolder {
   id: string;
   name: string;
   locked?: boolean;
+  /** Code d'accès propre au dossier (trouvé ailleurs dans le jeu). */
+  code?: string;
+  codeHint?: string;
   lines: string[];
 }
 
 /** Dossiers de l'ordinateur du spatioport. Le dossier d'Azura reste verrouillé. */
 export const ARCHIVES: ArchiveFolder[] = [
   {
-    id: 'plans', name: 'LAZARE_POD_MOBILE',
+    id: 'plans', name: 'LAZARE_POD_MOBILE', code: '1184',
+    codeHint: 'Code détenu par l’observatoire de la colline.',
     lines: [
       'PROGRAMME LAZARE — POD MOBILE (plan v4)',
       'Une navette : 12 passagers, et l’énergie de toute la ville pendant un an.',
@@ -247,7 +252,7 @@ export interface Api {
   say(lines: string[], then?: () => void): void;
   keypad(title: string, onCode: (code: string) => void): void;
   sfx(name: 'success' | 'wrong' | 'door' | 'item'): void;
-  ui(kind: 'switches' | 'orbit' | 'codebook' | 'archives', then?: () => void): void;
+  ui(kind: 'switches' | 'orbit' | 'codebook' | 'archives' | 'plansBanner', then?: () => void): void;
 }
 
 export const SCRIPTS: Record<string, (api: Api) => void> = {
@@ -607,7 +612,15 @@ export const SCRIPTS: Record<string, (api: Api) => void> = {
     });
   },
 
-  telescope: (api) => api.say(['Le grand télescope est pointé vers le bas du ciel, sur une étoile énorme et rougeoyante.']),
+  telescope: (api) =>
+    api.say(
+      [
+        'Le grand télescope est pointé vers le bas du ciel, sur une étoile énorme et rougeoyante.',
+        'Un post-it est collé sur l’oculaire :',
+        '« Dossier LAZARE, ordinateur du spatioport. Code d’accès : la période de l’étoile errante, en années. »',
+      ],
+      () => api.clue('lead7'),
+    ),
 
   orbitChart: (api) => api.ui('orbit', () => api.clue('heat6')),
 
@@ -650,8 +663,9 @@ export const SCRIPTS: Record<string, (api: Api) => void> = {
       if (api.has('arch_plans')) {
         const first = !api.has('plansRead');
         api.set('plansRead');
-        api.clue('lead6');
-        if (first) api.say(['Un pod mobile… La capsule 07 pourrait servir de base.']);
+        if (first)
+          api.ui('plansBanner', () => api.say(['Un pod mobile… La capsule 07 pourrait servir de base.'], () => api.clue('lead6')));
+        else api.clue('lead6');
       }
     }),
 

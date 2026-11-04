@@ -564,12 +564,17 @@ export class Game {
     ui: (kind, then) => {
       releaseAll();
       if (kind === 'switches') ui.openSwitches(SWITCHES, RESTART_ORDER, () => then?.());
+      else if (kind === 'plansBanner') ui.showBanner('Plans du pod mobile', 'Tu as maintenant les plans pour réparer ta capsule 07.', then);
       else if (kind === 'archives')
         ui.openTerminal({
           folders: ARCHIVES,
           code: ARCHIVE_CODE,
           loggedIn: this.flags.has('archLogin'),
-          onEvent: (ev) => this.flags.add(ev === 'login' ? 'archLogin' : ev === 'azura' ? 'archAzura' : 'arch_' + ev),
+          unlocked: new Set(ARCHIVES.filter((f) => this.flags.has('archUnlock_' + f.id)).map((f) => f.id)),
+          onEvent: (ev) => {
+            this.flags.add(ev === 'login' ? 'archLogin' : ev === 'azura' ? 'archAzura' : ev.startsWith('unlock:') ? 'archUnlock_' + ev.slice(7) : 'arch_' + ev);
+            this.save();
+          },
           onClose: then,
         });
       else if (kind === 'orbit') ui.openViewer('Carte des orbites', ui.orbitChart(), then);

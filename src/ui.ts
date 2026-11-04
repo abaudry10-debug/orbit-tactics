@@ -2,6 +2,7 @@
 import { setStatic, sfx, startStatic, stopStatic } from './audio.js';
 import { iconUrl } from './sprites.js';
 import { CLUES, ITEMS, QUESTIONS, THREADS, type ArchiveFolder } from './story.js';
+import { iconCanvas } from './sprites.js';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -322,7 +323,7 @@ export function showPlace(name: string) {
 
 // ---------- fenêtres pause / confirmation ----------
 export const overlayOpen = () =>
-  !$('pause').hidden || !$('confirm').hidden || !$('viewer').hidden || !$('switches').hidden || !$('finale').hidden || !$('term').hidden;
+  !$('pause').hidden || !$('confirm').hidden || !$('viewer').hidden || !$('switches').hidden || !$('finale').hidden || !$('term').hidden || !$('banner').hidden;
 
 export function confirm(question: string, onYes: () => void, onNo?: () => void, labels?: [string, string]) {
   $('confirm-text').textContent = question;
@@ -464,7 +465,8 @@ export function orbitChart(): HTMLElement {
     '<span><i style="background:#ffe08a"></i>Notre soleil</span>' +
     '<span><i style="background:#6fb8ff"></i>Vesper</span>' +
     '<span><i style="background:#ff5a2d"></i>L’étoile errante</span>' +
-    '<span><i style="background:#ff2a2a"></i>Prochain passage</span>';
+    '<span><i style="background:#ff2a2a"></i>Prochain passage</span>' +
+    '<span class="orbit-period">Période de l’étoile errante : 1 184 ans</span>';
   wrap.appendChild(legend);
   const c = cv.getContext('2d')!;
   const px = (x: number, y: number, col: string, w = 1, h = 1) => {
@@ -662,11 +664,13 @@ interface TermOpts {
   folders: ArchiveFolder[];
   code: string;
   loggedIn: boolean;
-  onEvent: (ev: string) => void; // 'login', puis l'id de chaque dossier ouvert
+  onEvent: (ev: string) => void; // 'login', 'unlock:<id>', puis l'id de chaque dossier ouvert
   onClose?: () => void;
+  /** Dossiers protégés par un code et déjà déverrouillés. */
+  unlocked: Set<string>;
 }
 let term: TermOpts | undefined;
-let termState: 'login' | 'menu' | 'file' = 'login';
+let termState: 'login' | 'menu' | 'file' | 'fcode' = 'login';
 let termSel = 0;
 let termFile: ArchiveFolder | undefined;
 let termDigits = [0, 0, 0, 0];
@@ -697,8 +701,13 @@ export function closeTerminal() {
   cb?.();
 }
 
+const needsCode = (f: ArchiveFolder) => !!f.code && !term!.unlocked.has(f.id);
 const termItems = (): string[] =>
-  termState === 'menu' ? [...term!.folders.map((f) => f.name + (f.locked ? '/ [VIDE]' : '/')), 'DÉCONNEXION'] : termState === 'file' ? ['◀ RETOUR'] : [];
+  termState === 'menu'
+    ? [...term!.folders.map((f) => f.name + (f.locked ? '/ [VIDE]' : needsCode(f) ? '/ [CODE]' : '/')), 'DÉCONNEXION']
+    : termState === 'file'
+      ? ['◀ RETOUR']
+      : [];
 
 function line(text: string, cls = '') {
   const p = document.createElement('p');
@@ -713,11 +722,15 @@ function renderTerm() {
   const scr = $('term-screen');
   scr.innerHTML = '';
   scr.appendChild(line('SPATIOPORT DE VESPER — ARCHIVES v2.07', 'dim'));
-  if (termState === 'login') {
-    scr.appendChild(line('UTILISATEUR : I.VARN'));
+  if (termState === 'login' || termState === 'fcode') {
+    const fc = termState === 'fcode';
+    if (fc) {
+      scr.appendChild(line('> open /missions/' + termFile!.name, 'dim'));
+      scr.appendChild(line('DOSSIER PROTÉGÉ.'));
+    } else scr.appendChild(line('UTILISATEUR : I.VARN'));
     const row = document.createElement('div');
     row.className = 'term-pass';
-    row.appendChild(line('MOT DE PASSE :'));
+    row.appendChild(line(fc ? 'CODE D’ACCÈS :' : 'MOT DE PASSE :'));
     termDigits.forEach((d, i) => {
       const cell = document.createElement('div');
       cell.className = 'term-digit' + (i === termCursor ? ' sel' : '');
@@ -728,18 +741,18 @@ function renderTerm() {
       row.appendChild(cell);
     });
     scr.appendChild(row);
-    scr.appendChild(line('Indice : « la mission qui n’a trouvé que de la glace »', 'dim'));
+    scr.appendChild(line(fc ? termFile!.codeHint ?? '' : 'Indice : « la mission qui n’a trouvé que de la glace »', 'dim'));
     if (termMsg) scr.appendChild(line(termMsg, 'warn'));
     const actions = document.createElement('div');
     actions.className = 'term-actions';
     const ok = document.createElement('button');
     ok.className = 'term-btn';
-    ok.textContent = '[ CONNEXION ]';
+    ok.textContent = fc ? '[ OUVRIR ]' : '[ CONNEXION ]';
     ok.addEventListener('click', () => termInput('a'));
     const quit = document.createElement('button');
     quit.className = 'term-btn';
-    quit.textContent = '[ QUITTER ]';
-    quit.addEventListener('click', closeTerminal);
+    quit.textContent = fc ? '[ RETOUR ]' : '[ QUITTER ]';
+    quit.addEventListener('click', () => termInput('b'));
     actions.append(ok, quit);
     scr.appendChild(actions);
   } else if (termState === 'menu') {
@@ -755,6 +768,15 @@ function renderTerm() {
       cv.className = 'term-photo';
       scr.appendChild(cv);
       drawArchivePhoto(termFile.id, cv);
+      if (big) {
+        scr.appendChild(line('VUE ÉCLATÉE :', 'dim'));
+        const ex = document.createElement('canvas');
+        ex.width = 101;
+        ex.height = 30;
+        ex.className = 'term-photo';
+        scr.appendChild(ex);
+        drawExploded(ex);
+      }
     }
     for (const l of termFile.lines) scr.appendChild(line(l, termFile.locked ? 'dim' : ''));
   }
@@ -773,21 +795,37 @@ function renderTerm() {
 
 export function termInput(b: string) {
   if (!term) return;
-  if (termState === 'login') {
+  if (termState === 'login' || termState === 'fcode') {
+    const fc = termState === 'fcode';
     if (b === 'up') termDigits[termCursor] = (termDigits[termCursor] + 1) % 10;
     else if (b === 'down') termDigits[termCursor] = (termDigits[termCursor] + 9) % 10;
     else if (b === 'left') termCursor = (termCursor + 3) % 4;
     else if (b === 'right') termCursor = (termCursor + 1) % 4;
-    else if (b === 'b' || b === 'menu') return closeTerminal();
-    else if (b === 'a') {
-      if (termDigits.join('') === term.code) {
+    else if (b === 'b' || b === 'menu') {
+      if (!fc) return closeTerminal();
+      termState = 'menu';
+      termMsg = '';
+      termSel = Math.max(0, term.folders.indexOf(termFile!));
+      sfx.key();
+      return renderTerm();
+    } else if (b === 'a') {
+      const want = fc ? termFile!.code : term.code;
+      if (termDigits.join('') === want) {
         sfx.success();
-        term.onEvent('login');
-        termState = 'menu';
+        termMsg = '';
+        if (fc) {
+          term.unlocked.add(termFile!.id);
+          term.onEvent('unlock:' + termFile!.id);
+          term.onEvent(termFile!.id);
+          termState = 'file';
+        } else {
+          term.onEvent('login');
+          termState = 'menu';
+        }
         termSel = 0;
       } else {
         sfx.wrong();
-        termMsg = 'MOT DE PASSE INCORRECT.';
+        termMsg = fc ? 'CODE INCORRECT.' : 'MOT DE PASSE INCORRECT.';
       }
       return renderTerm();
     }
@@ -808,8 +846,16 @@ export function termInput(b: string) {
       return closeTerminal();
     } else {
       termFile = term.folders[termSel];
-      termState = 'file';
       termSel = 0;
+      if (needsCode(termFile)) {
+        termState = 'fcode';
+        termDigits = [0, 0, 0, 0];
+        termCursor = 0;
+        termMsg = '';
+        sfx.key();
+        return renderTerm();
+      }
+      termState = 'file';
       term.onEvent(termFile.id);
       sfx.page();
       return renderTerm();
@@ -918,4 +964,81 @@ function drawPodPlan(c: CanvasRenderingContext2D, G: string[]) {
   px(97, 55, 1, 19, 22);
   for (let y = -2; y <= 2; y++) for (let x = -2; x <= 2; x++) if (x * x + y * y <= 4) px(106 + x, 59 + y, 4);
   px(103, 62, 4, 7, 9); px(104, 71, 4, 2, 5); px(108, 71, 4, 2, 5);
+}
+
+/** Vue éclatée des cinq pièces du pod, en phosphore vert. */
+function drawExploded(cv: HTMLCanvasElement) {
+  const c = cv.getContext('2d')!;
+  const G = ['#031006', '#0b3014', '#1a6a2c', '#33b056', '#7dffa0', '#d8ffe4'];
+  c.fillStyle = G[0];
+  c.fillRect(0, 0, cv.width, cv.height);
+  const DIG: Record<string, string> = { '1': '010110010010111', '2': '111001111100111', '3': '111001011001111', '4': '101101111001001', '5': '111100111001111' };
+  const parts = ['matrice', 'noyau', 'antenne', 'cle', 'battery'];
+  parts.forEach((id, i) => {
+    const x0 = 2 + i * 20;
+    // l'icône du sac, recolorée en vert selon sa luminosité
+    const src = id === 'cle' ? keyIcon() : iconCanvas(id);
+    const tmp = document.createElement('canvas');
+    tmp.width = tmp.height = 16;
+    const t = tmp.getContext('2d')!;
+    t.drawImage(src, 0, 0);
+    const img = t.getImageData(0, 0, 16, 16);
+    for (let p = 0; p < img.data.length; p += 4) {
+      if (img.data[p + 3] < 40) { img.data[p + 3] = 0; continue; }
+      const l = (img.data[p] * 0.3 + img.data[p + 1] * 0.59 + img.data[p + 2] * 0.11) / 255;
+      const g = G[Math.min(5, 2 + Math.floor(l * 4))];
+      img.data[p] = parseInt(g.slice(1, 3), 16);
+      img.data[p + 1] = parseInt(g.slice(3, 5), 16);
+      img.data[p + 2] = parseInt(g.slice(5, 7), 16);
+      img.data[p + 3] = 255;
+    }
+    t.putImageData(img, 0, 0);
+    c.strokeStyle = G[2];
+    c.strokeRect(x0 + 0.5, 2.5, 17, 17);
+    c.drawImage(tmp, x0 + 1, 3);
+    [...DIG[String(i + 1)]].forEach((b, k) => {
+      if (b !== '1') return;
+      c.fillStyle = G[5];
+      c.fillRect(x0 + 7 + (k % 3), 22 + Math.floor(k / 3), 1, 1);
+    });
+  });
+}
+
+function keyIcon() {
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = 16;
+  const c = cv.getContext('2d')!;
+  c.fillStyle = '#1a1c22'; c.fillRect(3, 2, 10, 12);
+  c.fillStyle = '#9aa3b3';
+  for (let i = 0; i < 9; i++) c.fillRect(4 + (i % 3) * 3, 3 + Math.floor(i / 3) * 3, 2, 2);
+  c.fillStyle = '#ffffff'; c.fillRect(4, 12, 8, 1);
+  return cv;
+}
+
+// ---------- grande notification (étape clé franchie) ----------
+let bannerDone: (() => void) | undefined;
+let bannerTimer = 0;
+export const bannerOpen = () => !$('banner').hidden;
+
+export function showBanner(title: string, text: string, done?: () => void) {
+  $('banner-title').textContent = title;
+  $('banner-text').textContent = text;
+  const b = $('banner');
+  b.hidden = false;
+  b.classList.remove('show');
+  void b.offsetWidth;
+  b.classList.add('show');
+  sfx.success();
+  bannerDone = done;
+  window.clearTimeout(bannerTimer);
+  bannerTimer = window.setTimeout(closeBanner, 4500);
+}
+
+export function closeBanner() {
+  if ($('banner').hidden) return;
+  window.clearTimeout(bannerTimer);
+  $('banner').hidden = true;
+  const cb = bannerDone;
+  bannerDone = undefined;
+  cb?.();
 }

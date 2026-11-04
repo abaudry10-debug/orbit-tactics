@@ -78,7 +78,7 @@ test('chaque objet a un script existant, chaque objet du sac est décrit', () =>
 test('chaque indice, objet et réponse est obtenable', () => {
   const clues = new Set<string>(['mis7']); // donné par le moteur (signal radio)
   const items = new Set<string>();
-  const flags = new Set<string>(['pixelOn', 'batteryFound', 'signalFound', 'knowsCabin', 'arch_plans']); // posés par le moteur (Pixel, fouille, radio, trappe)
+  const flags = new Set<string>(['pixelOn', 'batteryFound', 'signalFound', 'knowsCabin', 'arch_plans', 'archUnlock_plans']); // posés par le moteur (Pixel, fouille, radio, trappe)
   for (const assumeAll of [false, true]) {
     for (const run of Object.values(SCRIPTS)) {
       const api = {
@@ -110,7 +110,7 @@ test('chaque indice, objet et réponse est obtenable', () => {
 test('la progression complète est possible : chaque porte finit par s’ouvrir', () => {
   // On rejoue tous les scripts tant que de nouveaux drapeaux apparaissent,
   // en ne connaissant au départ que ce que le moteur pose lui-même.
-  const flags = new Set<string>(['pixelOn', 'batteryFound', 'signalFound', 'knowsCabin', 'arch_plans']);
+  const flags = new Set<string>(['pixelOn', 'batteryFound', 'signalFound', 'knowsCabin', 'arch_plans', 'archUnlock_plans']);
   const items = new Set<string>();
   let grew = true;
   while (grew) {

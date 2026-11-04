@@ -941,6 +941,13 @@ const ICONS: Record<string, Painter> = {
 
 const iconCache = new Map<string, string>();
 /** Icône d'objet en image (data URL), affichée en grand avec des pixels nets. */
+/** Icône du sac sous forme de canevas (pour la vue éclatée des plans). */
+export function iconCanvas(id: string): HTMLCanvasElement {
+  const [c, ctx] = canvas();
+  (ICONS[id] ?? ICONS.badge)(ctx, 0);
+  return c;
+}
+
 export function iconUrl(id: string): string {
   let url = iconCache.get(id);
   if (url) return url;

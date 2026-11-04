@@ -1162,3 +1162,24 @@ details.thread > summary.has-new .count { color: var(--accent-dark); }
   border-radius: 4px;
   letter-spacing: 1px;
 }
+
+/* ---------- grande notification ---------- */
+.banner { background: rgba(8, 6, 14, 0.72); z-index: 25; }
+.banner-box {
+  width: min(88%, 420px);
+  text-align: center;
+  padding: 18px 16px 12px;
+  background: linear-gradient(#2a1d0e, #1a1208);
+  border: 3px solid var(--accent);
+  border-radius: 12px;
+  box-shadow: 0 0 0 3px #1a1208, 0 0 36px rgba(255, 138, 61, 0.55);
+  color: #ffe9c4;
+}
+.banner.show .banner-box { animation: bannerIn 0.5s cubic-bezier(0.2, 1.4, 0.4, 1); }
+.banner-kicker { margin: 0; color: var(--accent); letter-spacing: 2px; font-size: 18px; }
+.banner-box h2 { margin: 6px 0 8px; font-size: 32px; font-weight: normal; color: #fff; }
+#banner-text { margin: 0 0 10px; font-size: 22px; line-height: 1.2; }
+.banner-hint { margin: 0; font-size: 16px; color: #b89a74; animation: termBlink 1.4s steps(2) infinite; }
+@keyframes bannerIn { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+.orbit-period { grid-column: 1 / -1; text-align: center; color: #b4522a; }
