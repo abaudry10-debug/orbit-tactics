@@ -2,6 +2,7 @@ import { isMuted, playTheme, setMuted, sfx, unlock } from './audio.js';
 import { Game, view } from './game.js';
 import { onPress, releaseAll, setupInput } from './input.js';
 import { INTRO } from './story.js';
+import { relayoutTitleScene, startTitleScene, stopTitleScene } from './title.js';
 import * as ui from './ui.js';
 
 const $ = (id: string) => document.getElementById(id)!;
@@ -25,8 +26,15 @@ function resize() {
   canvas.style.width = `${view.w * scale}px`;
   canvas.style.height = `${view.h * scale}px`;
 }
+// Après une rotation, l'iPhone change la taille de l'écran un peu après l'événement :
+// on surveille directement la zone de jeu, et on recalcule aussi juste après la rotation.
 window.addEventListener('resize', resize);
+window.addEventListener('resize', () => window.setTimeout(relayoutTitleScene, 50));
 window.visualViewport?.addEventListener('resize', resize);
+window.addEventListener('orientationchange', () => {
+  for (const ms of [100, 300, 700]) window.setTimeout(resize, ms);
+});
+if ('ResizeObserver' in window) new ResizeObserver(() => resize()).observe($('screen'));
 
 // Le son ne peut démarrer qu'après un geste : premier contact avec la page.
 window.addEventListener('pointerdown', unlock, { capture: true });
@@ -53,6 +61,7 @@ const btnContinue = $('btn-continue') as HTMLButtonElement;
 
 function showTitle() {
   title.hidden = false;
+  startTitleScene($('title-bg') as HTMLCanvasElement);
   btnContinue.hidden = !Game.hasSave();
   playTheme('title');
 }
@@ -68,6 +77,7 @@ function startNew() {
   Game.clearSave();
   game = new Game(ctx);
   title.hidden = true;
+  stopTitleScene();
   game.blackout = true;
   playTheme('none');
   ui.say(INTRO, () => {
@@ -89,6 +99,7 @@ function continueGame() {
   game = new Game(ctx);
   if (!game.load()) return startNew();
   title.hidden = true;
+  stopTitleScene();
   game.startMusic();
   ui.showPlace(game.map.name);
 }

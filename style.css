@@ -15,11 +15,17 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+html {
+  /* même couleur que la manette : aucune bande visible sous les commandes, même sous la barre iPhone */
+  background: #140c1c;
+  min-height: 100%;
+  min-height: 100lvh;
+}
+
 html,
 body {
   margin: 0;
   height: 100%;
-  background: var(--bg);
   color: #f2e9dc;
   font-family: var(--font);
   overscroll-behavior: none;
@@ -33,11 +39,15 @@ body {
   display: none !important;
 }
 
+body {
+  background: transparent;
+}
+
 #app {
   position: fixed;
   inset: 0;
   overflow: hidden;
-  background: var(--bg);
+  background: transparent;
 }
 
 /* ---------- écran de jeu : plein écran ---------- */
@@ -271,9 +281,7 @@ body {
     border-bottom: 3px solid var(--ink);
     box-shadow: 0 6px 24px rgba(0, 0, 0, 0.6);
   }
-  #app {
-    background: radial-gradient(ellipse at 50% 100%, #2a1420 0%, var(--bg) 70%);
-  }
+
   #controls {
     bottom: 0;
     height: calc(var(--controls-h) + env(safe-area-inset-bottom));
@@ -370,7 +378,55 @@ body {
 }
 
 #title {
-  background: linear-gradient(180deg, rgba(60, 20, 30, 0.55), rgba(8, 5, 14, 0.92) 70%);
+  background: #12081a;
+  padding: 0;
+  align-items: stretch;
+}
+#title-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+.title-layout {
+  position: relative;
+  z-index: 1;
+  max-width: 420px;
+  margin: 0 auto;
+  height: 100%;
+  justify-content: space-between;
+  padding: calc(var(--safe-top) + 28px) 24px calc(var(--safe-bottom) + 20px);
+}
+.title-top {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.title-bottom {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.title-top .tagline {
+  text-shadow: 0 2px 0 #12081a, 0 0 12px rgba(18, 8, 26, 0.9);
+}
+@media (orientation: landscape) and (max-height: 600px) {
+  #title .title-layout {
+    max-width: none;
+    flex-direction: row;
+    align-items: flex-end;
+    padding: 20px 32px calc(var(--safe-bottom) + 12px);
+  }
+  #title .title-top {
+    align-self: flex-start;
+    text-align: left;
+    max-width: 50%;
+  }
+  #title .title-bottom {
+    width: 300px;
+  }
 }
 
 .title-box {

@@ -54,14 +54,18 @@
 
       <!-- écran titre -->
       <section id="title" class="overlay">
-        <div class="title-box">
-          <p class="kicker">Chapitre 1 · Le Réveil</p>
-          <h1>VESPER</h1>
-          <p class="tagline">Tu te réveilles seul dans une ville morte.<br />Que s’est-il passé ici ?</p>
-          <button id="btn-continue" class="menu">Continuer</button>
-          <button id="btn-new" class="menu primary">Nouvelle partie</button>
-          <button id="btn-sound" class="menu small">Son : activé</button>
-          <p class="hint">Croix pour marcher · A pour examiner · Sac pour tes objets · Journal pour tes découvertes</p>
+        <canvas id="title-bg" aria-hidden="true"></canvas>
+        <div class="title-box title-layout">
+          <div class="title-top">
+            <p class="kicker">Chapitre 1 · Le Réveil</p>
+            <h1>VESPER</h1>
+            <p class="tagline">Tu te réveilles seul dans une ville morte.<br />Que s’est-il passé ici ?</p>
+          </div>
+          <div class="title-bottom">
+            <button id="btn-continue" class="menu">Continuer</button>
+            <button id="btn-new" class="menu primary">Nouvelle partie</button>
+            <button id="btn-sound" class="menu small">Son : activé</button>
+          </div>
         </div>
       </section>
 
