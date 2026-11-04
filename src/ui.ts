@@ -1,5 +1,5 @@
 // Interface HTML par-dessus le canvas : dialogues, journal, clavier à code, notifications.
-import { setStatic, sfx, startStatic, stopStatic } from './audio.js';
+import { playEnding, setStatic, sfx, startStatic, stopStatic } from './audio.js';
 import { iconUrl } from './sprites.js';
 import { CLUES, ITEMS, QUESTIONS, THREADS, type ArchiveFolder } from './story.js';
 import { iconCanvas } from './sprites.js';
@@ -576,86 +576,254 @@ export async function playFinale(pixelSprite: HTMLCanvasElement, onBlack?: () =>
   const text = $('finale-text');
   const c = cv.getContext('2d')!;
   // canevas aux proportions de l'écran, en gros pixels
-  const W = 80;
-  const H = Math.max(80, Math.round((W * el.parentElement!.clientHeight) / Math.max(1, el.parentElement!.clientWidth)));
+  const W = 96;
+  const H = Math.max(96, Math.round((W * el.parentElement!.clientHeight) / Math.max(1, el.parentElement!.clientWidth)));
   cv.width = W;
   cv.height = H;
   c.imageSmoothingEnabled = false;
   text.textContent = '';
+  text.className = '';
   el.className = 'finale clear';
   el.hidden = false;
-  /** Fait varier t de 0 à 1 pendant `ms`, en redessinant à chaque image. */
-  const animate = (ms: number, draw: (t: number) => void) =>
-    new Promise<void>((res) => {
-      const t0 = performance.now();
-      const step = (now: number) => {
-        const t = Math.min(1, (now - t0) / ms);
-        draw(t);
-        if (t < 1) requestAnimationFrame(step);
-        else res();
-      };
-      requestAnimationFrame(step);
-    });
+  const stopMusic = playEnding();
+
+  // --- petits outils de dessin ---
+  let seed = 3;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const clamp = (x: number) => Math.max(0, Math.min(1, x));
+  const ease = (x: number) => { x = clamp(x); return x * x * (3 - 2 * x); };
+  const win = (t: number, a: number, b: number) => clamp((t - a) / (b - a)); // 0→1 entre a et b
   const fill = (col: string, alpha = 1) => {
-    c.globalAlpha = alpha;
+    if (alpha <= 0) return;
+    c.globalAlpha = Math.min(1, alpha);
     c.fillStyle = col;
     c.fillRect(0, 0, W, H);
     c.globalAlpha = 1;
   };
-  // 1. tout s'assombrit peu à peu, jusqu'au noir complet
-  await animate(2400, (t) => { c.clearRect(0, 0, W, H); fill('#000', t * t); });
-  el.className = 'finale';
-  onBlack?.();
-  await wait(1000);
-  // 2. dans le noir, la silhouette de Pixel… et son œil qui clignote une fois
-  const dx = Math.round(W / 2 - 8), dy = Math.round(H * 0.62);
-  const pixel = (alpha: number, eye: boolean) => {
-    fill('#000');
-    c.globalAlpha = alpha;
+  const dot = (x: number, y: number, col: string, a = 1, w = 1, h = 1) => {
+    if (a <= 0) return;
+    c.globalAlpha = Math.min(1, a);
+    c.fillStyle = col;
+    c.fillRect(Math.round(x), Math.round(y), w, h);
+    c.globalAlpha = 1;
+  };
+  const disc = (cx: number, cy: number, r: number, col: string, a = 1) => {
+    c.globalAlpha = Math.min(1, a);
+    c.fillStyle = col;
+    for (let y = -r; y <= r; y++) {
+      const w = Math.floor(Math.sqrt(r * r - y * y));
+      c.fillRect(Math.round(cx - w), Math.round(cy + y), w * 2 + 1, 1);
+    }
+    c.globalAlpha = 1;
+  };
+
+  // --- décors préparés une fois ---
+  const stars = Array.from({ length: 140 }, () => ({ x: rnd() * W, y: rnd() * H * 3, b: 0.3 + rnd() * 0.7, tw: rnd() * 6 }));
+  const skyline: [number, number, number][] = []; // x, largeur, hauteur des immeubles en ruine
+  for (let x = -2; x < W; ) {
+    const w = 5 + Math.floor(rnd() * 9);
+    skyline.push([x, w, 10 + Math.floor(rnd() * 26)]);
+    x += w + Math.floor(rnd() * 2);
+  }
+  const warp = Array.from({ length: 90 }, () => ({ a: rnd() * Math.PI * 2, d: rnd(), s: 0.4 + rnd() * 0.9 }));
+  const motes = Array.from({ length: 40 }, () => ({ x: rnd() * 30 - 15, s: 0.4 + rnd(), o: rnd() }));
+  const clouds = Array.from({ length: 6 }, (_, i) => ({ x: rnd() * W, y: H * (0.12 + i * 0.07), w: 12 + rnd() * 16, v: 1.5 + rnd() * 2.5 }));
+  const cx = Math.round(W / 2);
+  const groundY = Math.round(H * 0.7);
+
+  // la capsule 07, dessinée en gros pixels, qui s'illumine
+  const pod = (glow: number, a: number) => {
+    const x = cx - 7, y = groundY - 30;
+    dot(x, y + 2, '#2a2f3a', a, 14, 26); dot(x + 1, y, '#2a2f3a', a, 12, 2);
+    dot(x + 2, y + 3, glow > 0 ? '#1b4a5a' : '#141822', a, 10, 18);
+    dot(x + 2, y + 3, '#7ff6ff', a * glow * 0.8, 10, 18);
+    dot(x + 4, y + 6, '#0d1018', a * (1 - glow * 0.7), 6, 12); // le dormeur
+    dot(x + 3, y + 23, '#5ef0ff', a * (0.3 + glow), 8, 2);
+    if (glow > 0) {
+      c.globalAlpha = Math.min(1, glow * a * 0.35);
+      c.fillStyle = '#5ef0ff';
+      c.fillRect(x - 3, y - 2, 20, 32);
+      c.globalAlpha = 1;
+    }
+  };
+  const pixel = (a: number, eye: boolean) => {
+    const dx = cx + 6, dy = groundY - 13;
+    c.globalAlpha = a;
     c.drawImage(pixelSprite, dx, dy);
     c.globalAlpha = 1;
     if (eye) {
-      c.fillStyle = 'rgba(94,240,255,0.35)';
-      c.fillRect(dx + 11, dy + 4, 3, 3);
-      c.fillStyle = '#5ef0ff';
-      c.fillRect(dx + 12, dy + 5, 1, 1);
+      dot(dx + 11, dy + 4, '#5ef0ff', 0.35, 3, 3);
+      dot(dx + 12, dy + 5, '#5ef0ff', 1);
     }
   };
-  await animate(900, (t) => pixel(0.4 * t, false));
-  await wait(700);
-  pixel(0.4, true);
-  await wait(260);
-  pixel(0.4, false);
-  await wait(900);
-  await animate(700, (t) => pixel(0.4 * (1 - t), false));
-  await wait(500);
-  // 3. l'éclair blanc du transfert
-  await animate(450, (t) => { fill('#000'); fill('#fff', t); });
-  await wait(1500);
-  // 4. fondu vers un ciel bleu
-  const sky = document.createElement('canvas');
-  sky.width = W;
-  sky.height = H;
-  const s = sky.getContext('2d')!;
-  for (let y = 0; y < H; y++) {
-    const k = y / H;
-    s.fillStyle = `rgb(${Math.round(90 + 90 * k)},${Math.round(160 + 60 * k)},${Math.round(235 + 15 * k)})`;
-    s.fillRect(0, y, W, 1);
-  }
-  const cloud = (x: number, y: number) => {
-    s.fillStyle = '#ffffff';
-    s.fillRect(x, y, 18, 3); s.fillRect(x + 3, y - 2, 10, 2); s.fillRect(x + 6, y - 4, 5, 2);
+
+  const T_END = 36;
+  const draw = (t: number) => {
+    c.clearRect(0, 0, W, H);
+    // 1. le monde s'éteint (0 → 2,4 s) : on voit encore le jeu derrière
+    if (t < 2.4) { fill('#000', ease(t / 2.4)); return; }
+    fill('#000');
+    // 2. la silhouette de Pixel, son œil clignote une fois (3,4 → 7,6 s)
+    if (t < 11.5) {
+      const pa = 0.42 * win(t, 3.4, 4.4) * (1 - win(t, 10.4, 11.4));
+      pod(0, pa * 0.9);
+      pixel(pa, t > 5.3 && t < 5.56);
+    }
+    // 3. la capsule s'éveille (7,6 → 11,5 s) : lueur, poussière d'énergie qui monte
+    if (t >= 7.6 && t < 12.5) {
+      const g = ease(win(t, 7.6, 10.5));
+      pod(g, 1 - win(t, 11.6, 12.4));
+      for (const m of motes) {
+        const life = ((t - 7.6) * m.s + m.o * 3) % 3;
+        const y = groundY - 18 - life * 22;
+        dot(cx + m.x * (1 - life / 4), y, '#bffbff', g * (1 - life / 3));
+      }
+      // anneau d'énergie qui pulse
+      const ring = (t * 1.6) % 1;
+      c.strokeStyle = '#7ff6ff';
+      c.globalAlpha = g * (1 - ring) * 0.8;
+      c.beginPath();
+      c.ellipse(cx, groundY - 17, 8 + ring * 20, 3 + ring * 7, 0, 0, Math.PI * 2);
+      c.stroke();
+      c.globalAlpha = 1;
+    }
+    // 4. le faisceau jaillit et la caméra monte au-dessus de la ville (11,5 → 15,2 s)
+    if (t >= 11.5 && t < 15.6) {
+      const k = ease(win(t, 12.9, 15.2));
+      const pan = k * H * 1.5; // la ville glisse vers le bas
+      for (const s of stars) {
+        const y = s.y - H * 2 + pan;
+        if (y >= 0 && y < H) dot(s.x, y, '#ffffff', s.b * (0.4 + 0.6 * k) * win(t, 11.5, 12.6));
+      }
+      // la ville en ruine, en ombre chinoise, sur un ciel de nuit rougi par l'étoile errante
+      const base = groundY + pan;
+      for (let y = Math.max(0, Math.floor(base - 90)); y < Math.min(H, base); y++) {
+        const v = 1 - (base - y) / 90; // 0 en haut du dégradé (noir), 1 à l'horizon
+        const r = Math.round(170 * v * v * v), g = Math.round(14 * v + 40 * v * v * v), b = Math.round(60 * v);
+        dot(0, y, `rgb(${r},${g},${b})`, 1, W, 1);
+      }
+      for (const [x, w, h] of skyline) {
+        dot(x, base - h, '#07080e', 1, w, h + H);
+        for (let wy = base - h + 3; wy < base - 2; wy += 4)
+          for (let wx = x + 1; wx < x + w - 1; wx += 3) if ((wx * 13 + wy * 7) % 11 === 0) dot(wx, wy, '#ffb45a', 0.55, 1, 1);
+      }
+      // le faisceau
+      const beamA = win(t, 11.5, 11.8);
+      const top = (base - 18) * (1 - ease(win(t, 11.5, 12.2)));
+      dot(cx - 3, top, '#5ef0ff', beamA * 0.25, 7, base - 16 - top);
+      dot(cx - 1, top, '#bffbff', beamA * 0.7, 3, base - 16 - top);
+      dot(cx, top, '#ffffff', beamA, 1, base - 16 - top);
+      dot(cx - 4, top - 2, '#ffffff', beamA, 9, 3);
+      fill('#ffffff', 0.5 * (1 - win(t, 11.5, 12.1))); // le choc du départ
+      fill('#000', win(t, 15.0, 15.6));
+    }
+    // 5. le voyage : les étoiles filent, l'étoile errante passe (15,2 → 18,5 s)
+    if (t >= 15.2 && t < 18.6) {
+      const k = win(t, 15.2, 18.5);
+      const speed = 0.25 + k * k * 2.5;
+      const cy = H / 2;
+      // l'étoile errante, énorme et rouge, qui passe sur le côté
+      const sx = -30 + k * 70, sy = cy - 26 + k * 10;
+      disc(sx, sy, 26, '#5a1408', 0.5);
+      disc(sx, sy, 20, '#b4361a', 0.75);
+      disc(sx, sy, 14, '#ff6a2d', 0.9);
+      disc(sx, sy, 8, '#ffc07a', 1);
+      for (const w of warp) {
+        const d = (w.d + (t - 15.2) * w.s * speed * 0.35) % 1;
+        const r0 = d * d * W * 0.9;
+        const len = 1 + speed * d * 9;
+        c.strokeStyle = d > 0.5 ? '#ffffff' : '#9ab6ff';
+        c.globalAlpha = Math.min(1, d * 1.6) * win(t, 15.2, 15.7);
+        c.beginPath();
+        c.moveTo(cx + Math.cos(w.a) * r0, cy + Math.sin(w.a) * r0);
+        c.lineTo(cx + Math.cos(w.a) * (r0 + len), cy + Math.sin(w.a) * (r0 + len));
+        c.stroke();
+      }
+      c.globalAlpha = 1;
+      // l'esprit : un point de lumière qui grandit au centre
+      const pulse = 1 + Math.sin(t * 18) * 0.5;
+      disc(cx, cy, Math.round(1 + k * 3 + pulse), '#5ef0ff', 0.35);
+      disc(cx, cy, Math.round(1 + k * 2), '#ffffff', 1);
+      fill('#ffffff', ease(win(t, 17.6, 18.5)));
+    }
+    // 6. l'éclair blanc (18,5 → 20 s)
+    if (t >= 18.5 && t < 20.2) fill('#ffffff');
+    // 7. Azura : l'aube sur un monde bleu (20 → 26 s)
+    if (t >= 20) {
+      const k = win(t, 20, 26);
+      for (let y = 0; y < H; y++) {
+        const v = y / H;
+        const r = Math.round(40 + 140 * v + 60 * Math.max(0, v - 0.55));
+        const g = Math.round(110 + 110 * v);
+        const b = Math.round(220 + 30 * v - 40 * Math.max(0, v - 0.6));
+        dot(0, y, `rgb(${r},${g},${b})`, 1, W, 1);
+      }
+      // le soleil d'Azura se lève
+      const sunY = H * 0.62 - ease(k) * H * 0.1;
+      disc(cx + 18, sunY, 10, '#fff4c8', 0.35);
+      disc(cx + 18, sunY, 7, '#fffbe8', 1);
+      // nuages qui dérivent
+      for (const cl of clouds) {
+        const x = ((cl.x + (t - 20) * cl.v) % (W + 40)) - 20;
+        dot(x, cl.y, '#ffffff', 0.9, cl.w, 2);
+        dot(x + 3, cl.y - 2, '#ffffff', 0.9, cl.w - 7, 2);
+        dot(x + 6, cl.y - 3, '#ffffff', 0.9, Math.max(2, cl.w - 13), 1);
+      }
+      // collines bleu-vert, en deux plans
+      for (let x = 0; x < W; x++) {
+        const h1 = H * 0.66 + Math.sin(x / 11) * 4 + Math.sin(x / 5.3) * 1.5;
+        const h2 = H * 0.76 + Math.sin(x / 8 + 2) * 5;
+        dot(x, h1, '#4f8fa8', 1, 1, H);
+        dot(x, h2, '#2f6a6a', 1, 1, H);
+      }
+      // des oiseaux au loin
+      for (let i = 0; i < 3; i++) {
+        const bx = ((t - 20) * (6 + i) + i * 25) % (W + 10) - 5;
+        const by = H * (0.3 + i * 0.05) + Math.sin(t * 2 + i) * 2;
+        const flap = Math.floor(t * 5 + i) % 2;
+        dot(bx, by, '#203040', 1, 1, 1); dot(bx - 1, by - flap, '#203040', 1, 1, 1); dot(bx + 1, by - flap, '#203040', 1, 1, 1);
+      }
+      fill('#ffffff', 1 - ease(win(t, 20, 22.4))); // le blanc se dissout dans le ciel
+      fill('#000', ease(win(t, 25.2, 26.4)));
+    }
   };
-  cloud(8, Math.round(H * 0.25)); cloud(50, Math.round(H * 0.45)); cloud(20, Math.round(H * 0.7));
-  await animate(1800, (t) => { fill('#fff'); c.globalAlpha = t; c.drawImage(sky, 0, 0); c.globalAlpha = 1; });
-  await wait(2200);
-  // 5. le noir, puis le dernier texte
-  await animate(1000, (t) => { c.drawImage(sky, 0, 0); fill('#000', t); });
-  await wait(700);
-  text.textContent = 'Transfert du sujet 07 :\n4\u00a0212 / 4\u00a0212.';
-  await wait(4500);
+
+  // les textes de fin, posés sur le noir
+  const lines = async () => {
+    await wait(26.6 * 1000);
+    text.textContent = 'Transfert du sujet 07\u00a0:';
+    await wait(1500);
+    text.textContent = 'Transfert du sujet 07\u00a0:\n4\u00a0212 / 4\u00a0212.';
+    await wait(3400);
+    text.textContent = 'Transfert du sujet 07\u00a0:\n4\u00a0212 / 4\u00a0212.\n\n— FIN —';
+    text.className = 'with-end';
+  };
+  void lines();
+
+  await new Promise<void>((res) => {
+    const start = performance.now();
+    let blacked = false;
+    const frame = (now: number) => {
+      const t = (now - start) / 1000;
+      if (!blacked && t >= 2.4) {
+        blacked = true;
+        el.className = 'finale';
+        onBlack?.();
+      }
+      draw(Math.min(t, T_END));
+      if (t < T_END) requestAnimationFrame(frame);
+      else res();
+    };
+    requestAnimationFrame(frame);
+  });
+  text.style.transition = 'opacity 1.2s';
+  text.style.opacity = '0';
+  stopMusic();
+  await wait(1400);
   text.textContent = '';
-  await wait(700);
+  text.style.opacity = '';
+  text.style.transition = '';
+  text.className = '';
   el.hidden = true;
 }
 

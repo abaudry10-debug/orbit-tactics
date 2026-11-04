@@ -339,3 +339,81 @@ export function stopStatic() {
   staticNodes?.stop();
   staticNodes = null;
 }
+
+// ---------- musique de fin : la réussite du départ, la tristesse de laisser Pixel ----------
+// Une pièce écrite d'avance (~36 s), calée sur la cinématique de fin (voir ui.playFinale).
+export function playEnding(): () => void {
+  if (!ac) return () => {};
+  const t0 = ac.currentTime + 0.05;
+  const bus = ac.createGain();
+  bus.gain.value = 0.9;
+  // un écho doux qui fait office de réverbération
+  const delay = ac.createDelay(1);
+  delay.delayTime.value = 0.36;
+  const fb = ac.createGain();
+  fb.gain.value = 0.38;
+  const damp = ac.createBiquadFilter();
+  damp.type = 'lowpass';
+  damp.frequency.value = 2200;
+  bus.connect(musicBus);
+  bus.connect(delay);
+  delay.connect(damp).connect(fb).connect(delay);
+  damp.connect(musicBus);
+
+  const pad = (notes: number[], at: number, dur: number, vol = 1) => {
+    for (const n of notes) {
+      tone(bus, 'triangle', hz(n), t0 + at, dur, 0.045 * vol, { attack: Math.min(1.6, dur / 3), release: Math.min(2, dur / 2), detune: 4 });
+      tone(bus, 'sawtooth', hz(n - 12), t0 + at, dur, 0.018 * vol, { attack: Math.min(1.8, dur / 3), release: Math.min(2, dur / 2), detune: -7, filter: 900 });
+    }
+    tone(bus, 'sine', hz(notes[0] - 24), t0 + at, dur, 0.11 * vol, { attack: 0.6, release: 1.4 });
+  };
+  // boîte à musique : une note claire qui s'éteint lentement
+  const bell = (n: number, at: number, vol = 1, len = 1.6) => {
+    tone(bus, 'sine', hz(n), t0 + at, len, 0.07 * vol, { attack: 0.004, release: len - 0.05 });
+    tone(bus, 'sine', hz(n + 12), t0 + at, len * 0.5, 0.018 * vol, { attack: 0.004, release: len * 0.5 - 0.05 });
+  };
+  const arp = (notes: number[], at: number, dur: number, rate: number, vol = 1) => {
+    for (let i = 0, t = at; t < at + dur - 0.05; i++, t += rate) {
+      tone(bus, 'square', hz(notes[i % notes.length] + 12), t0 + t, rate * 0.9, 0.012 * vol, { release: rate * 0.6, filter: 2600 });
+    }
+  };
+
+  // A. Pixel s'endort (la mineur, fa) — 0 à 7,6 s
+  pad([57, 60, 64], 0, 4.2, 0.8);
+  pad([53, 57, 60], 3.8, 4.2, 0.8);
+  [[76, 2.4], [74, 2.9], [72, 3.4], [71, 4.2], [69, 5.0], [72, 6.2], [71, 6.7], [69, 7.2]].forEach(([n, at]) => bell(n, at, 0.9));
+  bell(88, 5.3, 0.5, 0.9); // le clignement de l'œil
+
+  // B. Le transfert s'élance (ré m, la m, fa, sol, puis mi) — 7,6 à 18,5 s
+  const prog: [number[], number][] = [[[50, 53, 57], 7.6], [[57, 60, 64], 9.5], [[53, 57, 60], 11.4], [[55, 59, 62], 13.3]];
+  for (const [ch, at] of prog) {
+    pad(ch, at, 2.1, 0.9);
+    arp([ch[0], ch[1], ch[2], ch[1] + 12], at, 1.9, at < 11 ? 0.24 : 0.16, 0.9);
+  }
+  pad([52, 56, 59, 64], 15.2, 3.4, 1.1); // mi majeur : la tension avant l'arrivée
+  arp([52, 56, 59, 64, 68], 15.2, 3.3, 0.11, 1.2);
+  noise(bus, t0 + 14.6, 4, 0.05, 'bandpass', 400, 6000); // la montée
+
+  // C. Le flash et Azura (do majeur, fa, sol, do) — 18,5 à 26 s
+  noise(bus, t0 + 18.5, 2.6, 0.09, 'highpass', 3000, 9000);
+  pad([48, 52, 55, 60, 64], 18.5, 3.2, 1.3);
+  [84, 88, 91, 96].forEach((n, i) => bell(n, 18.55 + i * 0.07, 0.6, 2.4));
+  pad([53, 57, 60, 64], 21.2, 2.2, 1.0);
+  pad([55, 59, 62, 65], 23.0, 1.8, 1.0);
+  pad([48, 52, 55, 60], 24.6, 3.4, 1.1);
+  // le thème du début, mais en majeur : on est arrivé
+  [[76, 20.4], [74, 20.9], [72, 21.4], [74, 22.2], [76, 23.0], [79, 23.6], [84, 24.6]].forEach(([n, at]) => bell(n, at, 1, 2));
+
+  // D. Le texte final : la joie retombe, Pixel est resté là-bas — 26 à 36 s
+  pad([57, 60, 64, 71], 26.2, 4, 0.7);
+  pad([53, 57, 60, 67], 29.8, 3.2, 0.6);
+  pad([48, 52, 55, 62], 32.6, 4.2, 0.55);
+  [[76, 27.2], [74, 27.7], [72, 28.2], [71, 29.0], [69, 30.0]].forEach(([n, at]) => bell(n, at, 0.7, 2));
+  bell(88, 33.6, 0.35, 2.4); // un dernier « clignement »
+
+  return () => {
+    const t = ac!.currentTime;
+    bus.gain.setTargetAtTime(0, t, 0.3);
+    fb.gain.setTargetAtTime(0, t, 0.3);
+  };
+}

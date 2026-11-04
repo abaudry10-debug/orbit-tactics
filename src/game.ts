@@ -444,7 +444,6 @@ export class Game {
         ui.say(
           ['Tu glisses la batterie dans le logement de l’amorce. La capsule ronronne.', 'Tu t’allonges dans la capsule 07. Pixel est couché à son pied.', ...FINALE],
           async () => {
-            sfx.success();
             await ui.playFinale(dogAsleep(), () => { this.blackout = true; });
             this.locked = false;
             this.onFinished();
