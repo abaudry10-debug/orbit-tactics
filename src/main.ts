@@ -1,5 +1,5 @@
 import { isMuted, playTheme, setMuted, sfx, unlock } from './audio.js';
-import { Game, VIEW_H, VIEW_W } from './game.js';
+import { Game, view } from './game.js';
 import { onPress, releaseAll, setupInput } from './input.js';
 import { INTRO } from './story.js';
 import * as ui from './ui.js';
@@ -7,20 +7,24 @@ import * as ui from './ui.js';
 const $ = (id: string) => document.getElementById(id)!;
 
 const canvas = $('game') as HTMLCanvasElement;
-canvas.width = VIEW_W;
-canvas.height = VIEW_H;
 const ctx = canvas.getContext('2d')!;
 let game = new Game(ctx);
 
-// Taille d'affichage : pixels nets (échelle entière quand c'est possible).
+// Plein écran : la vue s'adapte à l'écran, avec des pixels nets (échelle entière).
+// On garde environ 12 cases sur le petit côté, quelle que soit l'orientation.
 function resize() {
-  const controls = $('controls').offsetHeight;
-  const availW = Math.min(window.innerWidth, 560) - 16;
-  const availH = window.innerHeight - controls - 24;
-  let scale = Math.min(availW / VIEW_W, availH / VIEW_H);
-  if (scale >= 2) scale = Math.floor(scale);
-  canvas.style.width = `${Math.floor(VIEW_W * scale)}px`;
-  canvas.style.height = `${Math.floor(VIEW_H * scale)}px`;
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  const scale = Math.max(1, Math.floor(Math.min(w, h) / (11.5 * 16)));
+  view.w = Math.ceil(w / scale);
+  view.h = Math.ceil(h / scale);
+  canvas.width = view.w;
+  canvas.height = view.h;
+  canvas.style.width = `${view.w * scale}px`;
+  canvas.style.height = `${view.h * scale}px`;
+  // en vertical, les commandes occupent le bas de l'écran : la caméra en tient compte
+  const controls = document.getElementById('controls')!;
+  view.padBottom = h > w ? Math.ceil((controls.offsetHeight + 16) / scale) : 0;
 }
 window.addEventListener('resize', resize);
 window.visualViewport?.addEventListener('resize', resize);

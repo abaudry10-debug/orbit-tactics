@@ -210,7 +210,7 @@ export const SCRIPTS: Record<string, (api: Api) => void> = {
     api.say(['Un escalier descend vers le métro.', 'En bas, le noir complet. Impossible d’y voir quoi que ce soit.']),
 
   spatioport: (api) =>
-    api.say(['Les portes du spatioport sont soudées.', 'Au-dessus, un panneau : « DÉPARTS — TOUS VOLS ANNULÉS ».'], () => api.clue('mis3')),
+    api.say(['Le hangar des navettes du spatioport. Les portes sont soudées.', 'Au-dessus, un panneau : « DÉPARTS — TOUS VOLS ANNULÉS ».'], () => api.clue('mis3')),
 
   researchDoor: (api) => {
     if (api.has('researchOpen')) return api.say(['La porte du centre de recherche est ouverte.']);
@@ -369,6 +369,12 @@ export const SCRIPTS: Record<string, (api: Api) => void> = {
   // ----- centrale Hélios -----
   heliosSign: (api) =>
     api.say(['« CENTRALE SOLAIRE HÉLIOS — Zone évacuée. »', 'Les dunes ont recouvert la moitié des panneaux.']),
+
+  heliosDoor: (api) =>
+    api.say(['« CENTRALE HÉLIOS — SALLE DES TURBINES. »', 'Une porte blindée, scellée. Le voyant est mort : plus aucune énergie ici.']),
+
+  shuttle: (api) =>
+    api.say(['Une navette écrasée sur l’aire d’envol. Son nez est arraché.', 'Sur la carlingue, à moitié effacé : « NAVETTE CIVILE — 120 PASSAGERS ».']),
 
   controlPanel: (api) => api.say(['Un pupitre de commande fondu par la chaleur. Les boutons ont coulé comme de la cire.']),
 };

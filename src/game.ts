@@ -2,12 +2,12 @@
 import { playTheme, sfx } from './audio.js';
 import { heldDir, releaseAll } from './input.js';
 import { MAPS, START, SOLID, charAt, type GameMap, type MapObject } from './maps.js';
-import { T, dog, hash, hero, tile, type Dir } from './sprites.js';
+import { T, dish, dog, hash, hero, shuttleWreck, solarTower, tile, type Dir } from './sprites.js';
 import { CLUES, ITEMS, QUESTIONS, SCRIPTS, type Api } from './story.js';
 import * as ui from './ui.js';
 
-export const VIEW_W = 12 * T;
-export const VIEW_H = 16 * T;
+/** Taille de la vue en pixels de jeu ; recalculée selon l'écran (voir main.ts). */
+export const view = { w: 12 * T, h: 16 * T, padBottom: 0 }; // padBottom : zone cachée par les commandes
 const MOVE_TIME = 0.19; // secondes pour traverser une case
 const SAVE_KEY = 'vesper-save-v2';
 
@@ -60,6 +60,9 @@ export class Game {
   private openQ = new Set<string>();
   private solvedQ = new Set<string>();
   private ctx: CanvasRenderingContext2D;
+  private decalShuttle = shuttleWreck();
+  private decalDish = dish();
+  private decalTower = solarTower();
 
   constructor(ctx: CanvasRenderingContext2D) {
     this.ctx = ctx;
@@ -267,6 +270,8 @@ export class Game {
     else if (ch === 'T') ui.say(['Un arbre mort, calciné d’un seul côté.']);
     else if (ch === 'P') ui.say(['Un panneau solaire brisé, à moitié enfoui dans le sable.']);
     else if (ch === 'v') ui.say(['Des plants desséchés.']);
+    else if (ch === 'N' && this.map.id === 'vesper') SCRIPTS.shuttle?.(this.api);
+    else if (ch === 'N') ui.say(['Une tour solaire. Son capteur doré fixe encore le ciel.']);
   }
 
   // ---------- sac à dos ----------
@@ -441,9 +446,18 @@ export class Game {
 
   // ---------- rendu ----------
   private tileName(x: number, y: number): string {
-    const ch = charAt(this.map, x, y);
-    const below = y + 1 >= this.map.height ? ch : charAt(this.map, x, y + 1);
+    const m = this.map;
+    const mark = m.marks?.find((k) => k.x === x && k.y === y);
+    if (mark) return mark.sprite;
+    const ch = charAt(m, x, y);
+    const below = y + 1 >= m.height ? ch : charAt(m, x, y + 1);
+    if (ch === '#' && m.skins) {
+      const sk = m.skins.find((k) => x >= k.x && x < k.x + k.w && y >= k.y && y < k.y + k.h);
+      if (sk) return `${sk.style}${below === '#' && y + 1 < sk.y + sk.h ? 'Top' : 'Front'}`;
+    }
     switch (ch) {
+      case 'H': return 'pad';
+      case 'N': return m.solidBase ?? 'pad';
       case '.': return 'dust';
       case '"': return 'grass';
       case ',': return 'asphalt';
@@ -480,27 +494,34 @@ export class Game {
     const c = this.ctx;
     c.imageSmoothingEnabled = false;
     c.fillStyle = '#05060c';
-    c.fillRect(0, 0, VIEW_W, VIEW_H);
+    c.fillRect(0, 0, view.w, view.h);
     if (this.blackout) return;
 
     const [hx, hy] = this.heroPixel();
     const mw = this.map.width * T;
     const mh = this.map.height * T;
-    const camX = mw <= VIEW_W ? (mw - VIEW_W) / 2 : Math.max(0, Math.min(mw - VIEW_W, hx + T / 2 - VIEW_W / 2));
-    const camY = mh <= VIEW_H ? (mh - VIEW_H) / 2 : Math.max(0, Math.min(mh - VIEW_H, hy + T / 2 - VIEW_H / 2));
+    const camX = mw <= view.w ? (mw - view.w) / 2 : Math.max(0, Math.min(mw - view.w, hx + T / 2 - view.w / 2));
+    const visH = view.h - view.padBottom; // on garde le héros au-dessus des commandes
+    const camY = mh <= visH ? (mh - visH) / 2 : Math.max(0, Math.min(mh - visH, hy + T / 2 - visH / 2));
     const ox = Math.round(camX);
     const oy = Math.round(camY);
 
     const x0 = Math.floor(ox / T) - 1;
     const y0 = Math.floor(oy / T) - 1;
-    for (let y = y0; y <= y0 + VIEW_H / T + 2; y++) {
-      for (let x = x0; x <= x0 + VIEW_W / T + 2; x++) {
+    for (let y = y0; y <= y0 + view.h / T + 2; y++) {
+      for (let x = x0; x <= x0 + view.w / T + 2; x++) {
         if (x < 0 || y < 0 || x >= this.map.width || y >= this.map.height) continue;
         const obj = this.objAt(x, y);
         const sprite = obj ? this.objSprite(obj) : '';
         const name = sprite || this.tileName(x, y);
         c.drawImage(tile(name, hash(x, y)), x * T - ox, y * T - oy);
       }
+    }
+
+    // grands décors, alignés sur le bas de leur emprise
+    for (const d of this.map.decals ?? []) {
+      const img = d.kind === 'shuttle' ? this.decalShuttle : d.kind === 'dish' ? this.decalDish : this.decalTower;
+      c.drawImage(img, d.x * T - ox, (d.y + d.h) * T - img.height - oy);
     }
 
     // indicateur au-dessus de l'objet regardé
@@ -548,8 +569,8 @@ export class Game {
 
   private newParticle(anywhere: boolean): Particle {
     return {
-      x: anywhere ? Math.random() * VIEW_W : -4,
-      y: Math.random() * VIEW_H,
+      x: anywhere ? Math.random() * view.w : -4,
+      y: Math.random() * view.h,
       vx: 6 + Math.random() * 10,
       vy: 1 + Math.random() * 4,
       a: 0.15 + Math.random() * 0.35,
@@ -561,18 +582,18 @@ export class Game {
       const p = this.particles[i];
       p.x += p.vx * dt;
       p.y += p.vy * dt + Math.sin(this.time * 2 + i) * 0.05;
-      if (p.x > VIEW_W + 4 || p.y > VIEW_H + 4) this.particles[i] = this.newParticle(false);
+      if (p.x > view.w + 4 || p.y > view.h + 4) this.particles[i] = this.newParticle(false);
     }
   }
 
   private renderAtmosphere() {
     const c = this.ctx;
     if (this.map.outdoor) {
-      const g = c.createLinearGradient(0, 0, 0, VIEW_H);
+      const g = c.createLinearGradient(0, 0, 0, view.h);
       g.addColorStop(0, 'rgba(255,110,40,0.22)');
       g.addColorStop(1, 'rgba(120,30,60,0.12)');
       c.fillStyle = g;
-      c.fillRect(0, 0, VIEW_W, VIEW_H);
+      c.fillRect(0, 0, view.w, view.h);
       for (const p of this.particles) {
         c.fillStyle = `rgba(255,214,160,${p.a})`;
         c.fillRect(Math.round(p.x), Math.round(p.y), 1, 1);
@@ -580,12 +601,12 @@ export class Game {
     } else {
       const flicker = Math.sin(this.time * 23) > 0.96 ? 0.12 : 0;
       c.fillStyle = `rgba(20,40,80,${0.18 + flicker})`;
-      c.fillRect(0, 0, VIEW_W, VIEW_H);
+      c.fillRect(0, 0, view.w, view.h);
     }
-    const v = c.createRadialGradient(VIEW_W / 2, VIEW_H / 2, VIEW_H * 0.35, VIEW_W / 2, VIEW_H / 2, VIEW_H * 0.75);
+    const v = c.createRadialGradient(view.w / 2, view.h / 2, view.h * 0.35, view.w / 2, view.h / 2, view.h * 0.75);
     v.addColorStop(0, 'rgba(0,0,0,0)');
     v.addColorStop(1, 'rgba(0,0,0,0.55)');
     c.fillStyle = v;
-    c.fillRect(0, 0, VIEW_W, VIEW_H);
+    c.fillRect(0, 0, view.w, view.h);
   }
 }

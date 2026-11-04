@@ -400,6 +400,174 @@ const dogOff: Painter = (c, v) => {
   drawDog(c, 0, true);
 };
 
+// ---------- bâtiments reconnaissables (toit + façade par style) ----------
+// Laboratoire Lazare : panneaux blancs cliniques, néon turquoise.
+const labTop: Painter = (c, v) => {
+  r(c, 0, 0, T, T, '#d7dde4'); r(c, 0, 0, T, 1, '#f2f5f8');
+  r(c, 0, 7, T, 1, '#b9c2cc'); r(c, 7, 0, 1, T, '#b9c2cc');
+  if (v === 1) { r(c, 3, 2, 3, 3, '#8e9aab'); r(c, 4, 3, 1, 1, '#4fd1c5'); } // ventilation
+  if (v === 2) { r(c, 10, 10, 4, 3, '#a7b2bf'); r(c, 10, 10, 4, 1, '#c6ced8'); }
+};
+const labFront: Painter = (c, v) => {
+  r(c, 0, 0, T, T, '#e6eaef'); r(c, 0, 0, T, 2, '#b9c2cc');
+  r(c, 0, 11, T, 2, P.neon); r(c, 0, 14, T, 2, '#9aa6b4');
+  r(c, 3, 4, 10, 5, P.ink); r(c, 4, 5, 8, 3, '#2f6f8a'); r(c, 4, 5, 3, 1, '#9ad8ff');
+  if (v === 2) { r(c, 4, 5, 8, 3, '#1c2533'); r(c, 6, 6, 3, 1, P.glass); } // vitre brisée
+};
+const labEmblem: Painter = (c) => {
+  labFront(c, 0);
+  r(c, 3, 2, 10, 9, '#e6eaef'); r(c, 4, 2, 8, 8, P.ink); r(c, 5, 3, 6, 6, '#e6eaef');
+  r(c, 7, 3, 2, 6, P.neon); // capsule stylisée
+  r(c, 6, 4, 4, 1, P.neon); r(c, 6, 7, 4, 1, P.neon);
+};
+
+// Centre de recherche : verre sombre, armature acier, antenne parabolique.
+const resTop: Painter = (c, v) => {
+  r(c, 0, 0, T, T, '#3a4656'); r(c, 0, 0, T, 1, '#5a687a');
+  for (let x = 0; x < T; x += 4) r(c, x, 0, 1, T, '#323c4a');
+  if (v === 1) { r(c, 5, 5, 6, 6, '#56657a'); r(c, 6, 6, 4, 4, '#2a323e'); r(c, 7, 7, 2, 2, P.screen); } // lanterneau
+};
+const resFront: Painter = (c, v) => {
+  r(c, 0, 0, T, T, '#1c2a36'); r(c, 0, 0, T, 2, '#5a687a');
+  for (const x of [0, 8]) r(c, x, 2, 1, 14, '#5a687a');
+  r(c, 0, 8, T, 1, '#5a687a');
+  r(c, 2, 3, 5, 4, '#2c5a6e'); r(c, 10, 3, 5, 4, '#2c5a6e'); r(c, 2, 10, 5, 5, '#24485a'); r(c, 10, 10, 5, 5, '#24485a');
+  r(c, 3, 3, 2, 1, '#8fe0ff'); r(c, 11, 10, 2, 1, '#8fe0ff');
+  if (v === 2) { r(c, 10, 3, 5, 4, '#0c1218'); r(c, 12, 4, 1, 2, '#8fe0ff'); }
+};
+const atomEmblem: Painter = (c) => {
+  resFront(c, 0);
+  r(c, 2, 2, 12, 12, P.ink); r(c, 3, 3, 10, 10, '#10202a');
+  r(c, 4, 7, 8, 2, P.screen); r(c, 7, 4, 2, 8, P.screen); r(c, 5, 5, 2, 2, P.screen); r(c, 9, 9, 2, 2, P.screen);
+  r(c, 9, 5, 2, 2, P.screen); r(c, 5, 9, 2, 2, P.screen); r(c, 7, 7, 2, 2, '#ffffff');
+};
+
+// Métro : auvent carrelé vert, grand « M ».
+const metroTop: Painter = (c) => {
+  r(c, 0, 0, T, T, '#2f6b52'); r(c, 0, 0, T, 1, '#4f9a78');
+  for (let y = 3; y < T; y += 4) r(c, 0, y, T, 1, '#265844');
+  for (let x = 2; x < T; x += 4) r(c, x, 0, 1, T, '#3a7d60');
+};
+const metroFront: Painter = (c, v) => {
+  r(c, 0, 0, T, T, '#d8d2c0'); r(c, 0, 0, T, 3, '#2f6b52'); r(c, 0, 3, T, 1, P.ink);
+  for (let y = 6; y < T; y += 3) r(c, 0, y, T, 1, '#bfb8a4');
+  for (let x = 3; x < T; x += 4) r(c, x, 4, 1, 12, '#bfb8a4');
+  if (v === 1) { r(c, 4, 8, 4, 3, '#a59e8a'); } // carreaux tombés
+};
+const metroSign: Painter = (c) => {
+  metroFront(c, 0);
+  r(c, 2, 4, 12, 11, P.ink); r(c, 3, 5, 10, 9, '#f2c230');
+  r(c, 4, 6, 2, 7, P.ink); r(c, 10, 6, 2, 7, P.ink); r(c, 6, 7, 1, 2, P.ink); r(c, 9, 7, 1, 2, P.ink); r(c, 7, 9, 2, 2, P.ink);
+};
+
+// Spatioport : hangar en tôle ondulée, bandes de danger, fusée.
+const spatioTop: Painter = (c, v) => {
+  r(c, 0, 0, T, T, '#8c939e');
+  for (let x = 0; x < T; x += 3) r(c, x, 0, 1, T, '#6e7480');
+  r(c, 0, 0, T, 1, '#b4bac4');
+  if (v === 2) { r(c, 4, 5, 6, 5, '#1c1a22'); r(c, 5, 6, 4, 2, '#3a2a2a'); } // trou dans la tôle
+};
+const spatioFront: Painter = (c, v) => {
+  r(c, 0, 0, T, T, '#5f6672'); r(c, 0, 0, T, 2, '#8c939e');
+  for (let x = 0; x < T; x += 4) { r(c, x, 13, 2, 3, P.hazard); r(c, x + 2, 13, 2, 3, P.ink); }
+  r(c, 0, 5, T, 1, '#4a505a'); r(c, 0, 9, T, 1, '#4a505a');
+  if (v === 1) { r(c, 3, 3, 10, 2, P.ink); r(c, 4, 3, 8, 1, '#ff7a3d'); } // néon « départs » éteint
+};
+const rocketEmblem: Painter = (c) => {
+  spatioFront(c, 0);
+  r(c, 3, 1, 10, 11, P.ink); r(c, 4, 2, 8, 9, '#23344a');
+  r(c, 7, 3, 2, 6, '#e6ecff'); r(c, 6, 5, 4, 3, '#e6ecff'); r(c, 7, 2, 2, 1, P.red);
+  r(c, 5, 8, 1, 2, '#e6ecff'); r(c, 10, 8, 1, 2, '#e6ecff'); r(c, 7, 9, 2, 1, P.hazard);
+};
+const pad: Painter = (c, v) => {
+  speckle(c, 41 + v * 5, '#57525e', [['#4c4854', 10], ['#625d6a', 6]]);
+  r(c, 0, 0, T, 1, '#3e3a46'); r(c, 0, 0, 1, T, '#3e3a46'); // joints des dalles
+  if (v === 2) { r(c, 11, 11, 3, 3, P.hazard); r(c, 12, 12, 1, 1, P.ink); } // balise
+  if (v === 1) { r(c, 4, 6, 5, 1, '#3a3540'); r(c, 6, 7, 1, 3, '#3a3540'); } // fissure
+};
+
+// Centrale Hélios : toit couvert de cellules solaires, façade jaune et soleil.
+const heliosTop: Painter = (c, v) => {
+  r(c, 0, 0, T, T, P.ink);
+  for (const [x, y] of [[1, 1], [9, 1], [1, 9], [9, 9]]) {
+    r(c, x, y, 6, 6, v === 1 && x === 9 && y === 1 ? '#1a2436' : '#24406a');
+    r(c, x, y + 2, 6, 1, '#335a8c'); r(c, x + 3, y, 1, 6, '#335a8c');
+  }
+  if (v !== 1) r(c, 10, 2, 2, 1, '#9ad8ff');
+};
+const heliosFront: Painter = (c, v) => {
+  r(c, 0, 0, T, T, '#c9a24a'); r(c, 0, 0, T, 2, '#8a6a2a'); r(c, 0, 14, T, 2, '#8a6a2a');
+  r(c, 0, 6, T, 2, '#e8c45a');
+  r(c, 3, 9, 4, 4, P.ink); r(c, 9, 9, 4, 4, P.ink); r(c, 4, 10, 2, 2, '#3a2a1a'); r(c, 10, 10, 2, 2, '#3a2a1a');
+  if (v === 2) { r(c, 1, 3, 4, 1, '#8a6a2a'); r(c, 12, 2, 1, 4, '#8a6a2a'); } // fissures
+};
+const sunEmblem: Painter = (c) => {
+  heliosFront(c, 0);
+  r(c, 2, 1, 12, 12, P.ink); r(c, 3, 2, 10, 10, '#2a1a10');
+  r(c, 6, 5, 4, 4, '#ffd34d'); r(c, 7, 3, 2, 1, '#ffd34d'); r(c, 7, 10, 2, 1, '#ffd34d');
+  r(c, 4, 6, 1, 2, '#ffd34d'); r(c, 11, 6, 1, 2, '#ffd34d');
+  r(c, 4, 3, 1, 1, '#ffb347'); r(c, 11, 3, 1, 1, '#ffb347'); r(c, 4, 10, 1, 1, '#ffb347'); r(c, 11, 10, 1, 1, '#ffb347');
+};
+const heliosDoor: Painter = (c) => {
+  heliosFront(c, 1);
+  r(c, 3, 3, 10, 13, P.ink); r(c, 4, 4, 8, 12, P.metal); r(c, 7, 4, 2, 12, P.metalDark);
+  r(c, 4, 7, 8, 1, P.hazard); r(c, 10, 9, 1, 2, P.red);
+};
+
+// Maisons du quartier : toit de tuiles, façade crème.
+const houseTop: Painter = (c, v) => {
+  r(c, 0, 0, T, T, '#8a4636');
+  for (let y = 1; y < T; y += 4) { r(c, 0, y, T, 1, '#6e3428'); for (let x = (y % 8 === 1 ? 0 : 2); x < T; x += 4) r(c, x, y + 1, 1, 3, '#6e3428'); }
+  r(c, 0, 0, T, 1, '#a85a46');
+  if (v === 1) { r(c, 5, 6, 5, 4, '#2a1a16'); r(c, 6, 7, 3, 2, '#4a2a20'); } // tuiles envolées
+};
+const houseFront: Painter = (c, v) => {
+  r(c, 0, 0, T, T, '#d8c4a0'); r(c, 0, 0, T, 2, '#6e3428'); r(c, 0, 14, T, 2, '#a88e68');
+  r(c, 4, 4, 8, 7, P.ink); r(c, 5, 5, 6, 5, '#2a3c4a'); r(c, 8, 5, 1, 5, P.ink); r(c, 5, 7, 6, 1, P.ink);
+  r(c, 3, 11, 10, 1, '#8a6a4a');
+  if (v === 1) { r(c, 5, 5, 3, 2, P.glass); }
+  if (v === 2) { r(c, 4, 4, 8, 7, '#5a4636'); r(c, 4, 6, 8, 1, '#3e2f24'); r(c, 4, 9, 8, 1, '#3e2f24'); } // volet fermé
+};
+const houseDoor: Painter = (c) => {
+  houseFront(c, 0);
+  r(c, 4, 4, 8, 12, P.ink); r(c, 5, 5, 6, 11, '#6e4a30'); r(c, 9, 10, 1, 1, P.hazard);
+};
+
+// ---------- grands décors (plus grands qu'une case) ----------
+export function shuttleWreck(): HTMLCanvasElement {
+  const [cv, c] = canvas(64, 48);
+  c.fillStyle = 'rgba(0,0,0,0.3)'; c.fillRect(4, 38, 58, 8);
+  // fuselage couché, nez cassé à droite
+  r(c, 4, 18, 50, 18, P.ink); r(c, 5, 19, 48, 16, '#d9dde4'); r(c, 5, 19, 48, 3, '#f2f4f7'); r(c, 5, 31, 48, 4, '#a9b0bb');
+  r(c, 52, 21, 8, 12, P.ink); r(c, 53, 22, 6, 10, '#a9b0bb'); r(c, 58, 24, 4, 6, P.ink); // nez arraché
+  r(c, 10, 23, 30, 2, P.red); // bande de couleur
+  for (const x of [16, 24, 32]) { r(c, x, 26, 5, 4, P.ink); r(c, x + 1, 27, 3, 2, '#2f6f8a'); }
+  r(c, 42, 25, 6, 8, P.ink); r(c, 43, 26, 4, 6, '#454c59'); // porte ouverte
+  // aileron et réacteur
+  r(c, 4, 6, 12, 14, P.ink); r(c, 6, 8, 9, 11, '#c9ced6'); r(c, 6, 8, 9, 2, '#e6e9ee');
+  r(c, 0, 22, 6, 10, P.ink); r(c, 1, 23, 4, 8, '#3a3540'); r(c, 1, 25, 3, 4, '#ff7a3d');
+  // brûlures et sable
+  r(c, 30, 30, 10, 3, '#5a4a40'); r(c, 18, 20, 6, 2, '#8a8f99');
+  r(c, 8, 34, 14, 3, '#c9945a'); r(c, 36, 35, 18, 3, '#c9945a');
+  return cv;
+}
+
+export function dish(): HTMLCanvasElement {
+  const [cv, c] = canvas(32, 32);
+  r(c, 14, 18, 4, 12, P.metalDark); r(c, 10, 28, 12, 3, P.metal);
+  r(c, 4, 6, 24, 14, P.ink); r(c, 5, 7, 22, 12, '#c9ced6'); r(c, 7, 9, 18, 8, '#a9b0bb'); r(c, 5, 7, 22, 2, '#e6e9ee');
+  r(c, 15, 2, 2, 9, P.metalDark); r(c, 14, 1, 4, 2, P.red);
+  return cv;
+}
+
+export function solarTower(): HTMLCanvasElement {
+  const [cv, c] = canvas(16, 40);
+  r(c, 5, 10, 6, 30, P.ink); r(c, 6, 11, 4, 29, '#d9dde4'); r(c, 6, 11, 1, 29, '#f2f4f7');
+  r(c, 2, 0, 12, 11, P.ink); r(c, 3, 1, 10, 9, '#ffd34d'); r(c, 5, 3, 6, 5, '#fff3b0'); // capteur lumineux
+  for (const y of [18, 26, 34]) r(c, 6, y, 4, 1, '#a9b0bb');
+  return cv;
+}
+
 // ---------- Pixel, le chien robot ----------
 function drawDog(c: Ctx, frame: number, off: boolean) {
   const body = off ? '#6a6f7a' : '#a9b3c4';
@@ -476,6 +644,12 @@ const REGISTRY: Record<string, Painter[]> = {
   stairs: [stairs], vitrine: [vitrine], desk: [desk], shelf: [shelf], vent: [vent(false)], ventOpen: [vent(true)],
   pedestal: [pedestal(true)], pedestalEmpty: [pedestal(false)], capsuleFrost: [capsuleFrost], book: [book],
   plantsSign: [plantsSign], dogOff: [dogOff],
+  labTop: [labTop], labFront: [labFront], labEmblem: [labEmblem],
+  resTop: [resTop], resFront: [resFront], atomEmblem: [atomEmblem],
+  metroTop: [metroTop], metroFront: [metroFront], metroSign: [metroSign],
+  spatioTop: [spatioTop], spatioFront: [spatioFront], rocketEmblem: [rocketEmblem], pad: [pad],
+  heliosTop: [heliosTop], heliosFront: [heliosFront], sunEmblem: [sunEmblem], heliosDoor: [heliosDoor],
+  houseTop: [houseTop], houseFront: [houseFront], houseDoor: [houseDoor],
   dust: [dust], grass: [grass], asphalt: [asphalt], road: [road], labFloor: [labFloor],
   toxic0: [toxicFrame(0)], toxic1: [toxicFrame(1)], rubble: [rubble], fence: [fence],
   wallTop: [wallTop], wallFront: [wallFront], labWallTop: [labWallTop], labWallFront: [labWallFront],

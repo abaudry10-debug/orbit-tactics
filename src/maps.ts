@@ -5,12 +5,12 @@
 //   .  poussière        "  herbe sèche      ,  asphalte       -  route (marquage)
 //   #  ruine (mur)      ~  eau toxique      *  gravats        |  clôture
 //   T  arbre mort       C  épave de voiture S  sable (on peut y creuser)
-//   P  panneau solaire  v  potager brûlé
+//   P  panneau solaire  v  potager brûlé     H  aire d'envol      N  décor solide (épave…)
 //   =  sol du labo      X  mur du labo
 
 import type { Dir } from './sprites.js';
 
-export const SOLID = new Set(['#', '~', '*', '|', 'T', 'C', 'X', 'P']);
+export const SOLID = new Set(['#', '~', '*', '|', 'T', 'C', 'X', 'P', 'N']);
 
 export interface Door {
   to: string; // carte d'arrivée
@@ -38,6 +38,24 @@ export interface EnergySource {
   goneWhen: string; // drapeau qui indique que la source a été récupérée
 }
 
+/** Style de façade d'un bâtiment (les cases # de cette zone prennent ce dessin). */
+export interface Skin {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  style: 'lab' | 'res' | 'metro' | 'spatio' | 'helios' | 'house';
+}
+
+/** Grand décor dessiné par-dessus les cases (navette, antenne…), aligné sur le bas de son emprise. */
+export interface Decal {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  kind: 'shuttle' | 'dish' | 'tower';
+}
+
 export interface GameMap {
   id: string;
   name: string;
@@ -47,6 +65,10 @@ export interface GameMap {
   rows: string[][];
   objects: MapObject[];
   energy?: EnergySource[];
+  skins?: Skin[];
+  marks?: { x: number; y: number; sprite: string }[]; // case remplacée par un dessin (enseigne, emblème)
+  decals?: Decal[];
+  solidBase?: string; // dessin sous les cases N
 }
 
 class Builder {
@@ -125,13 +147,14 @@ function buildVesper(): GameMap {
   b.rect(31, 12, 7, 4, '#'); // centre de recherche, porte en (34,15)
   b.rect(3, 24, 5, 3, '#');
   b.rect(10, 18, 5, 3, '#'); // bouche de métro, escalier en (12,20)
-  b.rect(29, 21, 9, 5, '#'); // spatioport, portes en (33,25)
-  b.rect(28, 20, 1, 7, '|').rect(28, 27, 4, 1, '|').rect(35, 27, 4, 1, '|');
+  b.rect(24, 24, 14, 4, 'H'); // aire d'envol du spatioport
+  b.rect(31, 20, 7, 4, '#'); // spatioport, portes en (34,23)
+  b.rect(25, 25, 4, 2, 'N'); // navette écrasée
 
   b.border('*');
   b.rect(0, 10, 1, 1, '-'); // sortie ouest
   b.rect(19, 29, 3, 1, ','); // sortie sud
-  b.points('T', [[1, 1], [2, 1], [13, 1], [38, 7], [1, 14], [1, 27], [12, 23], [24, 25], [38, 13], [16, 7], [33, 8]]);
+  b.points('T', [[1, 1], [2, 1], [13, 1], [38, 7], [1, 14], [1, 27], [12, 23], [22, 26], [38, 13], [16, 7], [33, 8]]);
   b.points('*', [[12, 1], [22, 1], [23, 1], [17, 13], [23, 14], [9, 22], [14, 23], [26, 18], [37, 18], [1, 18], [19, 29], [21, 29]]);
   b.points('C', [[14, 10], [27, 9], [20, 14], [6, 11], [34, 11]]);
 
@@ -143,7 +166,7 @@ function buildVesper(): GameMap {
     height: b.height,
     rows: b.rows,
     objects: [
-      { id: 'labEntrance', x: 7, y: 5, sprite: 'ruinDoor', script: 'labEntrance', door: { to: 'lab', x: 5, y: 8, dir: 'up' } },
+      { id: 'labEntrance', x: 7, y: 5, sprite: 'labDoorOpen', script: 'labEntrance', door: { to: 'lab', x: 5, y: 8, dir: 'up' } },
       { id: 'signVesper', x: 9, y: 7, sprite: 'sign', script: 'signVesper' },
       { id: 'thermo', x: 13, y: 12, sprite: 'thermometer', script: 'thermometer' },
       { id: 'posterShade', x: 6, y: 16, sprite: 'poster', script: 'posterShade' },
@@ -153,13 +176,29 @@ function buildVesper(): GameMap {
       { id: 'noteLea', x: 24, y: 8, sprite: 'note', script: 'noteLea' },
       { id: 'crate1', x: 17, y: 25, sprite: 'crate', script: 'crate' },
       { id: 'metro', x: 12, y: 20, sprite: 'stairs', script: 'metro' },
-      { id: 'spatioport', x: 33, y: 25, sprite: 'bunkerDoor', script: 'spatioport' },
+      { id: 'spatioport', x: 34, y: 23, sprite: 'bunkerDoor', script: 'spatioport' },
       {
         id: 'researchDoor', x: 34, y: 15, sprite: 'bunkerDoor', spriteWhen: ['researchOpen', 'bunkerDoorOpen'], script: 'researchDoor',
         door: { to: 'research', x: 10, y: 12, dir: 'up', needs: 'researchOpen' },
       },
       exit('toQuartier', 0, 10, { to: 'quartier', x: 34, y: 12, dir: 'left' }),
       exit('toCentrale', 20, 29, { to: 'centrale', x: 15, y: 1, dir: 'down' }),
+    ],
+    skins: [
+      { x: 3, y: 1, w: 9, h: 5, style: 'lab' },
+      { x: 31, y: 12, w: 7, h: 4, style: 'res' },
+      { x: 10, y: 18, w: 5, h: 3, style: 'metro' },
+      { x: 31, y: 20, w: 7, h: 4, style: 'spatio' },
+    ],
+    marks: [
+      { x: 9, y: 5, sprite: 'labEmblem' }, { x: 5, y: 5, sprite: 'labEmblem' },
+      { x: 32, y: 15, sprite: 'atomEmblem' }, { x: 36, y: 15, sprite: 'atomEmblem' },
+      { x: 11, y: 20, sprite: 'metroSign' }, { x: 13, y: 20, sprite: 'metroSign' },
+      { x: 32, y: 23, sprite: 'rocketEmblem' }, { x: 36, y: 23, sprite: 'rocketEmblem' },
+    ],
+    decals: [
+      { x: 25, y: 25, w: 4, h: 2, kind: 'shuttle' },
+      { x: 33, y: 13, w: 2, h: 1, kind: 'dish' },
     ],
   };
 }
@@ -194,12 +233,12 @@ function buildQuartier(): GameMap {
     height: b.height,
     rows: b.rows,
     objects: [
-      { id: 'leaHouse', x: 6, y: 6, sprite: 'ruinDoor', script: 'leaHouse' },
+      { id: 'leaHouse', x: 6, y: 6, sprite: 'houseDoor', script: 'leaHouse' },
       { id: 'leaMailbox', x: 8, y: 8, sprite: 'sign', script: 'leaMailbox' },
       { id: 'motherJournal', x: 16, y: 8, sprite: 'note', script: 'motherJournal' },
-      { id: 'pilotHouse', x: 15, y: 6, sprite: 'ruinDoor', script: 'pilotHouse' },
+      { id: 'pilotHouse', x: 15, y: 6, sprite: 'houseDoor', script: 'pilotHouse' },
       { id: 'radioNotes', x: 28, y: 8, sprite: 'note', script: 'radioNotes' },
-      { id: 'radioHouse', x: 27, y: 6, sprite: 'ruinDoor', script: 'radioHouse' },
+      { id: 'radioHouse', x: 27, y: 6, sprite: 'houseDoor', script: 'radioHouse' },
       { id: 'ticket', x: 3, y: 10, sprite: 'note', script: 'ticket' },
       { id: 'letter', x: 6, y: 21, sprite: 'note', script: 'letter' },
       { id: 'garden', x: 24, y: 21, sprite: 'plantsSign', script: 'garden' },
@@ -207,6 +246,13 @@ function buildQuartier(): GameMap {
       { id: 'thermo2', x: 18, y: 14, sprite: 'thermometer', script: 'thermometer2' },
       { id: 'tank', x: 31, y: 22, sprite: 'crate', script: 'tank' },
       exit('toVesper', 35, 12, { to: 'vesper', x: 1, y: 10, dir: 'right' }),
+    ],
+    skins: [
+      { x: 3, y: 2, w: 7, h: 5, style: 'house' },
+      { x: 13, y: 2, w: 6, h: 5, style: 'house' },
+      { x: 24, y: 2, w: 7, h: 5, style: 'house' },
+      { x: 3, y: 16, w: 6, h: 4, style: 'house' },
+      { x: 16, y: 16, w: 4, h: 4, style: 'house' },
     ],
   };
 }
@@ -251,6 +297,7 @@ function buildCentrale(): GameMap {
   b.rect(18, 7, 7, 4, '#'); // ruines de la centrale
   b.points('P', [[3, 13], [5, 14], [8, 12]]);
   b.points('*', [[17, 12], [25, 9], [12, 18], [6, 17], [27, 4]]);
+  b.set(26, 8, 'N'); // tour solaire
   b.border('*');
   b.rect(15, 0, 1, 1, '.'); // sortie nord
   return {
@@ -262,10 +309,15 @@ function buildCentrale(): GameMap {
     rows: b.rows,
     objects: [
       { id: 'heliosSign', x: 13, y: 6, sprite: 'sign', script: 'heliosSign' },
-      { id: 'controlPanel', x: 21, y: 11, sprite: 'crate', script: 'controlPanel' },
+      { id: 'controlPanel', x: 19, y: 12, sprite: 'crate', script: 'controlPanel' },
+      { id: 'heliosDoor', x: 21, y: 10, sprite: 'heliosDoor', script: 'heliosDoor' },
       exit('toVesperN', 15, 0, { to: 'vesper', x: 20, y: 28, dir: 'up' }),
     ],
     energy: [{ x: 22, y: 13, goneWhen: 'batteryFound' }],
+    skins: [{ x: 18, y: 7, w: 7, h: 4, style: 'helios' }],
+    marks: [{ x: 19, y: 10, sprite: 'sunEmblem' }, { x: 23, y: 10, sprite: 'sunEmblem' }],
+    decals: [{ x: 26, y: 8, w: 1, h: 1, kind: 'tower' }],
+    solidBase: 'sand',
   };
 }
 
