@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#0b0812" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Vesper" />
+    <title>Vesper</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="icon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main id="app">
+      <div id="screen">
+        <canvas id="game"></canvas>
+        <div id="place"></div>
+        <div id="toast"></div>
+        <div id="dialog" hidden>
+          <p id="dialog-text"></p>
+          <span id="dialog-more" hidden>▼</span>
+        </div>
+        <div id="fade"></div>
+      </div>
+
+      <div id="controls">
+        <div class="dpad">
+          <button data-btn="up" class="d up" aria-label="Haut"></button>
+          <button data-btn="left" class="d left" aria-label="Gauche"></button>
+          <span class="d center"></span>
+          <button data-btn="right" class="d right" aria-label="Droite"></button>
+          <button data-btn="down" class="d down" aria-label="Bas"></button>
+        </div>
+        <div class="buttons">
+          <button data-btn="journal" id="btn-journal" class="pill" aria-label="Journal">Journal</button>
+          <button data-btn="a" class="round a" aria-label="Examiner">A</button>
+        </div>
+      </div>
+
+      <!-- écran titre -->
+      <section id="title" class="overlay">
+        <div class="title-box">
+          <p class="kicker">Chapitre 1 · Le Réveil</p>
+          <h1>VESPER</h1>
+          <p class="tagline">Tu te réveilles seul dans une ville morte.<br />Que s’est-il passé ici ?</p>
+          <button id="btn-continue" class="menu">Continuer</button>
+          <button id="btn-new" class="menu primary">Nouvelle partie</button>
+          <p class="hint">Croix pour marcher · A pour examiner · Journal pour tes découvertes</p>
+        </div>
+      </section>
+
+      <!-- journal -->
+      <section id="journal" class="overlay" hidden>
+        <div class="journal-box">
+          <header>
+            <h2>Journal</h2>
+            <button id="journal-close" class="close" aria-label="Fermer">✕</button>
+          </header>
+          <p id="journal-progress"></p>
+          <div id="journal-bar"><div></div></div>
+          <div id="journal-body"></div>
+        </div>
+      </section>
+
+      <!-- clavier à code -->
+      <section id="keypad" class="overlay" hidden>
+        <div class="keypad-box">
+          <h2>ABRI DELTA</h2>
+          <p>Code d’accès</p>
+          <div id="keypad-digits">
+            <div class="digit"><button class="up">▲</button><span>0</span><button class="down">▼</button></div>
+            <div class="digit"><button class="up">▲</button><span>0</span><button class="down">▼</button></div>
+            <div class="digit"><button class="up">▲</button><span>0</span><button class="down">▼</button></div>
+            <div class="digit"><button class="up">▲</button><span>0</span><button class="down">▼</button></div>
+          </div>
+          <div class="row">
+            <button id="keypad-cancel" class="menu">Annuler</button>
+            <button id="keypad-ok" class="menu primary">Valider</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- fin du chapitre -->
+      <section id="ending" class="overlay" hidden>
+        <div class="title-box">
+          <p class="kicker">Fin du chapitre 1</p>
+          <h1>À suivre…</h1>
+          <p id="ending-stats" class="tagline"></p>
+          <button id="ending-close" class="menu primary">Continuer à explorer</button>
+        </div>
+      </section>
+    </main>
+    <script type="module" src="js/main.js"></script>
+  </body>
+</html>

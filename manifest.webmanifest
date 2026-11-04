@@ -1,0 +1,11 @@
+{
+  "name": "Vesper",
+  "short_name": "Vesper",
+  "description": "Explore une ville morte et découvre ce qui s’est passé.",
+  "start_url": "./",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#0b0812",
+  "theme_color": "#0b0812",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

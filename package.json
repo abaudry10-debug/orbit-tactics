@@ -1,31 +1,16 @@
 {
-  "name": "orbit-tactics",
+  "name": "vesper",
   "version": "0.1.0",
   "private": true,
-  "main": "index.ts",
+  "type": "module",
+  "description": "Jeu d'exploration en pixel art dans un monde post-apocalyptique.",
   "scripts": {
-    "setup": "npm install && npx expo install --fix",
-    "start": "expo start",
-    "tunnel": "expo start --tunnel",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web",
-    "build:web": "expo export --platform web",
-    "typecheck": "tsc --noEmit",
+    "build": "tsc && node scripts/copy-static.mjs",
+    "dev": "tsc --watch",
+    "serve": "npx http-server dist -p 8080 -c-1",
     "test": "node --import ./tests/register.mjs --test tests/*.test.ts"
   },
-  "dependencies": {
-    "@expo/metro-runtime": "*",
-    "expo": "latest",
-    "expo-status-bar": "*",
-    "react": "*",
-    "react-dom": "*",
-    "react-native": "*",
-    "react-native-safe-area-context": "*",
-    "react-native-web": "*"
-  },
   "devDependencies": {
-    "@types/react": "*",
-    "typescript": "*"
+    "typescript": "^5.6.0"
   }
 }

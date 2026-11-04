@@ -1,69 +1,54 @@
-# Orbit Tactics
+# Vesper
 
-Jeu de cartes tactique de science-fiction, au tour par tour, façon échecs.
-Deux flottes s'affrontent sur une grille de 6 × 6 : détruis le Vaisseau amiral adverse.
+Jeu d'exploration en pixel art, façon Pokémon à l'ancienne, dans un monde futuriste post-apocalyptique.
+Tu te réveilles dans une capsule, sans mémoire, au milieu d'une ville morte.
+Chaque indice trouvé remplit ton **journal**, jusqu'à comprendre ce qui s'est passé… et trouver une issue.
 
-Règles complètes : voir le document de règles partagé dans Claude.
+**Jouer :** https://abaudry10-debug.github.io/orbit-tactics/
 
-## Jouer sur ton téléphone
+Sur iPhone : ouvre le lien dans Safari, puis **Partager → Sur l'écran d'accueil** pour jouer en plein écran.
 
-### 1. Le plus simple : la version web (rien à installer)
+## Chapitre 1 — Le Réveil
 
-À chaque push sur `main`, GitHub construit le jeu et le publie sur :
+- **Laboratoire Lazare** : capsules, terminal, casier (badge pour sortir).
+- **Ruines de Vesper** : panneau, robot de patrouille, carnet, Monument, lac toxique.
+- **Abri Delta** : une porte à code. Le code se déduit des indices trouvés en ville.
+- 10 découvertes réparties en 3 fils : *Qui suis-je ?*, *Que s'est-il passé à Vesper ?*, *L'Abri Delta*.
+- Sauvegarde automatique dans le navigateur.
 
-**https://abaudry10-debug.github.io/orbit-tactics/**
+Commandes : croix pour marcher, **A** pour examiner, **Journal** pour tes découvertes.
+Au clavier : flèches ou ZQSD, Espace pour A, J pour le journal.
 
-Sur iPhone, ouvre ce lien dans Safari, puis **Partager → Sur l'écran d'accueil** :
-le jeu s'ouvre alors en plein écran, comme une appli.
+## Technique
 
-> Si le site n'apparaît pas après le premier push : dans le repo GitHub,
-> **Settings → Pages → Source : GitHub Actions**, puis relance le workflow
-> dans l'onglet **Actions**.
+TypeScript + Canvas 2D, **aucune dépendance** à l'exécution. Tout le pixel art est dessiné en code.
 
-### 2. En appli native avec Expo Go (sur ton ordinateur)
-
-Il faut Node.js 22 ou plus.
-
-```bash
-git clone https://github.com/abaudry10-debug/orbit-tactics
-cd orbit-tactics
-npm run setup      # installe les dépendances et aligne les versions Expo
-npm run tunnel     # lance le serveur et affiche un QR code
-```
-
-Installe **Expo Go** sur ton iPhone, puis scanne le QR code avec l'appareil photo.
-`tunnel` marche même si ton téléphone n'est pas sur le même Wi-Fi.
-
-> Si Expo Go indique que la version du SDK n'est pas compatible, utilise
-> la version web en attendant, ou passe directement par TestFlight (ci-dessous).
-
-### 3. Vers l'App Store (plus tard)
-
-1. Crée un compte Apple Developer (environ 99 $ par an) et un compte Expo (gratuit).
-2. `npm install -g eas-cli` puis `eas login`.
-3. `eas build --platform ios --profile production` : construit l'appli dans le cloud, sans Mac.
-4. `eas submit --platform ios` : l'envoie sur App Store Connect, puis sur **TestFlight**
-   pour l'installer sur ton iPhone et l'ouvrir à tes amis.
-5. Pour les amis sur Android : `eas build --platform android --profile preview` produit un APK à partager.
-
-## Structure du code
-
-| Dossier | Rôle |
+| Fichier | Rôle |
 | --- | --- |
-| `src/game/` | Moteur de règles pur (cartes, plateau, tours, combat) et bot. Aucune dépendance à React : il sera réutilisé par le serveur multijoueur. |
-| `src/ui/` | Écrans React Native : plateau, main, panneau d'info. |
-| `tests/` | Tests du moteur, dont 100 parties bot contre bot. |
-| `.github/workflows/web.yml` | Tests, build web et publication sur GitHub Pages. |
+| `src/sprites.ts` | Pixel art : héros animé (4 directions), tuiles, objets |
+| `src/maps.ts` | Cartes (laboratoire, ville) et objets placés dessus |
+| `src/story.ts` | Histoire : indices du journal, objets, scripts d'interaction, énigme |
+| `src/game.ts` | Déplacements case par case, caméra, interactions, rendu, sauvegarde |
+| `src/ui.ts` | Dialogues, journal, clavier à code, notifications |
+| `src/input.ts` | Clavier et croix tactile |
+| `tests/` | Vérifie que chaque objet est accessible et chaque indice obtenable |
 
 ```bash
-npm test          # tests du moteur (Node seul, pas besoin d'installer les dépendances)
-npm run typecheck # vérification TypeScript
-npm run web       # le jeu dans le navigateur de l'ordinateur
+npm install     # installe TypeScript
+npm test        # vérifie les cartes et l'histoire
+npm run build   # compile dans dist/
+npm run serve   # joue sur http://localhost:8080
 ```
 
-## Feuille de route
+Chaque push sur `main` lance les tests, compile et publie sur GitHub Pages.
 
-1. Prototype contre un bot ← **on est ici**
-2. Multijoueur entre amis (comptes, codes amis, parties asynchrones via Supabase)
-3. Collection : déblocage de cartes, decks, boosters
-4. Publication : TestFlight, puis App Store
+### Ajouter du contenu
+
+1. Un indice : une entrée dans `CLUES` (`src/story.ts`).
+2. Un objet sur la carte : une ligne dans `objects` (`src/maps.ts`) avec un `script`.
+3. Le script, dans `SCRIPTS` : il fait parler le jeu (`api.say`) et donne l'indice (`api.clue`).
+
+### Vers l'App Store
+
+Le même code sera emballé en appli iOS native avec Capacitor, puis compilé dans le cloud
+(sans Mac) et distribué via TestFlight. Il faudra un compte Apple Developer.
