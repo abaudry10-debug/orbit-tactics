@@ -269,12 +269,7 @@ export class Game {
     const obj = this.anyObjAt(fx, fy);
     if (obj?.id === 'capsule07' && this.flags.has('plansRead')) return this.podInteract();
     if (this.pixel && this.pixel.x === fx && this.pixel.y === fy && this.flags.has('podNeedsPrime') && this.map.id === 'lab') {
-      ui.confirm(
-        'Débrancher la batterie de Pixel ?',
-        () => this.finale(),
-        () => ui.say(['Pixel te regarde, la tête penchée.']),
-      );
-      return;
+      return this.askPrime();
     }
     if (obj?.script) {
       SCRIPTS[obj.script]?.(this.api);
@@ -394,13 +389,25 @@ export class Game {
       );
       return;
     }
-    if (f.has('primeHint')) return ui.say(['« AMORCE : SOURCE ISOLÉE REQUISE — TYPE BS-1. »']);
+    const lines = f.has('primeHint')
+      ? ['« AMORCE : SOURCE ISOLÉE REQUISE — TYPE BS-1. »', 'Pixel s’est assis au pied de la capsule.']
+      : [
+          '« AMORCE : SOURCE ISOLÉE REQUISE — TYPE BS-1. »',
+          'Une BS-1… Il n’en existe qu’une.',
+          'Elle est dans Pixel.',
+          'Pixel vient s’asseoir au pied de la capsule, et te regarde.',
+        ];
     f.add('primeHint');
-    ui.say([
-      '« AMORCE : SOURCE ISOLÉE REQUISE — TYPE BS-1. »',
-      'Une BS-1… Il n’en existe qu’une.',
-      'Elle est dans Pixel.',
-    ]);
+    ui.say(lines, () => this.askPrime());
+  }
+
+  /** La dernière décision : débrancher la batterie de Pixel pour amorcer le pod. */
+  private askPrime() {
+    ui.confirm(
+      'Débrancher la batterie de Pixel ?',
+      () => this.finale(),
+      () => ui.say(['Pixel te regarde, la tête penchée.']),
+    );
   }
 
   private finale() {
