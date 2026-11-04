@@ -1072,7 +1072,7 @@ h1 {
   pointer-events: none;
   background: repeating-linear-gradient(to bottom, rgba(0, 0, 0, 0.25) 0 1px, transparent 1px 3px);
 }
-.term-line { margin: 0 0 4px; white-space: pre-wrap; }
+.term-line { margin: 0 0 4px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .term-line.dim { color: #2a9a4c; }
 .term-line.warn { color: #9dffb8; animation: termBlink 1s steps(2) infinite; }
 .term-item, .term-btn {

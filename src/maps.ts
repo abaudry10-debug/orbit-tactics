@@ -257,6 +257,7 @@ function buildQuartier(): GameMap {
       { id: 'radioHouse', x: 27, y: 6, sprite: 'houseDoor', script: 'radioHouse' },
       { id: 'ticket', x: 3, y: 10, sprite: 'note', script: 'ticket' },
       { id: 'letter', x: 6, y: 21, sprite: 'note', script: 'letter' },
+      { id: 'frecklesLetter', x: 17, y: 20, sprite: 'note', script: 'frecklesLetter' },
       { id: 'garden', x: 27, y: 21, sprite: 'plantsSign', script: 'garden' },
       { id: 'shed', x: 29, y: 19, sprite: 'shed', script: 'shed' },
       { id: 'thermo2', x: 18, y: 14, sprite: 'thermometer', script: 'thermometer2' },
@@ -490,7 +491,6 @@ function buildSpatioportInt(): GameMap {
     solidBase: 'pad',
     objects: [
       { id: 'missionBoard', x: 16, y: 1, sprite: 'missionBoard', script: 'missionBoard' },
-      { id: 'podPlans', x: 14, y: 4, sprite: 'podPlans', script: 'podPlans' },
       { id: 'varnDesk', x: 19, y: 4, sprite: 'varnDesk', script: 'varnDesk' },
       { id: 'codebook', x: 18, y: 8, sprite: 'book', script: 'codebook' },
       { id: 'hangarNote', x: 8, y: 5, sprite: 'note', script: 'hangarNote' },

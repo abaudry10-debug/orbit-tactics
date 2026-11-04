@@ -704,8 +704,9 @@ function renderTerm() {
     scr.appendChild(line('> open /missions/' + termFile.name, 'dim'));
     if (!termFile.locked) {
       const cv = document.createElement('canvas');
-      cv.width = 96;
-      cv.height = 56;
+      const big = termFile.id === 'plans';
+      cv.width = big ? 128 : 96;
+      cv.height = big ? 84 : 56;
       cv.className = 'term-photo';
       scr.appendChild(cv);
       drawArchivePhoto(termFile.id, cv);
@@ -781,8 +782,9 @@ function drawArchivePhoto(id: string, cv: HTMLCanvasElement) {
   const px = (x: number, y: number, k: number, w = 1, h = 1) => { c.fillStyle = G[k]; c.fillRect(Math.round(x), Math.round(y), w, h); };
   let seed = 7;
   const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
-  const W = 96, H = 56;
+  const W = cv.width, H = cv.height;
   px(0, 0, 0, W, H);
+  if (id === 'plans') return drawPodPlan(c, G);
   if (id === 'heliade') {
     // un soleil énorme, une plaine de roche fondue
     for (let y = 0; y < 34; y++) px(0, y, y < 12 ? 2 : 1, W, 1);
@@ -822,4 +824,54 @@ function drawArchivePhoto(id: string, cv: HTMLCanvasElement) {
     px(56, 36, 1, 8, 4); px(58, 33, 1, 4, 3); px(55, 40, 1, 2, 2); px(63, 40, 1, 2, 2); // atterrisseur
     px(60, 31, 5); // sa balise
   }
+}
+
+/** Plan du pod mobile : la capsule et ses cinq pièces, l'esprit qui part vers Azura, le corps qui l'attend. */
+function drawPodPlan(c: CanvasRenderingContext2D, G: string[]) {
+  const px = (x: number, y: number, k: number, w = 1, h = 1) => { c.fillStyle = G[k]; c.fillRect(Math.round(x), Math.round(y), w, h); };
+  const W = 128, H = 84;
+  for (let x = 0; x < W; x += 8) px(x, 0, 1, 1, H);
+  for (let y = 0; y < H; y += 8) px(0, y, 1, W, 1);
+  const DIG: Record<string, string> = { '1': '010110010010111', '2': '111001111100111', '3': '111001011001111', '4': '101101111001001', '5': '111100111001111' };
+  const num = (n: string, x: number, y: number) => {
+    px(x - 1, y - 1, 0, 5, 7);
+    [...DIG[n]].forEach((b, i) => { if (b === '1') px(x + (i % 3), y + Math.floor(i / 3), 5); });
+  };
+  const line = (x0: number, y0: number, x1: number, y1: number, k = 2) => {
+    const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
+    for (let i = 0; i <= n; i++) px(x0 + ((x1 - x0) * i) / n, y0 + ((y1 - y0) * i) / n, k);
+  };
+  // la capsule, en coupe
+  px(14, 20, 3, 26, 1); px(14, 74, 3, 26, 1); px(13, 21, 3, 1, 53); px(40, 21, 3, 1, 53);
+  px(12, 22, 3, 1, 51); px(41, 22, 3, 1, 51);
+  px(16, 24, 1, 22, 36); // vitre
+  for (let y = -3; y <= 3; y++) for (let x = -3; x <= 3; x++) if (x * x + y * y <= 9) px(27 + x, 30 + y, 2); // le dormeur
+  px(23, 34, 2, 9, 14); px(24, 48, 2, 3, 10); px(28, 48, 2, 3, 10);
+  // 1. matrice, près de la tête
+  px(34, 28, 4, 4, 4); px(35, 29, 5, 2, 2); line(38, 30, 50, 30); num('1', 52, 27);
+  // 2. noyau, à la base
+  for (let y = -3; y <= 3; y++) for (let x = -3; x <= 3; x++) if (x * x + y * y <= 9) px(27 + x, 67 + y, x * x + y * y <= 2 ? 5 : 4);
+  line(31, 67, 50, 67); num('2', 52, 64);
+  // 3. antenne, sur le capot
+  px(27, 8, 3, 1, 12); line(23, 6, 27, 10, 3); line(31, 6, 27, 10, 3); num('3', 33, 10);
+  // 4. clé, sur le flanc
+  px(6, 40, 3, 6, 7); for (let i = 0; i < 6; i++) px(7 + (i % 2) * 3, 41 + Math.floor(i / 2) * 2, 5); line(12, 43, 13, 43); num('4', 2, 32);
+  // 5. amorce BS-1, au pied
+  px(34, 75, 2, 8, 5); px(36, 76, 4, 2, 3); px(42, 76, 3, 1, 2); num('5', 46, 75);
+  // l'esprit voyage : une onde pointillée jusqu'à Azura
+  for (let x = 30; x < 92; x += 3) {
+    const y = 8 + Math.round(Math.sin(x / 5) * 2) + Math.round(((x - 30) / 62) * 14);
+    px(x, y, x % 6 === 0 ? 4 : 3);
+  }
+  // Azura
+  for (let y = -12; y <= 12; y++) for (let x = -12; x <= 12; x++) {
+    const d = x * x + y * y;
+    if (d <= 144) px(106 + x, 26 + y, d > 120 ? 4 : (x + y * 2) % 7 === 0 || (x > 2 && y < -2) ? 3 : 2);
+  }
+  // et sur Azura, une cuve où un corps attend
+  line(106, 40, 106, 50, 3); line(103, 47, 106, 50, 3); line(109, 47, 106, 50, 3);
+  px(96, 52, 3, 20, 1); px(96, 78, 3, 20, 1); px(95, 53, 3, 1, 25); px(116, 53, 3, 1, 25);
+  px(97, 55, 1, 19, 22);
+  for (let y = -2; y <= 2; y++) for (let x = -2; x <= 2; x++) if (x * x + y * y <= 4) px(106 + x, 59 + y, 4);
+  px(103, 62, 4, 7, 9); px(104, 71, 4, 2, 5); px(108, 71, 4, 2, 5);
 }

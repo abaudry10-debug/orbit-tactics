@@ -63,12 +63,13 @@ export const CLUES: Clue[] = [
   { id: 'cap10', thread: 'capsules', title: 'Les cuves d’essai', text: 'Des cuves semblables à nos capsules, remplies d’un liquide ambré. « Essai 14 : forme stable. Aucune activité cérébrale. Normal : personne n’y est encore entré. »' },
   { id: 'cap11', thread: 'capsules', title: 'Le tableau blanc', text: 'Un schéma : une capsule à gauche, une cuve à droite, une flèche entre les deux. « ESPRIT → ». Dessous, entouré deux fois : « Même mémoire. Même visage. »' },
   { id: 'cap12', thread: 'capsules', title: 'Les caisses d’Aurore', text: '« AURORE — matériel de culture — 4 212 unités. » Les caisses sont parties avec la mission. Il ne reste ici que les cuves d’essai.' },
+  { id: 'cap13', thread: 'capsules', title: 'La lettre de Nina', text: '« Maman, on part demain avec le programme. Tu crois que j’aurai encore mes taches de rousseur, là-bas ? »' },
   { id: 'mis10', thread: 'missions', title: 'Les archives du spatioport', text: 'Les dossiers des missions : Héliade a trouvé un monde de roche fondue, Kairos s’est perdue dans une tempête, Ondine n’a trouvé que de la glace.' },
   { id: 'mis11', thread: 'missions', title: 'Le dossier Azura', text: '« AURORE / AZURA — ACCÈS REFUSÉ. Dossier classé confidentiel : direction du programme LAZARE. » Qu’y a-t-il à cacher sur le seul monde habitable ?' },
   { id: 'mis9', thread: 'missions', title: 'La grille de décodage', text: 'La grille de la mission Aurore associe chaque groupe de trois bips à un chiffre : ··· 0 · ··– 1 · ·–· 2 · ·–– 3 · –·· 4 · –·– 5 · ––· 6 · ––– 7.' },
   { id: 'cap9', thread: 'capsules', title: 'Le journal du Dr Varn', text: '« Les navettes ne suffiront jamais. Alors nous enverrons nos esprits. Sur Azura, la mission Aurore cultive un corps neuf pour chacun de nous. Les capsules transfèrent chaque esprit vers son double et protègent nos anciens corps de la chaleur. 4 212 habitants, 4 212 capsules. Tout le monde part. »' },
   { id: 'lead5', thread: 'leads', title: 'Le carnet du technicien', text: '« Arrêt d’urgence à la troisième cloche : j’ai coupé la pompe, puis l’onduleur, puis la ventilation, puis la turbine, et enfin le régulateur. » — R. Ilunga' },
-  { id: 'lead6', thread: 'leads', title: 'Les plans du pod mobile', text: '1. Matrice neuronale. 2. Noyau de transfert. 3. Antenne de synchronisation, accordée sur la balise d’Azura. 4. Clé de synchronisation. 5. Amorce : source isolée, type BS-1.' },
+  { id: 'lead6', thread: 'leads', title: 'Les plans du pod mobile', text: '1. Matrice vierge. 2. Noyau de transfert. 3. Antenne de synchronisation, accordée sur la balise d’Azura. 4. Clé de synchronisation. 5. Amorce : source isolée, type BS-1.' },
 ];
 
 /** Questions du journal : elles s'ouvrent avec un indice et se résolvent plus tard. */
@@ -134,7 +135,7 @@ export const ITEMS: Record<string, { name: string; text: string; usable?: boolea
   sonde: { name: 'Sonde Lumen', text: 'Détecte les sources d’énergie proches. Utilise-la pour l’allumer ou l’éteindre.', usable: true },
   pelle: { name: 'Pelle', text: 'Une pelle de jardin, solide. Utilise-la pour creuser là où tu te tiens.', usable: true },
   battery: { name: 'Batterie BS-1', text: 'Prototype de batterie solaire, encore chargée. Il faudrait la brancher sur quelque chose.', usable: true },
-  matrice: { name: 'Matrice neuronale', text: 'Une puce qui luit doucement. Une pièce de transfert ? Le Dr Varn en parlait.' },
+  matrice: { name: 'Matrice vierge', text: 'Une puce de rechange, vide. Elle sert à copier un esprit pour l’envoyer.' },
   lampe: { name: 'Lampe torche', text: 'La lampe du père de Betti. Elle s’allume d’elle-même dans le noir.' },
   capteur: { name: 'Récepteur radio', text: 'Le récepteur du radioamateur. Il capte les ondes, à condition d’être assez haut.', usable: true },
   noyau: { name: 'Noyau de transfert', text: 'Un cylindre lumineux, « pour pod mobile ». Une pièce pour voyager ?' },
@@ -167,6 +168,21 @@ export interface ArchiveFolder {
 
 /** Dossiers de l'ordinateur du spatioport. Le dossier d'Azura reste verrouillé. */
 export const ARCHIVES: ArchiveFolder[] = [
+  {
+    id: 'plans', name: 'LAZARE_POD_MOBILE',
+    lines: [
+      'PROGRAMME LAZARE — POD MOBILE (plan v4)',
+      'Une navette : 12 passagers, et l’énergie de toute la ville pendant un an.',
+      'Population : 4 212. Les corps ne partiront pas.',
+      'Seuls les esprits voyageront.',
+      '1. MATRICE VIERGE : copie l’esprit du dormeur.',
+      '2. NOYAU DE TRANSFERT : alimente la copie.',
+      '3. ANTENNE : à accorder sur la balise d’Azura (voir relevé radio).',
+      '4. CLÉ DE SYNCHRONISATION : extraite du signal d’Azura.',
+      '5. AMORCE : source isolée, type BS-1.',
+      'À l’arrivée : un corps cultivé par la mission Aurore attend chaque esprit.',
+    ],
+  },
   {
     id: 'heliade', name: 'MISSION_HELIADE',
     lines: [
@@ -492,8 +508,8 @@ export const SCRIPTS: Record<string, (api: Api) => void> = {
     if (api.hasItem('matrice')) return api.say(['Le socle est vide.']);
     api.say(
       [
-        'Sur un socle, une puce qui luit doucement : « Matrice neuronale ».',
-        'Tu la prends. Elle est tiède, presque vivante.',
+        'Sur un socle, une puce étiquetée : « Matrice — rechange — vierge ».',
+        'Une puce de rechange, vide. Elle sert à copier un esprit pour l’envoyer.',
       ],
       () => api.item('matrice'),
     );
@@ -607,19 +623,6 @@ export const SCRIPTS: Record<string, (api: Api) => void> = {
       () => api.clue('mis8'),
     ),
 
-  podPlans: (api) =>
-    api.say(
-      [
-        'Des plans épinglés : « POD MOBILE — transfert hors laboratoire ».',
-        '1. Matrice neuronale. 2. Noyau de transfert. 3. Antenne de synchronisation, accordée sur la balise d’Azura.',
-        '4. Clé de synchronisation. 5. Amorce : source isolée, type BS-1.',
-        'Un pod mobile… La capsule 07 pourrait servir de base.',
-      ],
-      () => {
-        api.set('plansRead');
-        api.clue('lead6');
-      },
-    ),
 
   varnDesk: (api) =>
     api.say(
@@ -643,7 +646,19 @@ export const SCRIPTS: Record<string, (api: Api) => void> = {
     api.ui('archives', () => {
       if (api.has('archLogin')) api.clue('mis10');
       if (api.has('archAzura')) api.clue('mis11');
+      if (api.has('arch_plans')) {
+        const first = !api.has('plansRead');
+        api.set('plansRead');
+        api.clue('lead6');
+        if (first) api.say(['Un pod mobile… La capsule 07 pourrait servir de base.']);
+      }
     }),
+
+  frecklesLetter: (api) =>
+    api.say(
+      ['Une lettre glissée sous une porte, jamais ramassée.', '« Maman, on part demain avec le programme. »', '« Tu crois que j’aurai encore mes taches de rousseur, là-bas ? » — Nina'],
+      () => api.clue('cap13'),
+    ),
 
   // ----- laboratoire de culture -----
   tankFull: (api) =>

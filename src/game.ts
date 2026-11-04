@@ -346,11 +346,11 @@ export class Game {
     const f = this.flags;
     if (!f.has('heliosOn')) return ui.say(['La capsule 07 est éteinte. Pour un transfert, il faudrait énormément d’énergie… Hélios ?']);
     if (!f.has('podAssembled')) {
-      const parts: [string, string][] = [['matrice', 'la Matrice neuronale'], ['noyau', 'le Noyau de transfert'], ['antenne', 'l’antenne de synchronisation']];
+      const parts: [string, string][] = [['matrice', 'la Matrice vierge'], ['noyau', 'le Noyau de transfert'], ['antenne', 'l’antenne de synchronisation']];
       const missing = parts.filter(([id]) => !this.items.has(id)).map(([, name]) => name);
       if (missing.length) return ui.say(['D’après les plans, il me manque encore :', `${missing.join(', ')}.`]);
       ui.say(
-        ['Tu poses la Matrice neuronale dans son logement.', 'Tu insères le Noyau de transfert. Il s’illumine.', 'Tu fixes l’antenne de synchronisation sur le capot.', 'La capsule 07 s’éveille dans un bourdonnement.'],
+        ['Tu poses la Matrice vierge dans son logement.', 'Tu insères le Noyau de transfert. Il s’illumine.', 'Tu fixes l’antenne de synchronisation sur le capot.', 'La capsule 07 s’éveille dans un bourdonnement.'],
         () => {
           for (const id of ['matrice', 'noyau', 'antenne']) this.items.delete(id);
           f.add('podAssembled');
