@@ -13,8 +13,8 @@
     <meta name="apple-mobile-web-app-title" content="Vesper" />
     <title>Vesper</title>
     <link rel="manifest" href="manifest.webmanifest" />
-    <link rel="icon" href="icon.svg" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="icon.svg" />
+    <link rel="icon" href="icon-180.png" type="image/png" />
+    <link rel="apple-touch-icon" href="icon-180.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet" />
@@ -42,7 +42,10 @@
           <button data-btn="down" class="d down" aria-label="Bas"></button>
         </div>
         <div class="buttons">
-          <button data-btn="journal" id="btn-journal" class="pill" aria-label="Journal">Journal</button>
+          <div class="pills">
+            <button data-btn="menu" id="btn-menu" class="pill small" aria-label="Menu">☰</button>
+            <button data-btn="journal" id="btn-journal" class="pill" aria-label="Journal">Journal</button>
+          </div>
           <button data-btn="a" class="round a" aria-label="Examiner">A</button>
         </div>
       </div>
@@ -55,6 +58,7 @@
           <p class="tagline">Tu te réveilles seul dans une ville morte.<br />Que s’est-il passé ici ?</p>
           <button id="btn-continue" class="menu">Continuer</button>
           <button id="btn-new" class="menu primary">Nouvelle partie</button>
+          <button id="btn-sound" class="menu small">Son : activé</button>
           <p class="hint">Croix pour marcher · A pour examiner · Journal pour tes découvertes</p>
         </div>
       </section>
@@ -67,7 +71,6 @@
             <button id="journal-close" class="close" aria-label="Fermer">✕</button>
           </header>
           <p id="journal-progress"></p>
-          <div id="journal-bar"><div></div></div>
           <div id="journal-body"></div>
         </div>
       </section>
@@ -87,6 +90,26 @@
             <button id="keypad-cancel" class="menu">Annuler</button>
             <button id="keypad-ok" class="menu primary">Valider</button>
           </div>
+        </div>
+      </section>
+
+      <!-- pause -->
+      <section id="pause" class="overlay" hidden>
+        <div class="title-box panel">
+          <p class="kicker">Pause</p>
+          <button id="pause-resume" class="menu primary">Reprendre</button>
+          <button id="pause-sound" class="menu">Son : activé</button>
+          <button id="pause-quit" class="menu">Sauvegarder et quitter</button>
+          <p id="pause-status" class="status"></p>
+        </div>
+      </section>
+
+      <!-- confirmation -->
+      <section id="confirm" class="overlay" hidden>
+        <div class="title-box panel">
+          <p id="confirm-text" class="tagline"></p>
+          <button id="confirm-yes" class="menu primary">Oui</button>
+          <button id="confirm-no" class="menu">Non</button>
         </div>
       </section>
 

@@ -1,7 +1,7 @@
 // Entrées : clavier (ordinateur) et croix directionnelle tactile (téléphone).
 import type { Dir } from './sprites.js';
 
-export type Button = 'a' | 'b' | 'journal' | Dir;
+export type Button = 'a' | 'b' | 'journal' | 'menu' | Dir;
 
 const held = new Set<Dir>();
 const order: Dir[] = []; // la dernière direction pressée gagne
@@ -40,7 +40,7 @@ export function releaseAll() {
 const KEYS: Record<string, Button> = {
   ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right',
   w: 'up', z: 'up', s: 'down', a: 'left', q: 'left', d: 'right',
-  ' ': 'a', Enter: 'a', e: 'a', j: 'journal', Tab: 'journal', Escape: 'b', Backspace: 'b',
+  ' ': 'a', Enter: 'a', e: 'a', j: 'journal', Tab: 'journal', Escape: 'menu', p: 'menu', Backspace: 'b',
 };
 
 export function setupInput() {
@@ -59,7 +59,7 @@ export function setupInput() {
   });
   window.addEventListener('blur', releaseAll);
 
-  // Boutons tactiles : data-btn="up|down|left|right|a|journal|b"
+  // Boutons tactiles : data-btn="up|down|left|right|a|journal|menu|b"
   document.querySelectorAll<HTMLElement>('[data-btn]').forEach((el) => {
     const b = el.dataset.btn as Button;
     const isDir = b === 'up' || b === 'down' || b === 'left' || b === 'right';

@@ -1,4 +1,5 @@
 // Interface HTML par-dessus le canvas : dialogues, journal, clavier à code, notifications.
+import { sfx } from './audio.js';
 import { CLUES, ITEMS, THREADS } from './story.js';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -46,6 +47,7 @@ function next() {
   typing = window.setInterval(() => {
     shown += 1;
     $('dialog-text').textContent = current.slice(0, shown);
+    if (shown % 3 === 0 && current[shown - 1] !== ' ') sfx.blip();
     if (shown >= current.length) {
       clearInterval(typing);
       typing = undefined;
@@ -61,7 +63,10 @@ export function advanceDialog() {
     typing = undefined;
     $('dialog-text').textContent = current;
     $('dialog-more').hidden = false;
-  } else next();
+  } else {
+    sfx.advance();
+    next();
+  }
 }
 
 // ---------- notification « Journal mis à jour » ----------
@@ -82,58 +87,46 @@ export const journalOpen = () => !$('journal').hidden;
 export function renderJournal(clues: Set<string>, items: Set<string>, fresh: Set<string>) {
   const body = $('journal-body');
   body.innerHTML = '';
-  const total = CLUES.length;
   const found = CLUES.filter((c) => clues.has(c.id)).length;
-  $('journal-progress').textContent = `${found} / ${total} découvertes`;
-  ($('journal-bar').firstElementChild as HTMLElement).style.width = `${(found / total) * 100}%`;
+  $('journal-progress').textContent =
+    found === 0 ? 'Rien encore. Examine ce qui t’entoure.' : `${found} découverte${found > 1 ? 's' : ''}`;
+
+  const card = (title: string, text: string, isFresh: boolean) => {
+    const el = document.createElement('div');
+    el.className = 'clue' + (isFresh ? ' fresh' : '');
+    el.innerHTML = '<strong></strong><p></p>';
+    el.querySelector('strong')!.textContent = title;
+    el.querySelector('p')!.textContent = text;
+    return el;
+  };
 
   for (const th of THREADS) {
-    const list = CLUES.filter((c) => c.thread === th.id);
-    const got = list.filter((c) => clues.has(c.id));
+    const got = CLUES.filter((c) => c.thread === th.id && clues.has(c.id));
+    if (got.length === 0) continue; // un fil n'apparaît qu'une fois entamé
     const section = document.createElement('section');
     section.className = 'thread';
     const h = document.createElement('h3');
-    h.innerHTML = `<span class="icon">${th.icon}</span>${got.length ? th.title : '???'}<span class="count">${got.length}/${list.length}</span>`;
+    h.innerHTML = `<span class="icon">${th.icon}</span><span></span>`;
+    (h.lastElementChild as HTMLElement).textContent = th.title;
     section.appendChild(h);
-    for (const c of list) {
-      const card = document.createElement('div');
-      if (clues.has(c.id)) {
-        card.className = 'clue' + (fresh.has(c.id) ? ' fresh' : '');
-        card.innerHTML = `<strong></strong><p></p>`;
-        card.querySelector('strong')!.textContent = c.title;
-        card.querySelector('p')!.textContent = c.text;
-      } else {
-        card.className = 'clue unknown';
-        card.textContent = '??? — quelque chose reste à découvrir.';
-      }
-      section.appendChild(card);
-    }
+    for (const c of got) section.appendChild(card(c.title, c.text, fresh.has(c.id)));
     body.appendChild(section);
   }
 
-  const inv = document.createElement('section');
-  inv.className = 'thread';
-  inv.innerHTML = `<h3><span class="icon">✦</span>Sac<span class="count">${items.size}</span></h3>`;
-  if (items.size === 0) {
-    const p = document.createElement('div');
-    p.className = 'clue unknown';
-    p.textContent = 'Rien pour l’instant.';
-    inv.appendChild(p);
+  if (items.size > 0) {
+    const inv = document.createElement('section');
+    inv.className = 'thread';
+    inv.innerHTML = '<h3><span class="icon">✦</span><span>Sac</span></h3>';
+    for (const id of items) {
+      const it = ITEMS[id];
+      if (it) inv.appendChild(card(it.name, it.text, false));
+    }
+    body.appendChild(inv);
   }
-  for (const id of items) {
-    const it = ITEMS[id];
-    if (!it) continue;
-    const card = document.createElement('div');
-    card.className = 'clue';
-    card.innerHTML = `<strong></strong><p></p>`;
-    card.querySelector('strong')!.textContent = it.name;
-    card.querySelector('p')!.textContent = it.text;
-    inv.appendChild(card);
-  }
-  body.appendChild(inv);
 }
 
 export function setJournal(open: boolean) {
+  if (open) sfx.page();
   $('journal').hidden = !open;
 }
 
@@ -159,6 +152,7 @@ export function openKeypad(cb: (code: string) => void) {
 }
 
 export function keypadInput(b: string) {
+  if (b !== 'a' && b !== 'b') sfx.key();
   if (b === 'up') digits[cursor] = (digits[cursor] + 1) % 10;
   else if (b === 'down') digits[cursor] = (digits[cursor] + 9) % 10;
   else if (b === 'left') cursor = (cursor + 3) % 4;
@@ -184,7 +178,7 @@ export function setupKeypadTouch() {
   $('keypad-digits').querySelectorAll<HTMLElement>('.digit').forEach((el, i) => {
     el.querySelector('.up')!.addEventListener('click', () => { cursor = i; keypadInput('up'); });
     el.querySelector('.down')!.addEventListener('click', () => { cursor = i; keypadInput('down'); });
-    el.querySelector('span')!.addEventListener('click', () => { cursor = i; renderKeypad(); });
+    el.querySelector('span')!.addEventListener('click', () => { cursor = i; sfx.key(); renderKeypad(); });
   });
   $('keypad-ok').addEventListener('click', submitKeypad);
   $('keypad-cancel').addEventListener('click', closeKeypad);
@@ -206,4 +200,24 @@ export function showPlace(name: string) {
   el.classList.remove('show');
   void el.offsetWidth;
   el.classList.add('show');
+}
+
+// ---------- fenêtres pause / confirmation ----------
+export const overlayOpen = () => !$('pause').hidden || !$('confirm').hidden || !$('ending').hidden;
+
+export function confirm(question: string, onYes: () => void) {
+  $('confirm-text').textContent = question;
+  $('confirm').hidden = false;
+  const yes = $('confirm-yes');
+  const no = $('confirm-no');
+  const close = () => {
+    $('confirm').hidden = true;
+    yes.onclick = null;
+    no.onclick = null;
+  };
+  yes.onclick = () => {
+    close();
+    onYes();
+  };
+  no.onclick = close;
 }

@@ -1,4 +1,5 @@
 // Cœur du jeu : état du personnage, déplacements case par case, interactions, rendu.
+import { playTheme, sfx } from './audio.js';
 import { heldDir, releaseAll } from './input.js';
 import { MAPS, START, SOLID, charAt, objectAt, type GameMap, type MapObject } from './maps.js';
 import { T, hash, hero, tile, type Dir } from './sprites.js';
@@ -46,6 +47,7 @@ export class Game {
   locked = false; // bloque le joueur (fondu, fin…)
   particles: Particle[] = [];
   private saveTimer = 0;
+  private bumpCooldown = 0;
 
   constructor(private ctx: CanvasRenderingContext2D) {
     for (let i = 0; i < 40; i++) this.particles.push(this.newParticle(true));
@@ -74,6 +76,19 @@ export class Game {
       this.clues = new Set(s.clues);
       this.items = new Set(s.items);
       return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /** Sauvegarde puis relit le stockage pour confirmer que tout est bien écrit. */
+  saveVerified(): boolean {
+    this.save();
+    try {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) return false;
+      const s = JSON.parse(raw) as Save;
+      return s.map === this.map.id && s.x === this.x && s.y === this.y && s.clues.length === this.clues.size;
     } catch {
       return false;
     }
@@ -111,13 +126,14 @@ export class Game {
   }
 
   get busy(): boolean {
-    return this.locked || this.blackout || ui.dialogOpen() || ui.journalOpen() || ui.keypadOpen();
+    return this.locked || this.blackout || ui.dialogOpen() || ui.journalOpen() || ui.keypadOpen() || ui.overlayOpen();
   }
 
   update(dt: number) {
     this.time += dt;
     this.updateParticles(dt);
     this.saveTimer += dt;
+    this.bumpCooldown -= dt;
     if (this.saveTimer > 10) {
       this.saveTimer = 0;
       if (!this.blackout) this.save();
@@ -137,14 +153,22 @@ export class Game {
     const ny = this.y + dy;
     const obj = objectAt(this.map, nx, ny);
     if (obj?.door && this.doorOpen(obj)) {
+      sfx.door();
       this.warp(obj.door.to, obj.door.x, obj.door.y, obj.door.dir);
       return;
     }
-    if (this.blocked(nx, ny)) return;
+    if (this.blocked(nx, ny)) {
+      if (this.bumpCooldown <= 0) {
+        sfx.bump();
+        this.bumpCooldown = 0.35;
+      }
+      return;
+    }
     this.moving = { fx: this.x, fy: this.y, t: 0 };
     this.x = nx;
     this.y = ny;
     this.steps += 1;
+    sfx.step();
   }
 
   warp(mapId: string, x: number, y: number, dir: Dir) {
@@ -158,6 +182,7 @@ export class Game {
       this.moving = null;
       this.locked = false;
       ui.showPlace(this.map.name);
+      this.startMusic();
       this.save();
       if (mapId === 'vesper' && !this.flags.has('firstOutside')) {
         this.flags.add('firstOutside');
@@ -201,6 +226,7 @@ export class Game {
       if (this.items.has(id)) return;
       this.items.add(id);
       ui.toast(`Objet obtenu : ${ITEMS[id]?.name ?? id}`);
+      sfx.item();
       this.save();
     },
     clue: (id) => this.addClue(id),
@@ -209,8 +235,13 @@ export class Game {
       releaseAll();
       ui.openKeypad(cb);
     },
+    sfx: (name) => sfx[name](),
     finish: () => this.finish(),
   };
+
+  startMusic() {
+    playTheme(this.map.outdoor ? 'outdoor' : 'lab');
+  }
 
   addClue(id: string) {
     if (this.clues.has(id)) return;
@@ -218,6 +249,7 @@ export class Game {
     this.fresh.add(id);
     const c = CLUES.find((x) => x.id === id);
     ui.toast(`Journal mis à jour : ${c?.title ?? id}`);
+    sfx.clue();
     document.getElementById('btn-journal')?.classList.add('fresh');
     this.save();
     for (const d of DEDUCTIONS) {

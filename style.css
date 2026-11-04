@@ -214,6 +214,11 @@ body {
   box-shadow: inset 0 2px 0 var(--accent-dark);
 }
 
+.pills {
+  display: flex;
+  gap: 10px;
+}
+
 .pill {
   position: relative;
   padding: 6px 18px;
@@ -224,6 +229,9 @@ body {
   font-family: var(--font);
   font-size: 22px;
   box-shadow: inset 0 -3px 0 #241a2e;
+}
+.pill.small {
+  padding: 6px 14px;
 }
 .pill.pressed {
   background: #4b3a5f;
@@ -312,6 +320,30 @@ h1 {
   color: #f2e9dc;
   box-shadow: inset 0 -4px 0 #17111f;
   cursor: pointer;
+}
+.menu.small {
+  font-size: 20px;
+  padding: 6px 12px;
+  background: transparent;
+  border-color: #3a2c4a;
+  box-shadow: none;
+  color: var(--muted);
+}
+.panel {
+  background: #1a1324;
+  border: 3px solid var(--ink);
+  border-radius: 10px;
+  padding: 22px 18px;
+  box-shadow: inset 0 0 0 2px #3a2a44, 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+.status {
+  min-height: 22px;
+  margin: 4px 0 0;
+  font-size: 20px;
+  color: var(--teal);
+}
+.status.error {
+  color: #ff8a8a;
 }
 .menu.primary {
   background: var(--accent);

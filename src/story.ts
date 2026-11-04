@@ -92,6 +92,7 @@ export interface Api {
   hasItem(id: string): boolean;
   say(lines: string[], then?: () => void): void;
   keypad(onCode: (code: string) => void): void;
+  sfx(name: 'success' | 'wrong' | 'door'): void;
   finish(): void;
 }
 
@@ -188,12 +189,14 @@ export const SCRIPTS: Record<string, (api: Api) => void> = {
       api.clue('delta1');
       api.keypad((code) => {
         if (code === DELTA_CODE) {
+          api.sfx('success');
           api.say(['Bip. Le voyant passe au vert.', 'La porte se déverrouille dans un grondement.'], () => {
             api.set('deltaOpen');
             api.clue('delta3');
             api.finish();
           });
         } else {
+          api.sfx('wrong');
           api.say(['Bzzt. Code refusé.', 'L’année où le ciel a brûlé… Il me manque des informations.']);
         }
       });

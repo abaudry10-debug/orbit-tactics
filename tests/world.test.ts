@@ -88,6 +88,7 @@ test('chaque indice appartient à un fil et est atteignable', () => {
       hasItem: () => false,
       say: (_l: string[], then?: () => void) => then?.(),
       keypad: (cb: (c: string) => void) => cb('2141'),
+      sfx: () => {},
       finish: () => {},
     };
     run(api);
