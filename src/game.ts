@@ -96,6 +96,7 @@ export class Game {
       this.clues = new Set(s.clues);
       this.items = new Set(s.items);
       this.fresh = new Set(s.fresh ?? []);
+      if (this.flags.has('batteryFound')) this.flags.delete('sondeOn'); // anciennes sauvegardes
       this.refreshQuestions(true);
       if (this.fresh.size) document.getElementById('btn-journal')?.classList.add('fresh');
       if (this.flags.has('pixelOn')) this.placePixelBehind();
@@ -303,6 +304,9 @@ export class Game {
       if (this.flags.has('sondeOn')) {
         this.flags.delete('sondeOn');
         ui.toast('Sonde éteinte');
+      } else if (this.flags.has('batteryFound')) {
+        // la seule source qu'elle cherchait est trouvée : elle ne capte plus rien
+        return ui.say(['Tu allumes la Sonde… Plus aucune source d’énergie à capter.', 'Tu l’éteins.']);
       } else {
         this.flags.add('sondeOn');
         ui.toast('Sonde allumée');
@@ -501,6 +505,8 @@ export class Game {
       ui.say(['Tu creuses… La pelle heurte quelque chose de dur.', 'Une batterie solaire, enveloppée dans une bâche : le prototype BS-1 !'], () => {
         this.flags.add('batteryFound');
         this.api.item('battery');
+        this.flags.delete('sondeOn'); // sa mission est accomplie
+        ui.toast('Sonde éteinte');
         this.save();
       });
     } else {
