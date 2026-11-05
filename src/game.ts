@@ -95,7 +95,7 @@ export class Game {
   /** Objet ramassé ou indice trouvé : une petite animation au-dessus du héros. */
   private pop: { kind: 'item' | 'clue'; id: string; t: number } | null = null;
   /** Scène où Pixel passe par un endroit où l'on ne peut pas aller. */
-  private cut: { kind: 'pixelFlap' | 'pixelVent' | 'pixelPower'; obj: MapObject; stage: 'go' | 'act' | 'back'; t: number; snd: number; then?: () => void } | null = null;
+  private cut: { kind: 'pixelFlap' | 'pixelVent' | 'pixelPower' | 'pixelCar'; obj: MapObject; stage: 'go' | 'act' | 'back'; t: number; snd: number; then?: () => void } | null = null;
   private smokeTimer = 0;
   // ---- vagues de chaleur ----
   heatPhase: 'none' | 'warn' | 'wave' | 'fade' = 'none';
@@ -516,6 +516,50 @@ export class Game {
     }
   }
 
+  // ---------- les souvenirs de Pixel ----------
+  /** Temps restant de la projection en jeu (le cône de lumière depuis l'œil de Pixel). */
+  private projecting = 0;
+
+  private plugMemory(n: number) {
+    const p = this.pixel;
+    if (!p) return ui.say(['Une carte mémoire abîmée. Le connecteur a une forme étrange…', 'On dirait une prise faite pour un robot.']);
+    if (this.map.dark) return ui.say(['Pas ici. Pixel tremble trop.']);
+    if (this.map.outdoor && (this.heatPhase === 'warn' || this.heatPhase === 'wave')) return ui.say(['Pas maintenant : la chaleur affole Pixel.']);
+    this.locked = true;
+    releaseAll();
+    p.walk = null;
+    this.pixelMode = 'sit';
+    this.facePixelToHero();
+    this.heroCrouch = 1.2;
+    sfx.door();
+    // la petite trappe s'ouvre, l'œil s'éteint, puis projette
+    window.setTimeout(() => {
+      sfx.projector();
+      this.projecting = 1.3;
+    }, 600);
+    window.setTimeout(() => {
+      playTheme('home');
+      ui.openMemory(n, () => {
+        this.items.delete(`memo${n}`);
+        this.flags.add(`memo${n}Seen`);
+        this.locked = false;
+        this.projecting = 0;
+        this.startMusic();
+        this.addClue(`memo${n}`);
+        // Pixel secoue la tête, comme au sortir d'un rêve
+        this.pixelMode = 'pet';
+        this.pixelTimer = 1.2;
+        this.save();
+      });
+    }, 1900);
+  }
+
+  /** Revoir un souvenir depuis le journal (Pixel n'a pas besoin d'être là). */
+  replayMemory(n: number) {
+    playTheme('home');
+    ui.openMemory(n, () => this.startMusic());
+  }
+
   /** Succès : on vérifie ceux qui viennent d'être atteints. */
   private unlockCheck() {
     for (const a of ACHIEVEMENTS) {
@@ -580,6 +624,7 @@ export class Game {
     }
     this.fx = this.fx.filter((f) => f.life > 0);
     this.heroCrouch -= dt;
+    if (this.projecting > 0) this.projecting -= dt;
     for (const pr of this.prints) pr.life -= dt;
     this.prints = this.prints.filter((pr) => pr.life > 0);
     if (this.pop) {
@@ -1336,8 +1381,8 @@ export class Game {
   }
 
   // ---------- scènes de Pixel : chatière, conduit, énergie ----------
-  private startCut(kind: 'pixelFlap' | 'pixelVent' | 'pixelPower', then?: () => void) {
-    const id = kind === 'pixelFlap' ? 'leaHouse' : kind === 'pixelVent' ? 'vent' : 'heliosDoor';
+  private startCut(kind: 'pixelFlap' | 'pixelVent' | 'pixelPower' | 'pixelCar', then?: () => void) {
+    const id = kind === 'pixelFlap' ? 'leaHouse' : kind === 'pixelVent' ? 'vent' : kind === 'pixelCar' ? 'shinyCar' : 'heliosDoor';
     const obj = this.map.objects.find((o) => o.id === id);
     const p = this.pixel;
     if (!p || !obj) return then?.();
@@ -1453,6 +1498,7 @@ export class Game {
     }
     if (id === 'pelle') return this.dig();
     if (id === 'ecrou') return this.throwNut();
+    if (/^memo[1-5]$/.test(id)) return this.plugMemory(Number(id.slice(4)));
     if (id === 'capteur') {
       if (this.map.id === 'sommet') {
         releaseAll();
@@ -1477,6 +1523,10 @@ export class Game {
           sfx.success();
           this.refreshQuestions(false);
           this.save();
+          // s'il porte déjà la carte tombée de son flanc, Pixel la réclame tout de suite
+          if (this.items.has('memo1')) {
+            ui.say(['Pixel renifle ton sac. Une petite trappe clignote sur son flanc…'], () => this.plugMemory(1));
+          }
         },
       );
       return;
@@ -1660,6 +1710,14 @@ export class Game {
       // Pixel se tourne vers toi et gratte le sol à ses pieds
       this.pixel.dir = this.x >= this.pixel.x ? 'right' : 'left';
     }
+    if (this.map.id === 'quartier' && !this.flags.has('memo2Found') && Math.max(Math.abs(this.x - 9), Math.abs(this.y - 9)) <= 1) {
+      ui.say(['Tu creuses à côté de la boîte aux lettres…', 'Un petit trésor enterré : une carte mémoire, enveloppée dans un chiffon.'], () => {
+        this.flags.add('memo2Found');
+        this.api.item('memo2');
+        this.save();
+      });
+      return;
+    }
     if (this.nearCabin()) {
       ui.say(['Tu plantes la pelle dans la terre du potager…', 'Elle heurte du bois. Une trappe !'], () => {
         sfx.door();
@@ -1745,7 +1803,7 @@ export class Game {
     ui: (kind, then) => {
       releaseAll();
       if (kind === 'switches') ui.openSwitches(SWITCHES, RESTART_ORDER, () => then?.());
-      else if (kind === 'pixelFlap' || kind === 'pixelVent' || kind === 'pixelPower') this.startCut(kind, then);
+      else if (kind === 'pixelFlap' || kind === 'pixelVent' || kind === 'pixelPower' || kind === 'pixelCar') this.startCut(kind, then);
       else if (kind === 'archives')
         ui.openTerminal({
           folders: ARCHIVES,
@@ -1813,7 +1871,8 @@ export class Game {
 
   openJournal() {
     ui.renderJournal(this.clues, this.fresh, this.openQ, this.solvedQ, (id) => this.flags.has(id) || this.items.has(id),
-      ACHIEVEMENTS.map((a) => ({ title: a.title, text: a.text, done: this.flags.has(`ach_${a.id}`), progress: `${Math.min(a.goal, this.counters[a.counter] ?? 0)}/${a.goal}` })));
+      ACHIEVEMENTS.map((a) => ({ title: a.title, text: a.text, done: this.flags.has(`ach_${a.id}`), progress: `${Math.min(a.goal, this.counters[a.counter] ?? 0)}/${a.goal}` })),
+      (n) => this.replayMemory(n));
     ui.setJournal(true);
     releaseAll();
     // tout ce qui vient d'être affiché est désormais « lu »
@@ -1823,7 +1882,7 @@ export class Game {
   }
 
   openBag() {
-    ui.renderBag([...this.items], (id) => this.useItem(id), this.flags.has('sondeOn'));
+    ui.renderBag([...this.items], (id) => this.useItem(id), this.flags.has('sondeOn'), !!this.pixel);
     ui.setBag(true);
     releaseAll();
     document.getElementById('btn-bag')?.classList.remove('fresh');
@@ -1996,6 +2055,26 @@ export class Game {
         }
         c.drawImage(dogSprite(pdir, look), dx, dy);
         c.globalAlpha = 1;
+        // une carte pas encore lue dans le sac : la trappe de son flanc clignote
+        if (!this.projecting && [1, 2, 3, 4, 5].some((n) => this.items.has(`memo${n}`)) && Math.floor(this.time * 2.5) % 2) {
+          c.fillStyle = '#ffcf4a';
+          c.fillRect(dx + (pdir === 'left' ? 9 : 6), dy + 9, 1, 1);
+        }
+        if (this.projecting > 0) {
+          // le cône de lumière qui sort de son œil
+          const ex = dx + (pdir === 'left' ? 4 : 12), ey = dy + 5;
+          const dirx = pdir === 'left' ? -1 : 1;
+          const a = Math.min(1, this.projecting / 0.4) * (0.35 + 0.1 * Math.sin(this.time * 30));
+          c.fillStyle = `rgba(94,240,255,${a})`;
+          c.beginPath();
+          c.moveTo(ex, ey);
+          c.lineTo(ex + dirx * 40, ey - 18);
+          c.lineTo(ex + dirx * 40, ey + 14);
+          c.closePath();
+          c.fill();
+          c.fillStyle = '#e8ffff';
+          c.fillRect(ex - 1, ey - 1, 2, 2);
+        }
         if (this.rescue?.stage === 'drag') {
           // l'écharpe tendue entre la gueule de Pixel et le héros
           const mx = pdir === 'left' ? dx + 1 : dx + 14;

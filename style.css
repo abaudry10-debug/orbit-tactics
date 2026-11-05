@@ -1226,3 +1226,48 @@ details.thread > summary.has-new .count { color: var(--accent-dark); }
 #achievement .ach-t { font-size: 24px; }
 #achievement .ach-d { font-size: 17px; }
 @keyframes achIn { from { transform: translateY(30px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* ---------- souvenirs de Pixel ---------- */
+.memory {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: radial-gradient(ellipse at center, #0a1a24 0%, #020608 75%);
+  color: #bff6ff;
+  padding: 16px;
+}
+.memory[hidden] { display: none; }
+#memory-title { margin: 0; font-size: 18px; letter-spacing: 2px; color: #5ef0ff; text-transform: uppercase; opacity: 0.85; }
+#memory-canvas {
+  width: min(94vw, 560px);
+  aspect-ratio: 160 / 112;
+  image-rendering: pixelated;
+  border: 2px solid #1f6a7a;
+  border-radius: 6px;
+  box-shadow: 0 0 30px rgba(94, 240, 255, 0.35);
+}
+#memory-caption {
+  margin: 0;
+  min-height: 3em;
+  max-width: min(94vw, 560px);
+  text-align: center;
+  font-size: 22px;
+  line-height: 1.25;
+  text-shadow: 0 0 6px rgba(94, 240, 255, 0.6);
+}
+.memory-hint { margin: 0; font-size: 15px; color: #4a8a96; animation: termBlink 1.4s steps(2) infinite; }
+.replay {
+  margin-top: 6px;
+  font: inherit;
+  font-size: 17px;
+  padding: 2px 10px;
+  border: 2px solid #1c1020;
+  border-radius: 6px;
+  background: #2f6f8a;
+  color: #e8fbff;
+}

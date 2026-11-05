@@ -3,6 +3,7 @@ import { playEnding, setStatic, sfx, startStatic, stopStatic } from './audio.js'
 import { iconUrl } from './sprites.js';
 import { CLUES, ITEMS, QUESTIONS, THREADS, type ArchiveFolder } from './story.js';
 import { iconCanvas } from './sprites.js';
+import { MEMORIES, MH, MW } from './memories.js';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -89,6 +90,7 @@ export const journalOpen = () => !$('journal').hidden;
 export function renderJournal(
   clues: Set<string>, fresh: Set<string>, openQ: Set<string>, solvedQ: Set<string>, isDone: (id: string) => boolean,
   achievements: { title: string; text: string; done: boolean; progress: string }[] = [],
+  onReplay?: (n: number) => void,
 ) {
   const body = $('journal-body');
   body.innerHTML = '';
@@ -149,6 +151,38 @@ export function renderJournal(
   // 2. Les fils de l'histoire, repliables ; ceux qui ont du nouveau s'ouvrent d'eux-mêmes
   for (const th of THREADS) {
     if (th.id === 'leads') continue;
+    if (th.id === 'pixel') {
+      // les souvenirs de Pixel : cinq cases, à revoir à volonté
+      const seen = [1, 2, 3, 4, 5].filter((n) => clues.has(`memo${n}`));
+      if (!seen.length) continue;
+      const newCount = seen.filter((n) => fresh.has(`memo${n}`)).length;
+      const d = document.createElement('details');
+      d.className = 'thread';
+      if (newCount) d.open = true;
+      const sum = document.createElement('summary');
+      sum.innerHTML = `<span class="icon">${th.icon}</span><span class="t"></span><span class="count"></span>`;
+      sum.querySelector('.t')!.textContent = th.title;
+      sum.querySelector('.count')!.textContent = `${seen.length}/5`;
+      d.appendChild(sum);
+      for (let n = 1; n <= 5; n++) {
+        const c = CLUES.find((x) => x.id === `memo${n}`)!;
+        if (!clues.has(c.id)) {
+          d.appendChild(card(`Souvenir ${n}`, 'Fragment manquant.', 'unknown', false));
+          continue;
+        }
+        const el = card(c.title, c.text, '', fresh.has(c.id));
+        if (onReplay) {
+          const btn = document.createElement('button');
+          btn.className = 'replay';
+          btn.textContent = '▶ Revoir';
+          btn.addEventListener('click', () => onReplay(n));
+          el.appendChild(btn);
+        }
+        d.appendChild(el);
+      }
+      body.appendChild(d);
+      continue;
+    }
     const got = CLUES.filter((c) => c.thread === th.id && clues.has(c.id));
     const qs = QUESTIONS.filter((q) => q.thread === th.id && openQ.has(q.id));
     if (got.length === 0 && qs.length === 0) continue; // un fil n'apparaît qu'une fois entamé
@@ -194,7 +228,7 @@ export function setBag(open: boolean) {
   $('bag').hidden = !open;
 }
 
-export function renderBag(items: string[], onUse: (id: string) => void, sondeOn: boolean) {
+export function renderBag(items: string[], onUse: (id: string) => void, sondeOn: boolean, pixelOn = false) {
   const grid = $('bag-grid');
   const detail = $('bag-detail');
   grid.innerHTML = '';
@@ -214,7 +248,7 @@ export function renderBag(items: string[], onUse: (id: string) => void, sondeOn:
     if (it?.usable) {
       const btn = document.createElement('button');
       btn.className = 'menu primary';
-      btn.textContent = id === 'sonde' ? (sondeOn ? 'Éteindre' : 'Allumer') : id === 'ecrou' ? 'Lancer' : 'Utiliser';
+      btn.textContent = id === 'sonde' ? (sondeOn ? 'Éteindre' : 'Allumer') : id === 'ecrou' ? 'Lancer' : id.startsWith('memo') ? (pixelOn ? 'Brancher sur Pixel' : 'Examiner') : 'Utiliser';
       btn.addEventListener('click', () => onUse(id));
       detail.appendChild(btn);
     }
@@ -336,7 +370,7 @@ export function showPlace(name: string) {
 
 // ---------- fenêtres pause / confirmation ----------
 export const overlayOpen = () =>
-  !$('pause').hidden || !$('confirm').hidden || !$('viewer').hidden || !$('switches').hidden || !$('finale').hidden || !$('term').hidden;
+  !$('pause').hidden || !$('confirm').hidden || !$('viewer').hidden || !$('switches').hidden || !$('finale').hidden || !$('term').hidden || !$('memory').hidden;
 
 export function confirm(question: string, onYes: () => void, onNo?: () => void, labels?: [string, string]) {
   $('confirm-text').textContent = question;
@@ -1247,4 +1281,91 @@ export function achievement(title: string, text: string) {
   sfx.success();
   window.clearTimeout(achTimer);
   achTimer = window.setTimeout(() => (el.hidden = true), 4200);
+}
+
+// ---------- la projection d'un souvenir de Pixel ----------
+let memoryState: { n: number; i: number; t0: number; raf: number; done: () => void } | null = null;
+export const memoryOpen = () => !$('memory').hidden;
+
+export function openMemory(n: number, done: () => void) {
+  const mem = MEMORIES[n - 1];
+  const el = $('memory');
+  const cv = $('memory-canvas') as HTMLCanvasElement;
+  cv.width = MW;
+  cv.height = MH;
+  $('memory-title').textContent = `Souvenir ${n} — ${mem.title}`;
+  el.hidden = false;
+  memoryState = { n, i: 0, t0: performance.now(), raf: 0, done };
+  const c = cv.getContext('2d')!;
+  c.imageSmoothingEnabled = false;
+  let seed = 9;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const frame = (now: number) => {
+    const st = memoryState;
+    if (!st) return;
+    const tab = mem.tableaux[st.i];
+    const t = (now - st.t0) / 1000;
+    if (t > tab.dur) return nextTableau();
+    c.globalAlpha = 1;
+    tab.draw(c, t);
+    // la projection abîmée : teinte cyan, lignes de balayage, sauts d'image, parasites
+    c.fillStyle = 'rgba(70,200,230,0.16)';
+    c.fillRect(0, 0, MW, MH);
+    c.fillStyle = 'rgba(0,10,20,0.22)';
+    for (let y = 0; y < MH; y += 2) c.fillRect(0, y, MW, 1);
+    seed = Math.floor(now / 90);
+    if (rnd() < 0.18) {
+      const y = Math.floor(rnd() * MH), h = 2 + Math.floor(rnd() * 6), off = Math.floor(rnd() * 8) - 4;
+      c.drawImage(cv, 0, y, MW, h, off, y, MW, h);
+    }
+    for (let i = 0; i < 30; i++) {
+      c.fillStyle = rnd() < 0.5 ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.3)';
+      c.fillRect(Math.floor(rnd() * MW), Math.floor(rnd() * MH), 1, 1);
+    }
+    // ouverture et fermeture du tableau : un fondu qui grésille
+    const edge = Math.min(t / 0.35, (tab.dur - t) / 0.35, 1);
+    if (edge < 1) {
+      c.fillStyle = `rgba(2,6,8,${1 - Math.max(0, edge)})`;
+      c.fillRect(0, 0, MW, MH);
+    }
+    // vignette
+    const g = c.createRadialGradient(MW / 2, MH / 2, MH * 0.35, MW / 2, MH / 2, MH * 0.85);
+    g.addColorStop(0, 'rgba(0,0,0,0)');
+    g.addColorStop(1, 'rgba(0,0,0,0.55)');
+    c.fillStyle = g;
+    c.fillRect(0, 0, MW, MH);
+    st.raf = requestAnimationFrame(frame);
+  };
+  const showCaption = () => {
+    $('memory-caption').textContent = mem.tableaux[memoryState!.i].caption;
+  };
+  const nextTableau = () => {
+    const st = memoryState;
+    if (!st) return;
+    cancelAnimationFrame(st.raf);
+    st.i += 1;
+    if (st.i >= mem.tableaux.length) return closeMemory();
+    st.t0 = performance.now();
+    showCaption();
+    st.raf = requestAnimationFrame(frame);
+  };
+  memoryNext = nextTableau;
+  showCaption();
+  memoryState.raf = requestAnimationFrame(frame);
+}
+
+let memoryNext: () => void = () => {};
+/** Un appui (A ou toucher) passe au tableau suivant. */
+export function memoryInput() {
+  sfx.key();
+  memoryNext();
+}
+
+function closeMemory() {
+  const st = memoryState;
+  memoryState = null;
+  $('memory').hidden = true;
+  $('memory-caption').textContent = '';
+  if (st) cancelAnimationFrame(st.raf);
+  st?.done();
 }

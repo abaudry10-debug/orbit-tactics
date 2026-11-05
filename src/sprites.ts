@@ -644,6 +644,21 @@ const heatAlert: Painter = (c, v) => {
   r(c, 6, 6, 4, 2, '#e8622c'); r(c, 7, 9, 2, 1, '#e8622c');
   r(c, 7, 5, 2, 2, '#ffcf4a');
 };
+// une carte mémoire abîmée, posée au sol
+const memoCard: Painter = (c, v) => {
+  dust(c, v);
+  c.fillStyle = 'rgba(0,0,0,0.25)'; c.fillRect(4, 11, 9, 2);
+  r(c, 4, 6, 8, 6, P.ink); r(c, 5, 7, 6, 4, '#2f6f5a'); r(c, 5, 7, 6, 1, '#4fa07e');
+  r(c, 6, 11, 1, 1, '#ffcf4a'); r(c, 8, 11, 1, 1, '#ffcf4a'); r(c, 10, 11, 1, 1, '#ffcf4a'); // contacts dorés
+  r(c, 9, 8, 1, 2, '#1c3a30'); r(c, 6, 9, 2, 1, '#9dffcf'); // une diode encore vivante
+};
+const musicBox: Painter = (c, v) => {
+  woodFloor(c, v);
+  c.fillStyle = 'rgba(0,0,0,0.25)'; c.fillRect(3, 13, 11, 2);
+  r(c, 3, 6, 10, 8, P.ink); r(c, 4, 7, 8, 6, '#c25a6a'); r(c, 4, 7, 8, 1, '#e07a88');
+  r(c, 3, 3, 10, 4, P.ink); r(c, 4, 4, 8, 2, '#e8c040'); // couvercle entrouvert
+  r(c, 7, 9, 2, 2, '#ffcf4a'); r(c, 12, 9, 2, 1, '#d8dde5'); // la petite clé
+};
 const dogBasket: Painter = (c, v) => {
   woodFloor(c, v);
   c.fillStyle = 'rgba(0,0,0,0.25)'; c.fillRect(2, 13, 13, 2);
@@ -1024,6 +1039,12 @@ export function dogSprite(dir: Dir, look: DogLook): HTMLCanvasElement {
 
 // ---------- icônes du sac à dos (16 × 16) ----------
 const ICONS: Record<string, Painter> = {
+  memo: (c) => {
+    r(c, 2, 4, 12, 9, P.ink); r(c, 3, 5, 10, 7, '#2f6f5a'); r(c, 3, 5, 10, 1, '#4fa07e');
+    for (let x = 4; x < 13; x += 2) r(c, x, 13, 1, 2, '#ffcf4a');
+    r(c, 5, 7, 4, 3, '#1c3a30'); r(c, 10, 7, 2, 1, '#9dffcf'); r(c, 9, 9, 3, 1, '#9dffcf');
+    r(c, 11, 4, 3, 2, P.ink); // un coin cassé
+  },
   combinaison: (c) => {
     // combinaison réfléchissante argentée, capuche et visière
     r(c, 5, 1, 6, 5, P.ink); r(c, 6, 2, 4, 3, '#dfe4ea'); r(c, 6, 3, 4, 1, '#ffb347');
@@ -1083,6 +1104,7 @@ const ICONS: Record<string, Painter> = {
     for (const i of [4, 7, 10]) { r(c, i, 1, 1, 2, P.metalLight); r(c, i, 13, 1, 2, P.metalLight); r(c, 1, i, 2, 1, P.metalLight); r(c, 13, i, 2, 1, P.metalLight); }
   },
 };
+for (let n = 1; n <= 5; n++) ICONS[`memo${n}`] = ICONS.memo;
 
 const iconCache = new Map<string, string>();
 /** Icône d'objet en image (data URL), affichée en grand avec des pixels nets. */
@@ -1125,7 +1147,7 @@ const REGISTRY: Record<string, Painter[]> = {
   obsTop: [obsTop], obsFront: [obsFront], obsDoor: [obsDoor], console: [console_], antennaBase: [antennaBase], trapdoor: [trapdoor],
   turbine: [turbine], switchPanel: [switchPanel(false)], switchPanelOn: [switchPanel(true)], plaque: [plaque],
   telescope: [telescope], orbitChart: [orbitChart], missionBoard: [missionBoard], varnDesk: [varnDesk],
-  podPlans: [podPlans], dogSleep: [dogSleep], dogBasket: [dogBasket], mud: [mud], shackDoor: [shackDoor], heatAlert: [heatAlert],
+  podPlans: [podPlans], dogSleep: [dogSleep], dogBasket: [dogBasket], memoCard: [memoCard], musicBox: [musicBox], mud: [mud], shackDoor: [shackDoor], heatAlert: [heatAlert],
   signLeft: [signArrow('left', dust)], signRight: [signArrow('right', dust)], signDown: [signArrow('down', dust)], signUpSand: [signArrow('up', sand)],
   cultureTank: [cultureTank('full')], cultureTankEmpty: [cultureTank('empty')], cultureTankBroken: [cultureTank('broken')],
   whiteboard: [whiteboard], archiveTerm: [archiveTerm],

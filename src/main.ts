@@ -156,6 +156,7 @@ $('pause-quit').addEventListener('click', () => {
 
 // ---------- autres boutons ----------
 $('journal-close').addEventListener('click', () => ui.setJournal(false));
+$('memory').addEventListener('click', () => ui.memoryInput());
 $('bag-close').addEventListener('click', () => ui.setBag(false));
 $('viewer-close').addEventListener('click', () => ui.closeViewer());
 $('switches-close').addEventListener('click', () => ui.closeSwitches());
@@ -186,6 +187,10 @@ onPress((b) => {
   }
   if (!$('switches').hidden) {
     if (b === 'b' || b === 'menu') ui.closeSwitches();
+    return;
+  }
+  if (ui.memoryOpen()) {
+    if (b === 'a' || b === 'b') ui.memoryInput();
     return;
   }
   if (ui.termOpen()) return ui.termInput(b);

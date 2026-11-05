@@ -1,7 +1,7 @@
 // Histoire — étape 1 : indices du journal, questions, objets et scripts d'interaction.
 // Pour ajouter du contenu : une entrée dans CLUES, puis un script qui appelle api.clue().
 
-export type ThreadId = 'self' | 'capsules' | 'heat' | 'missions' | 'leads' | 'lea';
+export type ThreadId = 'self' | 'capsules' | 'heat' | 'missions' | 'leads' | 'lea' | 'pixel';
 
 export const THREADS: { id: ThreadId; title: string; icon: string }[] = [
   { id: 'self', title: 'Qui suis-je ?', icon: '◉' },
@@ -9,6 +9,7 @@ export const THREADS: { id: ThreadId; title: string; icon: string }[] = [
   { id: 'heat', title: 'Le ciel brûlant', icon: '☀' },
   { id: 'missions', title: 'Où sont-ils partis ?', icon: '▲' },
   { id: 'lea', title: 'Betti', icon: '✿' },
+  { id: 'pixel', title: 'Les souvenirs de Pixel', icon: '◉' },
   { id: 'leads', title: 'Pour avancer', icon: '★' },
 ];
 
@@ -69,6 +70,11 @@ export const CLUES: Clue[] = [
   { id: 'mis10', thread: 'missions', title: 'Les archives du spatioport', text: 'Les dossiers des missions : Héliade a trouvé un monde de roche fondue, Kairos s’est perdue dans une tempête, Ondine n’a trouvé que de la glace.' },
   { id: 'mis11', thread: 'missions', title: 'Le dossier Azura', text: 'Le dossier de la mission Aurore est vide : toutes ses archives ont été supprimées le jour du grand départ.' },
   { id: 'lead7', thread: 'leads', doneWhen: 'archUnlock_plans', title: 'Le post-it du télescope', text: '« Dossier LAZARE, ordinateur du spatioport. Code d’accès : la période de l’étoile errante, en années. »' },
+  { id: 'memo1', thread: 'pixel', title: 'Souvenir 1 — Le premier allumage', text: 'L’atelier. La maman de Betti penchée sur Pixel. Son œil s’allume pour la première fois. « Bonjour, toi. Je vais t’appeler… Pixel ! »' },
+  { id: 'memo2', thread: 'pixel', title: 'Souvenir 2 — La première sortie', text: 'Un ciel encore bleu. Betti lance un écrou, Pixel le rapporte. « C’est ton jouet, maintenant. Rien qu’à toi. »' },
+  { id: 'memo3', thread: 'pixel', title: 'Souvenir 3 — Le laboratoire', text: 'La maman de Betti travaille sur les batteries. « Ta batterie est unique, Pixel. La seule BS-1 qui marche vraiment. »' },
+  { id: 'memo4', thread: 'pixel', title: 'Souvenir 4 — La première vague', text: 'La sirène. Betti et Pixel cachés sous la table, la lumière rouge à la fenêtre. « On partira ensemble. Promis. »' },
+  { id: 'memo5', thread: 'pixel', title: 'Souvenir 5 — Le jour du départ', text: '« Les adultes disent que tu ne peux pas venir avec nous… Attends-moi ici. Veille sur ceux qui restent. »' },
   { id: 'mis9', thread: 'missions', title: 'La grille de décodage', text: 'La grille de la mission Aurore associe chaque groupe de trois bips à un chiffre : ··· 0 · ··– 1 · ·–· 2 · ·–– 3 · –·· 4 · –·– 5 · ––· 6 · ––– 7.' },
   { id: 'cap9', thread: 'capsules', title: 'Le journal du Dr Varn', text: '« Les navettes ne suffiront jamais. Ce ne sont pas nos corps qui partiront. Sur Azura, la mission Aurore prépare de quoi nous accueillir. 4 212 habitants, 4 212 capsules. Tout le monde part. »' },
   { id: 'lead5', thread: 'leads', doneWhen: 'heliosOn', title: 'Le carnet du technicien', text: '« Arrêt d’urgence à la troisième cloche : j’ai coupé la pompe, puis l’onduleur, puis la ventilation, puis la turbine, et enfin le régulateur. » — R. Ilunga' },
@@ -139,6 +145,11 @@ export const ITEMS: Record<string, { name: string; text: string; usable?: boolea
   pelle: { name: 'Pelle', text: 'Une pelle de jardin, solide. Utilise-la pour creuser là où tu te tiens.', usable: true },
   battery: { name: 'Batterie BS-1', text: 'Prototype de batterie solaire, encore chargée. Il faudrait la brancher sur quelque chose.', usable: true },
   combinaison: { name: 'Combinaison réfléchissante', text: 'Tu la portes sur toi. Elle ralentit la chaleur des vagues… sans en protéger complètement.' },
+  memo1: { name: 'Carte mémoire n°1', text: 'Une carte mémoire abîmée, tombée du flanc de Pixel.', usable: true },
+  memo2: { name: 'Carte mémoire n°2', text: 'Une carte mémoire abîmée, enterrée comme un trésor.', usable: true },
+  memo3: { name: 'Carte mémoire n°3', text: 'Une carte mémoire abîmée, trouvée sur un quai du métro.', usable: true },
+  memo4: { name: 'Carte mémoire n°4', text: 'Une carte mémoire abîmée, rapportée par Pixel de sous une voiture.', usable: true },
+  memo5: { name: 'Carte mémoire n°5', text: 'Une carte mémoire abîmée, cachée dans la boîte à musique de Betti.', usable: true },
   ecrou: { name: 'Écrou mâchouillé', text: 'Le jouet préféré de Pixel. Lance-le devant toi : il ira le chercher.', usable: true },
   matrice: { name: 'Matrice vierge', text: 'Une puce de rechange, vide. Elle sert à copier un esprit pour l’envoyer.' },
   lampe: { name: 'Lampe torche', text: 'La lampe du père de Betti. Elle s’allume d’elle-même dans le noir.' },
@@ -260,8 +271,8 @@ export interface Api {
   hasItem(id: string): boolean;
   say(lines: string[], then?: () => void): void;
   keypad(title: string, onCode: (code: string) => void): void;
-  sfx(name: 'success' | 'wrong' | 'door' | 'item'): void;
-  ui(kind: 'switches' | 'orbit' | 'codebook' | 'archives' | 'pixelFlap' | 'pixelVent' | 'pixelPower', then?: () => void): void;
+  sfx(name: 'success' | 'wrong' | 'door' | 'item' | 'musicBox'): void;
+  ui(kind: 'switches' | 'orbit' | 'codebook' | 'archives' | 'pixelFlap' | 'pixelVent' | 'pixelPower' | 'pixelCar', then?: () => void): void;
 }
 
 export const SCRIPTS: Record<string, (api: Api) => void> = {
@@ -604,7 +615,38 @@ export const SCRIPTS: Record<string, (api: Api) => void> = {
       },
     );
   },
-  leaToys: (api) => api.say(['Un coffre à jouets. Des robots en plastique, une fusée, une boîte de piles vides.']),
+  leaToys: (api) =>
+    api.say(['Un coffre à jouets. Des robots en plastique, une fusée, une boîte de piles vides.', 'Au fond, un dessin d’enfant : Pixel qui creuse à côté de la boîte aux lettres, avec un trésor qui brille.'], () => api.set('memoHint')),
+  memoCard1: (api) =>
+    api.say(['Par terre, juste à côté du chien robot, une petite carte mémoire.', 'Elle a dû tomber de son flanc. Le connecteur est abîmé.'], () => {
+      api.set('memo1Found');
+      api.item('memo1');
+    }),
+  memoCard3: (api) =>
+    api.say(['Sur le quai, une carte mémoire, couverte de poussière.', 'Pixel la renifle longuement.'], () => {
+      api.set('memo3Found');
+      api.item('memo3');
+    }),
+  shinyCar: (api) => {
+    if (api.has('memo4Found')) return api.say(['Une vieille voiture. Plus rien ne brille dessous.']);
+    if (!api.has('pixelOn')) return api.say(['Quelque chose brille sous la voiture…', 'Ta main ne passe pas. Il faudrait quelqu’un de plus petit.']);
+    api.say(['Quelque chose brille sous la voiture… Pixel remue la queue et se faufile dessous !'], () =>
+      api.ui('pixelCar', () =>
+        api.say(['Pixel ressort, une carte mémoire dans la gueule.'], () => {
+          api.set('memo4Found');
+          api.item('memo4');
+        }),
+      ),
+    );
+  },
+  musicBox: (api) => {
+    api.sfx('musicBox');
+    if (api.has('memo5Found')) return api.say(['La boîte à musique de Betti joue sa berceuse.']);
+    api.say(['Une boîte à musique. Tu remontes la petite clé : la berceuse de Betti.', 'Sous le mécanisme, une carte mémoire.'], () => {
+      api.set('memo5Found');
+      api.item('memo5');
+    });
+  },
 
   lampBox: (api) => {
     if (api.has('hasLamp')) return api.say(['La caisse est vide.']);

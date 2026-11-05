@@ -314,6 +314,20 @@ export const sfx = {
   scratch() {
     noise(sfxBus, now(), 0.12, 0.05, 'bandpass', 2600, 4200);
   },
+  /** Quelques notes de la berceuse, comme une boîte à musique qu'on remonte. */
+  musicBox() {
+    const t = now();
+    [72, 69, 72, 74, 72, 69, 67, 65].forEach((n, i) => {
+      tone(sfxBus, 'sine', hz(n + 12), t + i * 0.32, 0.9, 0.05, { attack: 0.004, release: 0.85 });
+    });
+  },
+  /** Le petit projecteur de Pixel qui s'allume. */
+  projector() {
+    const t = now();
+    tone(sfxBus, 'square', 1800, t, 0.03, 0.03, { filter: 3000 });
+    noise(sfxBus, t + 0.05, 0.9, 0.035, 'bandpass', 900, 1800);
+    tone(sfxBus, 'sine', 220, t + 0.05, 0.9, 0.03, { glide: 440 });
+  },
   throwNut() {
     noise(sfxBus, now(), 0.16, 0.06, 'bandpass', 1800, 3200);
   },

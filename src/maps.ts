@@ -187,6 +187,8 @@ function buildVesper(): GameMap {
       { id: 'robot', x: 30, y: 14, sprite: 'robot', script: 'robot' },
       { id: 'missionPlaque', x: 20, y: 19, sprite: 'monument', script: 'missionPlaque' },
       { id: 'pixelOff', x: 23, y: 7, sprite: 'dogOff', script: 'pixelOff', hideWhen: 'pixelOn' },
+      { id: 'memoCard1', x: 22, y: 7, sprite: 'memoCard', script: 'memoCard1', hideWhen: 'memo1Found' },
+      { id: 'shinyCar', x: 34, y: 11, sprite: 'car', script: 'shinyCar' },
       { id: 'noteLea', x: 24, y: 8, sprite: 'note', script: 'noteLea' },
       { id: 'crate1', x: 17, y: 25, sprite: 'crate', script: 'crate' },
       { id: 'metro', x: 12, y: 20, sprite: 'stairs', script: 'metro', door: { to: 'metro', x: 5, y: 2, dir: 'down', needs: 'hasLamp' } },
@@ -383,6 +385,7 @@ function buildCabane(): GameMap {
     objects: [
       { id: 'lampBox', x: 2, y: 2, sprite: 'lampBox', spriteWhen: ['hasLamp', 'lampBoxEmpty'], script: 'lampBox' },
       { id: 'leaLastNote', x: 5, y: 2, sprite: 'note', script: 'leaLastNote' },
+      { id: 'musicBox', x: 6, y: 3, sprite: 'musicBox', script: 'musicBox' },
       { id: 'cabaneExit', x: 4, y: 5, sprite: 'plankFront', door: { to: 'quartier', x: 26, y: 24, dir: 'down' } },
     ],
   };
@@ -406,6 +409,7 @@ function buildMetro(): GameMap {
       { id: 'mareeSign', x: 17, y: 1, sprite: 'networkMap', script: 'mareeSign' },
       { id: 'lostFound', x: 20, y: 2, sprite: 'counter', script: 'lostFound' },
       { id: 'metroTicket', x: 23, y: 5, sprite: 'note', script: 'metroTicket' },
+      { id: 'memoCard3', x: 33, y: 6, sprite: 'memoCard', script: 'memoCard3', hideWhen: 'memo3Found' },
       { id: 'caisson', x: 36, y: 11, sprite: 'caisson', spriteWhen: ['noyauFound', 'caissonEmpty'], script: 'caisson' },
       { id: 'metroUpColline', x: 35, y: 1, sprite: 'metroStairsUp', door: { to: 'colline', x: 4, y: 11, dir: 'down' } },
     ],
