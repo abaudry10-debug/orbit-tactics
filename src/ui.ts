@@ -524,42 +524,61 @@ export function codebookTable(): HTMLElement {
 export function openSwitches(labels: string[], order: string[], onSuccess: () => void) {
   const grid = $('switches-grid');
   grid.innerHTML = '';
-  let step = 0;
+  // l'ordre dans lequel le joueur a relevé les leviers ; on ne juge qu'une fois les cinq levés
+  const seq: string[] = [];
   const buttons: HTMLButtonElement[] = [];
-  const reset = () => {
-    step = 0;
-    buttons.forEach((b) => b.classList.remove('on'));
-  };
+  let busy = false;
+  const status = (t: string) => ($('switches-status').textContent = t);
   for (const label of labels) {
     const b = document.createElement('button');
     b.className = 'switch';
     b.innerHTML = '<span class="lever"></span><span class="name"></span>';
     b.querySelector('.name')!.textContent = label;
     b.addEventListener('click', () => {
-      if (b.classList.contains('on')) return;
-      if (label === order[step]) {
-        b.classList.add('on');
+      if (busy) return;
+      if (b.classList.contains('on')) {
+        // on peut redescendre le dernier levier relevé, pour se corriger
+        if (seq[seq.length - 1] !== label) return;
+        seq.pop();
+        b.classList.remove('on');
         sfx.key();
-        step += 1;
-        if (step === order.length) {
-          $('switches-status').textContent = 'Tous les circuits sont rétablis.';
+        status(seq.length ? `${seq.length} circuit${seq.length > 1 ? 's' : ''} sur ${order.length} relevé${seq.length > 1 ? 's' : ''}.` : 'Les cinq circuits sont coupés.');
+        return;
+      }
+      b.classList.add('on');
+      sfx.key();
+      seq.push(label);
+      if (seq.length < order.length) {
+        status(`${seq.length} circuit${seq.length > 1 ? 's' : ''} sur ${order.length} relevé${seq.length > 1 ? 's' : ''}.`);
+        return;
+      }
+      busy = true;
+      status('Mise sous tension…');
+      const ok = seq.every((l, i) => l === order[i]);
+      window.setTimeout(() => {
+        if (ok) {
+          status('Tous les circuits sont rétablis.');
           window.setTimeout(() => {
             $('switches').hidden = true;
             onSuccess();
           }, 700);
+          return;
         }
-      } else {
         sfx.wrong();
         $('switches-box').classList.add('tripped');
-        $('switches-status').textContent = 'Clac ! Le tableau disjoncte. Tout est retombé.';
-        window.setTimeout(() => $('switches-box').classList.remove('tripped'), 500);
-        reset();
-      }
+        status('Clac ! Le tableau disjoncte. Tout est retombé.');
+        window.setTimeout(() => {
+          $('switches-box').classList.remove('tripped');
+          buttons.forEach((x) => x.classList.remove('on'));
+          seq.length = 0;
+          busy = false;
+        }, 600);
+      }, 700);
     });
     buttons.push(b);
     grid.appendChild(b);
   }
-  $('switches-status').textContent = 'Les cinq circuits sont coupés.';
+  status('Les cinq circuits sont coupés.');
   $('switches').hidden = false;
 }
 
