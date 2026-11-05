@@ -599,7 +599,6 @@ export const SCRIPTS: Record<string, (api: Api) => void> = {
         api.set('noyauFound');
         api.item('noyau');
         api.clue('cap7');
-        if (api.has('signalFound')) api.say(['(Fin du contenu actuel : l’étape 3, le transporteur, arrive bientôt.)']);
       },
     );
   },

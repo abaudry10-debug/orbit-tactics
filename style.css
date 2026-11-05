@@ -1168,3 +1168,5 @@ details.thread > summary.has-new .count { color: var(--accent-dark); }
 
 #finale-text.with-end { animation: none; }
 #finale-text { transition: opacity 0.8s; }
+
+#dialog-text { white-space: pre-line; }

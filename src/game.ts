@@ -464,9 +464,9 @@ export class Game {
     ui.say(
       [
         '… Là ! Sur 47,2, un signal se détache du bruit.',
+        'Une suite de bips, toujours la même :\n–··   ··–   –––   ·–·',
         'Régulier, insistant. Il vient de très loin, de la planète d’Aurore.',
         'Ce n’est pas du silence… mais je n’y comprends rien. Le message est indéchiffrable.',
-        ...(this.flags.has('noyauFound') ? ['(Fin du contenu actuel : l’étape 3, le transporteur, arrive bientôt.)'] : []),
       ],
       () => this.addClue('mis7'),
     );
