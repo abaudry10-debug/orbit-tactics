@@ -2,7 +2,8 @@
 import { playTheme, sfx } from './audio.js';
 import { heldDir, releaseAll } from './input.js';
 import { MAPS, START, SOLID, charAt, type GameMap, type MapObject } from './maps.js';
-import { T, bigTree, dish, dogSprite, dogAsleep, type DogLook, frozenTrain, hash, hero, radioTower, shuttleWreck, solarTower, tile, type Dir } from './sprites.js';
+import { settings } from './settings.js';
+import { T, bigTree, dish, dogSprite, iconCanvas, dogAsleep, type DogLook, frozenTrain, hash, hero, radioTower, shuttleWreck, solarTower, tile, type Dir } from './sprites.js';
 import { ARCHIVE_CODE, ARCHIVES, CLUES, FINALE, ITEMS, QUESTIONS, RADIO_FREQ, RESTART_ORDER, SCRIPTS, SIGNAL_KEY, SWITCHES, type Api } from './story.js';
 import * as ui from './ui.js';
 
@@ -42,11 +43,11 @@ interface Follower {
 }
 
 /** Ce que fait Pixel quand il ne se contente pas de suivre. */
-type PixelMode = 'follow' | 'come' | 'sit' | 'pet' | 'rest' | 'fetch' | 'dig';
+type PixelMode = 'follow' | 'come' | 'sit' | 'pet' | 'rest' | 'fetch' | 'dig' | 'cut';
 
 /** Petits effets dessinés dans le monde : cœurs, « z », reflets de soleil, poussière, l'écrou lancé. */
 interface Fx {
-  kind: 'heart' | 'z' | 'spark' | 'dust';
+  kind: 'heart' | 'z' | 'spark' | 'dust' | 'smoke' | 'zap';
   x: number;
   y: number;
   vx: number;
@@ -83,6 +84,14 @@ export class Game {
   private nut: { fx: number; fy: number; tx: number; ty: number; t: number; dur: number; landed: boolean } | null = null;
   private fetch: { stage: 'flying' | 'run' | 'pick' | 'back'; tx: number; ty: number } | null = null;
   private fxTimer = 0;
+  // ---- effets visuels (désactivables : settings.fx) ----
+  /** Empreintes dans le sable, qui s'effacent peu à peu. */
+  private prints: { x: number; y: number; dir: Dir; life: number }[] = [];
+  /** Objet ramassé ou indice trouvé : une petite animation au-dessus du héros. */
+  private pop: { kind: 'item' | 'clue'; id: string; t: number } | null = null;
+  /** Scène où Pixel passe par un endroit où l'on ne peut pas aller. */
+  private cut: { kind: 'pixelFlap' | 'pixelVent' | 'pixelPower'; obj: MapObject; stage: 'go' | 'act' | 'back'; t: number; snd: number; then?: () => void } | null = null;
+  private smokeTimer = 0;
   private saveTimer = 0;
   private bumpCooldown = 0;
   private beepTimer = 0;
@@ -274,6 +283,15 @@ export class Game {
       p.y = this.y;
     }
     this.moving = { fx: this.x, fy: this.y, t: 0 };
+    if (settings.fx && this.map.outdoor) {
+      const ground = charAt(this.map, this.x, this.y);
+      if (ground === 'S' || ground === '.') {
+        for (let i = 0; i < 2; i++)
+          this.fx.push({ kind: 'dust', x: this.x * T + 5 + Math.random() * 6, y: this.y * T + 14, vx: (Math.random() - 0.5) * 16, vy: -10 - Math.random() * 8, life: 0.35, max: 0.35 });
+        if (ground === 'S') this.prints.push({ x: this.x, y: this.y, dir: this.dir, life: 9 });
+        if (this.prints.length > 40) this.prints.shift();
+      }
+    }
     this.x = nx;
     this.y = ny;
     this.steps += 1;
@@ -501,6 +519,24 @@ export class Game {
     }
     this.fx = this.fx.filter((f) => f.life > 0);
     this.heroCrouch -= dt;
+    for (const pr of this.prints) pr.life -= dt;
+    this.prints = this.prints.filter((pr) => pr.life > 0);
+    if (this.pop) {
+      this.pop.t += dt;
+      if (this.pop.t > 1.4) this.pop = null;
+    }
+    // fumée de l'épave de navette
+    this.smokeTimer -= dt;
+    if (settings.fx && this.smokeTimer <= 0) {
+      this.smokeTimer = 0.35;
+      for (const d of this.map.decals ?? []) {
+        if (d.kind !== 'shuttle') continue;
+        const x = (d.x + d.w * 0.55) * T + (Math.random() - 0.5) * 8;
+        const y = (d.y + d.h * 0.35) * T;
+        this.fx.push({ kind: 'smoke', x, y, vx: 4 + Math.random() * 4, vy: -6 - Math.random() * 4, life: 3.2, max: 3.2 });
+      }
+    }
+    this.updateCut(dt);
     const p = this.pixel;
     if (!p) return;
     this.pixelTimer -= dt;
@@ -588,6 +624,9 @@ export class Game {
     const happy = this.atPixelHome();
     const wag = happy ? Math.floor(t * 11) % 2 : Math.floor(t * 2.2) % 2 ? 1 : 2;
     const eye = t % 3.7 < 0.12 ? 'closed' : dark ? 'wide' : 'on';
+    if (this.cut?.stage === 'act' && this.cut.kind === 'pixelPower') {
+      return { pose: 'sit', eye: this.cut.t > 1.6 ? 'closed' : 'wide', tail: 2, earsDown: true };
+    }
     if (p.walk) {
       const run = this.pixelMode === 'fetch';
       return { pose: dark ? 'scared' : 'stand', frame: Math.floor(t * (run ? 16 : 10)) % 4, tail: dark ? 3 : Math.floor(t * 9) % 2, earsDown: dark || run };
@@ -605,6 +644,186 @@ export class Game {
     const moving = this.moving && p.moving;
     const frame = moving ? (this.moving!.t < 0.5 ? (this.steps % 2 ? 1 : 3) : 0) : 0;
     return { pose: 'stand', frame, eye, tail: moving ? Math.floor(t * 8) % 2 : wag };
+  }
+
+  /** Une case qui fait de l'ombre : mur, décor plein, objet qui bloque (pas les portes). */
+  private castsShadow(x: number, y: number): boolean {
+    if (x < 0 || y < 0 || x >= this.map.width || y >= this.map.height) return false;
+    const obj = this.objAt(x, y);
+    if (obj) return !obj.door && !obj.passWhen;
+    return SOLID.has(charAt(this.map, x, y));
+  }
+
+  /** Ombres portées : la lumière vient d'en haut à gauche. */
+  private renderShadows(vis: [string, number, number][], ox: number, oy: number) {
+    const c = this.ctx;
+    for (const [, x, y] of vis) {
+      if (this.castsShadow(x, y)) continue;
+      const sx = x * T - ox, sy = y * T - oy;
+      if (this.castsShadow(x, y - 1)) {
+        const a = [0.3, 0.22, 0.15, 0.09, 0.04];
+        for (let i = 0; i < a.length; i++) {
+          c.fillStyle = `rgba(10,6,20,${a[i]})`;
+          c.fillRect(sx, sy + i, T, 1);
+        }
+      }
+      if (this.castsShadow(x - 1, y)) {
+        c.fillStyle = 'rgba(10,6,20,0.16)';
+        c.fillRect(sx, sy, 2, T);
+        c.fillStyle = 'rgba(10,6,20,0.07)';
+        c.fillRect(sx + 2, sy, 2, T);
+      }
+    }
+  }
+
+  private renderPrints(ox: number, oy: number) {
+    const c = this.ctx;
+    for (const pr of this.prints) {
+      c.fillStyle = `rgba(90,50,20,${Math.min(0.35, pr.life / 9 * 0.35)})`;
+      const sx = pr.x * T - ox, sy = pr.y * T - oy;
+      if (pr.dir === 'left' || pr.dir === 'right') {
+        c.fillRect(sx + 4, sy + 9, 2, 1);
+        c.fillRect(sx + 9, sy + 12, 2, 1);
+      } else {
+        c.fillRect(sx + 5, sy + 6, 1, 2);
+        c.fillRect(sx + 9, sy + 10, 1, 2);
+      }
+    }
+  }
+
+  /** Le décor qui vit : écrans, capsules, cuves, turbines, robot, emblèmes. */
+  private renderAmbient(vis: [string, number, number][], ox: number, oy: number) {
+    const c = this.ctx;
+    const t = this.time;
+    for (const [name, x, y] of vis) {
+      const sx = x * T - ox, sy = y * T - oy;
+      const ph = (x * 7 + y * 13) % 10; // chaque objet a son propre rythme
+      if (name === 'terminal') {
+        // une ligne de balayage et un curseur qui clignote
+        c.fillStyle = 'rgba(120,255,190,0.18)';
+        c.fillRect(sx + 4, sy + 6 + Math.floor((t * 6 + ph) % 5), 8, 1);
+        if (Math.floor(t * 2 + ph) % 2) { c.fillStyle = '#9dffcf'; c.fillRect(sx + 9, sy + 9, 2, 1); }
+      } else if (name === 'archiveTerm') {
+        if (Math.floor(t * 2 + ph) % 2) { c.fillStyle = '#7dff9d'; c.fillRect(sx + 10, sy + 6, 1, 1); }
+        c.fillStyle = 'rgba(70,224,138,0.12)';
+        c.fillRect(sx + 4, sy + 3 + Math.floor((t * 5 + ph) % 5), 8, 1);
+      } else if (name === 'capsule' || name === 'capsuleEmpty' || name === 'cultureTankEmpty') {
+        // un reflet qui glisse sur la vitre de temps en temps
+        const k = ((t + ph * 0.7) % 6) / 0.9;
+        if (k < 1) {
+          const gx = sx + 4 + Math.floor(k * 9);
+          c.fillStyle = 'rgba(220,250,255,0.45)';
+          c.fillRect(gx, sy + 3, 1, 9);
+          c.fillStyle = 'rgba(220,250,255,0.2)';
+          c.fillRect(gx + 1, sy + 3, 1, 9);
+        }
+      } else if (name === 'capsuleFrost') {
+        if (Math.floor(t * 3 + ph) % 7 === 0) { c.fillStyle = '#ffffff'; c.fillRect(sx + 5 + (ph % 6), sy + 4 + (ph % 7), 1, 1); }
+      } else if (name === 'cultureTank') {
+        // des bulles qui montent dans le liquide
+        for (let i = 0; i < 3; i++) {
+          const k = (t * 0.6 + i * 0.33 + ph * 0.1) % 1;
+          c.fillStyle = 'rgba(255,240,200,0.55)';
+          c.fillRect(sx + 5 + ((i * 3 + ph) % 6), sy + 11 - Math.floor(k * 8), 1, 1);
+        }
+      } else if (name === 'turbine' && this.flags.has('heliosOn')) {
+        // les pales tournent
+        const f = Math.floor(t * 10) % 2;
+        c.fillStyle = '#3a3f48';
+        c.fillRect(sx + 4, sy + 6, 8, 6);
+        c.fillStyle = '#8a93a2';
+        if (f) { c.fillRect(sx + 7, sy + 6, 2, 6); c.fillRect(sx + 4, sy + 8, 8, 2); }
+        else { for (let i = 0; i < 6; i++) { c.fillRect(sx + 4 + i + 1, sy + 6 + i, 1, 1); c.fillRect(sx + 10 - i, sy + 6 + i, 1, 1); } }
+        c.fillStyle = '#5ef0ff';
+        c.fillRect(sx + 12, sy + 4, 1, 1);
+      } else if (name === 'robot') {
+        if (Math.floor(t * 1.3 + ph) % 3 === 0) { c.fillStyle = '#4a1010'; c.fillRect(sx + 11, sy + 6, 2, 1); }
+      } else if (name.endsWith('Emblem')) {
+        c.fillStyle = `rgba(94,240,255,${0.06 + 0.06 * Math.sin(t * 2 + ph)})`;
+        c.fillRect(sx + 2, sy + 1, 12, 11);
+      } else if (name === 'toxic0' || name === 'toxic1') {
+        // reflets qui scintillent sur l'eau
+        if (Math.floor(t * 4 + ph) % 5 === 0) { c.fillStyle = 'rgba(220,255,200,0.6)'; c.fillRect(sx + 3 + (ph % 9), sy + 4 + (ph % 7), 2, 1); }
+      }
+    }
+  }
+
+  /** Les grands décors s'animent : balise de la tour radio, reflet des tours solaires. */
+  private animateDecal(kind: string, left: number, top: number, w: number, _h: number) {
+    const c = this.ctx;
+    const t = this.time;
+    if (kind === 'radioTower') {
+      if (Math.floor(t * 1.2) % 2) {
+        c.fillStyle = 'rgba(255,60,60,0.3)';
+        c.fillRect(left + w / 2 - 3, top - 1, 6, 5);
+        c.fillStyle = '#ff4040';
+        c.fillRect(left + w / 2 - 1, top + 1, 2, 2);
+      }
+    } else if (kind === 'tower') {
+      const a = 0.25 + 0.25 * Math.sin(t * 1.5);
+      c.fillStyle = `rgba(255,236,160,${a})`;
+      c.fillRect(left + w / 2 - 2, top + 1, 4, 3);
+    } else if (kind === 'dish') {
+      if (Math.floor(t * 0.8) % 2) { c.fillStyle = '#ffcf4a'; c.fillRect(left + w / 2, top + 2, 1, 1); }
+    }
+  }
+
+  /** Les arcs électriques entre Pixel et le boîtier de la porte. */
+  private renderZap(ox: number, oy: number) {
+    const cut = this.cut;
+    if (!cut || cut.stage !== 'act' || cut.kind !== 'pixelPower' || !this.pixel) return;
+    const c = this.ctx;
+    const [px, py] = this.pixelPixel();
+    const ax = px - ox + 8, ay = py - oy + 6;
+    const bx = cut.obj.x * T - ox + 8, by = cut.obj.y * T - oy + 8;
+    for (let arc = 0; arc < 2; arc++) {
+      let x = ax, y = ay;
+      c.strokeStyle = arc ? '#ffffff' : 'rgba(94,240,255,0.9)';
+      c.lineWidth = 1;
+      c.beginPath();
+      c.moveTo(x, y);
+      for (let i = 1; i <= 6; i++) {
+        const k = i / 6;
+        x = ax + (bx - ax) * k + (i < 6 ? (Math.random() - 0.5) * 6 : 0);
+        y = ay + (by - ay) * k + (i < 6 ? (Math.random() - 0.5) * 6 : 0);
+        c.lineTo(Math.round(x) + 0.5, Math.round(y) + 0.5);
+      }
+      c.stroke();
+    }
+    // le boîtier s'illumine peu à peu
+    c.fillStyle = `rgba(94,240,255,${0.15 + 0.25 * Math.min(1, cut.t / 2)})`;
+    c.fillRect(bx - 6, by - 6, 12, 12);
+  }
+
+  /** L'objet ramassé brandi au-dessus de la tête, ou un « ! » pour un indice. */
+  private renderPop(hx: number, hy: number) {
+    const pop = this.pop;
+    if (!pop) return;
+    const c = this.ctx;
+    const k = Math.min(1, pop.t / 0.35);
+    const fade = pop.t > 1.1 ? Math.max(0, 1 - (pop.t - 1.1) / 0.3) : 1;
+    c.globalAlpha = fade;
+    if (pop.kind === 'item') {
+      const y = Math.round(hy - 6 - k * 12);
+      // rayons de lumière
+      c.fillStyle = 'rgba(255,236,160,0.5)';
+      const spin = pop.t * 3;
+      for (let i = 0; i < 8; i++) {
+        const a = spin + (i * Math.PI) / 4;
+        c.fillRect(Math.round(hx + 8 + Math.cos(a) * 11), Math.round(y + 8 + Math.sin(a) * 11), 1, 1);
+      }
+      c.drawImage(iconCanvas(pop.id), Math.round(hx), y);
+    } else {
+      const y = Math.round(hy - 10 - k * 4);
+      c.fillStyle = '#14101c';
+      c.fillRect(hx + 5, y, 6, 9);
+      c.fillStyle = '#fff4d6';
+      c.fillRect(hx + 6, y + 1, 4, 7);
+      c.fillStyle = '#e8622c';
+      c.fillRect(hx + 7, y + 2, 2, 3);
+      c.fillRect(hx + 7, y + 6, 2, 1);
+    }
+    c.globalAlpha = 1;
   }
 
   private renderFx(ox: number, oy: number) {
@@ -628,6 +847,15 @@ export class Game {
       } else if (f.kind === 'spark') {
         c.fillStyle = '#fff2a0';
         c.fillRect(x, y - 1, 1, 3); c.fillRect(x - 1, y, 3, 1);
+      } else if (f.kind === 'smoke') {
+        const age = 1 - f.life / f.max;
+        const size = 2 + Math.floor(age * 5);
+        c.globalAlpha = 0.28 * (1 - age);
+        c.fillStyle = '#5a5560';
+        c.fillRect(x - (size >> 1), y - (size >> 1), size, size);
+      } else if (f.kind === 'zap') {
+        c.fillStyle = Math.random() < 0.5 ? '#ffffff' : '#5ef0ff';
+        c.fillRect(x, y, 1, 1);
       } else {
         c.fillStyle = '#c9a26a';
         c.fillRect(x, y, 1, 1);
@@ -645,6 +873,104 @@ export class Game {
       c.fillStyle = '#c3c9d3';
       c.fillRect(Math.round(x - ox) - 1, Math.round(y - oy) - 1, 2, 2);
     }
+  }
+
+  // ---------- scènes de Pixel : chatière, conduit, énergie ----------
+  private startCut(kind: 'pixelFlap' | 'pixelVent' | 'pixelPower', then?: () => void) {
+    const id = kind === 'pixelFlap' ? 'leaHouse' : kind === 'pixelVent' ? 'vent' : 'heliosDoor';
+    const obj = this.map.objects.find((o) => o.id === id);
+    const p = this.pixel;
+    if (!settings.fx || !p || !obj) return then?.();
+    // la case libre la plus proche devant l'objet (de préférence juste en dessous)
+    const spots: [number, number][] = [[obj.x, obj.y + 1], [obj.x - 1, obj.y], [obj.x + 1, obj.y], [obj.x - 1, obj.y + 1], [obj.x + 1, obj.y + 1]];
+    let path: [number, number][] | null = null;
+    for (const s of spots) {
+      if (s[0] === p.x && s[1] === p.y) { path = []; break; }
+      if (!this.pixelFree(s[0], s[1])) continue;
+      path = this.pixelPath([p.x, p.y], s, false, 12);
+      if (path) break;
+    }
+    if (!path) return then?.();
+    this.locked = true;
+    releaseAll();
+    this.idle = 0;
+    this.pixelMode = 'cut';
+    this.cut = { kind, obj, stage: 'go', t: 0, snd: 0, then };
+    this.walkPixel(path, 3.4);
+  }
+
+  private updateCut(dt: number) {
+    const cut = this.cut;
+    const p = this.pixel;
+    if (!cut || !p) return;
+    if (cut.stage === 'go' && !p.walk) {
+      cut.stage = 'act';
+      cut.t = 0;
+      if (cut.obj.x !== p.x) p.dir = cut.obj.x > p.x ? 'right' : 'left';
+      if (cut.kind === 'pixelPower') sfx.zap();
+    }
+    if (cut.stage === 'act') {
+      cut.t += dt;
+      cut.snd -= dt;
+      const ox = cut.obj.x * T + 8, oy = cut.obj.y * T + 8;
+      if (cut.kind === 'pixelPower') {
+        if (cut.snd <= 0) {
+          cut.snd = 0.07;
+          this.fx.push({ kind: 'zap', x: ox + (Math.random() - 0.5) * 12, y: oy + (Math.random() - 0.5) * 10, vx: (Math.random() - 0.5) * 40, vy: -20 - Math.random() * 30, life: 0.35, max: 0.35 });
+        }
+        if (cut.t > 2.3) this.endCutAct();
+      } else {
+        // il disparaît dans la chatière ou le conduit… on l'entend s'activer… il revient
+        if (cut.t > 0.6 && cut.t < 2.5 && cut.snd <= 0) {
+          cut.snd = cut.kind === 'pixelVent' ? 0.32 + Math.random() * 0.2 : 0.22;
+          if (cut.kind === 'pixelVent') {
+            sfx.clank();
+            this.fx.push({ kind: 'dust', x: ox + (Math.random() - 0.5) * 10, y: oy + 4, vx: (Math.random() - 0.5) * 20, vy: -6, life: 0.6, max: 0.6 });
+          } else sfx.scratch();
+        }
+        if (cut.t > 3.2) this.endCutAct();
+      }
+    }
+    if (cut.stage === 'back' && !p.walk) {
+      this.cut = null;
+      this.locked = false;
+      this.pixelMode = 'follow';
+      this.facePixelToHero();
+      sfx.pixelHappy();
+      cut.then?.();
+    }
+  }
+
+  private endCutAct() {
+    const cut = this.cut!;
+    const p = this.pixel!;
+    cut.stage = 'back';
+    const [dx, dy] = DELTA[this.dir];
+    const spots: [number, number][] = [[this.x - dx, this.y - dy], [this.x + dy, this.y + dx], [this.x - dy, this.y - dx], [this.x + dx, this.y + dy]];
+    for (const s of spots) {
+      if (s[0] === p.x && s[1] === p.y) return this.walkPixel([], 3.4);
+      if (!this.pixelFree(s[0], s[1])) continue;
+      const path = this.pixelPath([p.x, p.y], s, false, 12);
+      if (path) return this.walkPixel(path, 3.4);
+    }
+    this.walkPixel([], 3.4);
+  }
+
+  /** Visibilité de Pixel pendant qu'il passe par la chatière ou le conduit (0 caché, 1 visible). */
+  private pixelVisibility(): number {
+    const cut = this.cut;
+    if (!cut || cut.stage !== 'act' || cut.kind === 'pixelPower') return 1;
+    if (cut.t < 0.6) return 1 - cut.t / 0.6;
+    if (cut.t < 2.6) return 0;
+    return Math.min(1, (cut.t - 2.6) / 0.5);
+  }
+
+  /** L'objet qui tremble (porte, conduit) pendant que Pixel s'y affaire. */
+  private shakeOf(obj: MapObject): number {
+    const cut = this.cut;
+    if (!settings.fx || !cut || cut.stage !== 'act' || cut.obj !== obj || cut.kind === 'pixelPower') return 0;
+    if (cut.t < 0.7 || cut.t > 2.5) return 0;
+    return Math.floor(this.time * 18) % 3 === 0 ? 1 : 0;
   }
 
   // ---------- sac à dos ----------
@@ -913,6 +1239,7 @@ export class Game {
       if (this.items.has(id)) return;
       this.items.add(id);
       ui.toast(`Objet obtenu : ${ITEMS[id]?.name ?? id}`);
+      if (settings.fx) this.pop = { kind: 'item', id, t: 0 };
       sfx.item();
       document.getElementById('btn-bag')?.classList.add('fresh');
       this.save();
@@ -927,6 +1254,7 @@ export class Game {
     ui: (kind, then) => {
       releaseAll();
       if (kind === 'switches') ui.openSwitches(SWITCHES, RESTART_ORDER, () => then?.());
+      else if (kind === 'pixelFlap' || kind === 'pixelVent' || kind === 'pixelPower') this.startCut(kind, then);
       else if (kind === 'archives')
         ui.openTerminal({
           folders: ARCHIVES,
@@ -961,6 +1289,7 @@ export class Game {
     this.fresh.add(id);
     const c = CLUES.find((x) => x.id === id);
     ui.toast(`Journal mis à jour : ${c?.title ?? id}`);
+    if (settings.fx && this.pop?.kind !== 'item') this.pop = { kind: 'clue', id, t: 0 };
     sfx.clue();
     document.getElementById('btn-journal')?.classList.add('fresh');
     this.refreshQuestions(false);
@@ -1087,6 +1416,7 @@ export class Game {
 
     const x0 = Math.floor(ox / T) - 1;
     const y0 = Math.floor(oy / T) - 1;
+    const vis: [string, number, number][] = [];
     for (let y = y0; y <= y0 + view.h / T + 2; y++) {
       for (let x = x0; x <= x0 + view.w / T + 2; x++) {
         if (x < 0 || y < 0 || x >= this.map.width || y >= this.map.height) {
@@ -1097,8 +1427,15 @@ export class Game {
         const obj = this.objAt(x, y);
         const sprite = obj ? this.objSprite(obj) : '';
         const name = sprite || this.tileName(x, y);
-        c.drawImage(tile(name, hash(x, y)), x * T - ox, y * T - oy);
+        const sh = obj ? this.shakeOf(obj) : 0;
+        c.drawImage(tile(name, hash(x, y)), x * T - ox + sh, y * T - oy);
+        vis.push([name, x, y]);
       }
+    }
+    if (settings.fx) {
+      this.renderShadows(vis, ox, oy);
+      this.renderPrints(ox, oy);
+      this.renderAmbient(vis, ox, oy);
     }
 
     // grands décors, alignés sur le bas de leur emprise
@@ -1106,7 +1443,16 @@ export class Game {
       const img =
         d.kind === 'shuttle' ? this.decalShuttle : d.kind === 'dish' ? this.decalDish : d.kind === 'radioTower' ? this.decalRadio
         : d.kind === 'train' ? this.decalTrain : d.kind === 'bigTree' ? this.decalBigTree : this.decalTower;
-      c.drawImage(img, d.x * T - ox, (d.y + d.h) * T - img.height - oy);
+      const left = d.x * T - ox, top = (d.y + d.h) * T - img.height - oy;
+      if (settings.fx) {
+        // une ombre douce au pied des grands décors
+        c.fillStyle = 'rgba(0,0,0,0.22)';
+        c.beginPath();
+        c.ellipse(left + img.width / 2 + 3, top + img.height - 2, img.width * 0.44, 4, 0, 0, Math.PI * 2);
+        c.fill();
+      }
+      c.drawImage(img, left, top);
+      if (settings.fx) this.animateDecal(d.kind, left, top, img.width, img.height);
     }
 
     // indicateur au-dessus de l'objet regardé
@@ -1139,9 +1485,18 @@ export class Game {
       // dans le noir, immobile, il tremble
       const shiver = look.pose === 'scared' && !this.pixel.walk && !this.moving ? Math.floor(this.time * 14) % 2 : 0;
       const carrying = this.fetch?.stage === 'back';
+      const vis = this.pixelVisibility();
       const drawDog = () => {
-        const dx = Math.round(px - ox) + shiver, dy = Math.round(py - oy) - 1;
+        if (vis <= 0) return;
+        let dx = Math.round(px - ox) + shiver, dy = Math.round(py - oy) - 1;
+        if (vis < 1 && this.cut) {
+          // il se faufile vers la chatière / le conduit
+          dx += Math.round((this.cut.obj.x * T - px) * (1 - vis) * 0.5);
+          dy += Math.round((this.cut.obj.y * T - py) * (1 - vis) * 0.5);
+          c.globalAlpha = vis;
+        }
         c.drawImage(dogSprite(pdir, look), dx, dy);
+        c.globalAlpha = 1;
         if (carrying) {
           // l'écrou dans la gueule
           const mx = pdir === 'left' ? dx + 0 : dx + 14;
@@ -1160,6 +1515,10 @@ export class Game {
       }
     } else drawHero();
     this.renderFx(ox, oy);
+    if (settings.fx) {
+      this.renderZap(ox, oy);
+      this.renderPop(hx - ox, hy - oy);
+    }
 
     this.renderAtmosphere();
     if (this.map.dark) {

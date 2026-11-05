@@ -1,3 +1,4 @@
+import { settings, setFx } from './settings.js';
 import { isMuted, playTheme, setMuted, sfx, unlock } from './audio.js';
 import { Game, view } from './game.js';
 import { onPress, releaseAll, setupInput } from './input.js';
@@ -54,6 +55,17 @@ function toggleSound() {
 $('btn-sound').addEventListener('click', toggleSound);
 $('pause-sound').addEventListener('click', toggleSound);
 refreshSoundLabels();
+
+// ---------- effets visuels (activables / désactivables) ----------
+function refreshFxLabel() {
+  $('pause-fx').textContent = settings.fx ? 'Effets visuels : activés' : 'Effets visuels : coupés';
+}
+$('pause-fx').addEventListener('click', () => {
+  setFx(!settings.fx);
+  refreshFxLabel();
+  sfx.select();
+});
+refreshFxLabel();
 
 // ---------- écran titre ----------
 const title = $('title');

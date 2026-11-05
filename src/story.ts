@@ -255,7 +255,7 @@ export interface Api {
   say(lines: string[], then?: () => void): void;
   keypad(title: string, onCode: (code: string) => void): void;
   sfx(name: 'success' | 'wrong' | 'door' | 'item'): void;
-  ui(kind: 'switches' | 'orbit' | 'codebook' | 'archives', then?: () => void): void;
+  ui(kind: 'switches' | 'orbit' | 'codebook' | 'archives' | 'pixelFlap' | 'pixelVent' | 'pixelPower', then?: () => void): void;
 }
 
 export const SCRIPTS: Record<string, (api: Api) => void> = {
@@ -383,10 +383,14 @@ export const SCRIPTS: Record<string, (api: Api) => void> = {
     if (api.has('leaOpen')) return api.say(['La porte de la maison Moreau est ouverte.']);
     if (!api.has('pixelOn'))
       return api.say(['Maison Moreau. La porte est coincée, comme gonflée par la chaleur.', 'En bas, une chatière. Bien trop petite pour moi.']);
-    api.say(['Pixel renifle la chatière… et s’y faufile d’un bond.', 'Un cliquetis à l’intérieur. Pixel a tiré le verrou !'], () => {
-      api.sfx('door');
-      api.set('leaOpen');
-    });
+    api.say(['Pixel renifle la chatière… et s’y faufile d’un bond.'], () =>
+      api.ui('pixelFlap', () =>
+        api.say(['Un cliquetis à l’intérieur. Pixel a tiré le verrou !'], () => {
+          api.sfx('door');
+          api.set('leaOpen');
+        }),
+      ),
+    );
   },
 
   leaMailbox: (api) => api.say(['Une boîte aux lettres : « Famille Moreau — Betti, Sam et Pixel ». Pixel a son nom sur la boîte.']),
@@ -502,10 +506,14 @@ export const SCRIPTS: Record<string, (api: Api) => void> = {
   vent: (api) => {
     if (api.has('sealedOpen')) return api.say(['Le conduit d’aération, grand ouvert.']);
     if (!api.has('pixelOn')) return api.say(['Un conduit d’aération. Beaucoup trop étroit pour moi.', 'De l’autre côté, une pièce scellée.']);
-    api.say(['Tu montres le conduit à Pixel. Il s’y faufile sans hésiter.', 'Des bruits métalliques… un déclic.', 'La porte de la salle scellée s’ouvre !'], () => {
-      api.sfx('door');
-      api.set('sealedOpen');
-    });
+    api.say(['Tu montres le conduit à Pixel. Il s’y faufile sans hésiter.'], () =>
+      api.ui('pixelVent', () =>
+        api.say(['Des bruits métalliques… un déclic.', 'La porte de la salle scellée s’ouvre !'], () => {
+          api.sfx('door');
+          api.set('sealedOpen');
+        }),
+      ),
+    );
   },
 
   sealedDoor: (api) => {
@@ -741,12 +749,13 @@ export const SCRIPTS: Record<string, (api: Api) => void> = {
     if (api.has('turbinesOpen')) return api.say(['La porte de la salle des turbines est ouverte.']);
     if (!api.has('pixelOn'))
       return api.say(['« CENTRALE HÉLIOS — SALLE DES TURBINES. »', 'Une porte blindée, scellée. Le voyant est mort : il faudrait un peu d’énergie pour le verrou.']);
-    api.say(
-      ['Le verrou est mort, faute d’énergie.', 'Pixel s’approche, colle son dos contre le boîtier… et lui prête un peu de l’énergie de sa batterie.', 'Le voyant passe au vert. La porte s’ouvre !'],
-      () => {
-        api.sfx('door');
-        api.set('turbinesOpen');
-      },
+    api.say(['Le verrou est mort, faute d’énergie.', 'Pixel s’approche, colle son dos contre le boîtier… et lui prête un peu de l’énergie de sa batterie.'], () =>
+      api.ui('pixelPower', () =>
+        api.say(['Le voyant passe au vert. La porte s’ouvre !'], () => {
+          api.sfx('door');
+          api.set('turbinesOpen');
+        }),
+      ),
     );
   },
 

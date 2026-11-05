@@ -262,6 +262,23 @@ export const sfx = {
   pixelWhine() {
     tone(sfxBus, 'sine', 760, now(), 0.42, 0.03, { glide: 430, release: 0.3 });
   },
+  /** Pixel prête son énergie : un bourdonnement électrique qui crépite. */
+  zap() {
+    const t = now();
+    tone(sfxBus, 'sawtooth', 95, t, 1.9, 0.035, { attack: 0.1, release: 0.4, filter: 1400 });
+    tone(sfxBus, 'square', 190, t, 1.9, 0.012, { attack: 0.2, release: 0.4, filter: 2200, detune: 9 });
+    for (let i = 0; i < 9; i++) noise(sfxBus, t + i * 0.2 + Math.random() * 0.1, 0.05, 0.06, 'highpass', 3500, 7000);
+  },
+  /** Bruit métallique dans le conduit. */
+  clank() {
+    const t = now();
+    tone(sfxBus, 'square', 140 + Math.random() * 60, t, 0.08, 0.04, { glide: 90, filter: 1500 });
+    noise(sfxBus, t, 0.09, 0.07, 'bandpass', 1200, 2600);
+  },
+  /** Des griffes qui grattent derrière une porte. */
+  scratch() {
+    noise(sfxBus, now(), 0.12, 0.05, 'bandpass', 2600, 4200);
+  },
   throwNut() {
     noise(sfxBus, now(), 0.16, 0.06, 'bandpass', 1800, 3200);
   },
