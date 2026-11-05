@@ -2,8 +2,7 @@
 import { playTheme, sfx } from './audio.js';
 import { heldDir, releaseAll } from './input.js';
 import { MAPS, START, SOLID, charAt, type GameMap, type MapObject } from './maps.js';
-import { settings } from './settings.js';
-import { T, bigTree, dish, dogSprite, iconCanvas, dogAsleep, type DogLook, frozenTrain, hash, hero, radioTower, shuttleWreck, solarTower, tile, type Dir } from './sprites.js';
+import { T, bigTree, cutout, dish, dogSprite, iconCanvas, dogAsleep, type DogLook, frozenTrain, hash, hero, radioTower, shuttleWreck, solarTower, tile, type Dir } from './sprites.js';
 import { ARCHIVE_CODE, ARCHIVES, CLUES, FINALE, ITEMS, QUESTIONS, RADIO_FREQ, RESTART_ORDER, SCRIPTS, SIGNAL_KEY, SWITCHES, type Api } from './story.js';
 import * as ui from './ui.js';
 
@@ -84,7 +83,7 @@ export class Game {
   private nut: { fx: number; fy: number; tx: number; ty: number; t: number; dur: number; landed: boolean } | null = null;
   private fetch: { stage: 'flying' | 'run' | 'pick' | 'back'; tx: number; ty: number } | null = null;
   private fxTimer = 0;
-  // ---- effets visuels (désactivables : settings.fx) ----
+  // ---- effets visuels ----
   /** Empreintes dans le sable, qui s'effacent peu à peu. */
   private prints: { x: number; y: number; dir: Dir; life: number }[] = [];
   /** Objet ramassé ou indice trouvé : une petite animation au-dessus du héros. */
@@ -284,7 +283,7 @@ export class Game {
       p.y = this.y;
     }
     this.moving = { fx: this.x, fy: this.y, t: 0 };
-    if (settings.fx && this.map.outdoor) {
+    if (this.map.outdoor) {
       const ground = charAt(this.map, this.x, this.y);
       if (ground === 'S' || ground === '.') {
         for (let i = 0; i < 2; i++)
@@ -528,7 +527,7 @@ export class Game {
     }
     // fumée de l'épave de navette
     this.smokeTimer -= dt;
-    if (settings.fx && this.smokeTimer <= 0) {
+    if (this.smokeTimer <= 0) {
       this.smokeTimer = 0.35;
       for (const d of this.map.decals ?? []) {
         if (d.kind !== 'shuttle') continue;
@@ -655,25 +654,46 @@ export class Game {
     return SOLID.has(charAt(this.map, x, y));
   }
 
-  /** Ombres portées : la lumière vient d'en haut à gauche. */
+  /**
+   * Ombres portées, lumière venant d'en haut à gauche :
+   * - au pied des murs et des bâtiments, une bande d'ombre douce ;
+   * - les autres objets (arbres, voitures, caisses, panneaux…) projettent une ombre à leur forme.
+   */
   private renderShadows(vis: [string, number, number][], ox: number, oy: number) {
     const c = this.ctx;
-    for (const [, x, y] of vis) {
-      if (this.castsShadow(x, y)) continue;
+    const names = new Map<string, string>();
+    for (const [n, x, y] of vis) names.set(`${x},${y}`, n);
+    const isWall = (n: string | undefined) => !!n && /(Top|Front)$/.test(n);
+    const shaped: [string, number, number][] = [];
+    for (const [name, x, y] of vis) {
       const sx = x * T - ox, sy = y * T - oy;
-      if (this.castsShadow(x, y - 1)) {
-        const a = [0.3, 0.22, 0.15, 0.09, 0.04];
+      if (this.castsShadow(x, y)) {
+        if (!isWall(name)) shaped.push([name, x, y]);
+        continue;
+      }
+      if (isWall(names.get(`${x},${y - 1}`))) {
+        const a = [0.26, 0.18, 0.11, 0.05];
         for (let i = 0; i < a.length; i++) {
           c.fillStyle = `rgba(10,6,20,${a[i]})`;
           c.fillRect(sx, sy + i, T, 1);
         }
       }
-      if (this.castsShadow(x - 1, y)) {
-        c.fillStyle = 'rgba(10,6,20,0.16)';
+      if (isWall(names.get(`${x - 1},${y}`))) {
+        c.fillStyle = 'rgba(10,6,20,0.12)';
         c.fillRect(sx, sy, 2, T);
-        c.fillStyle = 'rgba(10,6,20,0.07)';
-        c.fillRect(sx + 2, sy, 2, T);
       }
+    }
+    // ombre à la forme de l'objet, puis l'objet redessiné par-dessus son ombre
+    for (const [name, x, y] of shaped) {
+      const co = cutout(name, hash(x, y));
+      if (!co) continue;
+      const obj = this.objAt(x, y);
+      const sh = obj ? this.shakeOf(obj) : 0;
+      const sx = x * T - ox + sh, sy = y * T - oy;
+      c.globalAlpha = 0.26;
+      c.drawImage(co.shadow, sx + 2, sy + 2);
+      c.globalAlpha = 1;
+      c.drawImage(co.img, sx, sy);
     }
   }
 
@@ -881,7 +901,7 @@ export class Game {
     const id = kind === 'pixelFlap' ? 'leaHouse' : kind === 'pixelVent' ? 'vent' : 'heliosDoor';
     const obj = this.map.objects.find((o) => o.id === id);
     const p = this.pixel;
-    if (!settings.fx || !p || !obj) return then?.();
+    if (!p || !obj) return then?.();
     // la case libre la plus proche devant l'objet (de préférence juste en dessous)
     const spots: [number, number][] = [[obj.x, obj.y + 1], [obj.x - 1, obj.y], [obj.x + 1, obj.y], [obj.x - 1, obj.y + 1], [obj.x + 1, obj.y + 1]];
     let path: [number, number][] | null = null;
@@ -969,7 +989,7 @@ export class Game {
   /** L'objet qui tremble (porte, conduit) pendant que Pixel s'y affaire. */
   private shakeOf(obj: MapObject): number {
     const cut = this.cut;
-    if (!settings.fx || !cut || cut.stage !== 'act' || cut.obj !== obj || cut.kind === 'pixelPower') return 0;
+    if (!cut || cut.stage !== 'act' || cut.obj !== obj || cut.kind === 'pixelPower') return 0;
     if (cut.t < 0.7 || cut.t > 2.5) return 0;
     return Math.floor(this.time * 18) % 3 === 0 ? 1 : 0;
   }
@@ -1240,7 +1260,7 @@ export class Game {
       if (this.items.has(id)) return;
       this.items.add(id);
       ui.toast(`Objet obtenu : ${ITEMS[id]?.name ?? id}`);
-      if (settings.fx) this.pop = { kind: 'item', id, t: 0 };
+      this.pop = { kind: 'item', id, t: 0 };
       sfx.item();
       document.getElementById('btn-bag')?.classList.add('fresh');
       this.save();
@@ -1290,7 +1310,7 @@ export class Game {
     this.fresh.add(id);
     const c = CLUES.find((x) => x.id === id);
     ui.toast(`Journal mis à jour : ${c?.title ?? id}`);
-    if (settings.fx && this.pop?.kind !== 'item') this.pop = { kind: 'clue', id, t: 0 };
+    if (this.pop?.kind !== 'item') this.pop = { kind: 'clue', id, t: 0 };
     sfx.clue();
     document.getElementById('btn-journal')?.classList.add('fresh');
     this.refreshQuestions(false);
@@ -1433,11 +1453,9 @@ export class Game {
         vis.push([name, x, y]);
       }
     }
-    if (settings.fx) {
-      this.renderShadows(vis, ox, oy);
-      this.renderPrints(ox, oy);
-      this.renderAmbient(vis, ox, oy);
-    }
+    this.renderShadows(vis, ox, oy);
+    this.renderPrints(ox, oy);
+    this.renderAmbient(vis, ox, oy);
 
     // grands décors, alignés sur le bas de leur emprise
     for (const d of this.map.decals ?? []) {
@@ -1445,7 +1463,7 @@ export class Game {
         d.kind === 'shuttle' ? this.decalShuttle : d.kind === 'dish' ? this.decalDish : d.kind === 'radioTower' ? this.decalRadio
         : d.kind === 'train' ? this.decalTrain : d.kind === 'bigTree' ? this.decalBigTree : this.decalTower;
       const left = d.x * T - ox, top = (d.y + d.h) * T - img.height - oy;
-      if (settings.fx) {
+      {
         // une ombre douce au pied des grands décors
         c.fillStyle = 'rgba(0,0,0,0.22)';
         c.beginPath();
@@ -1453,7 +1471,7 @@ export class Game {
         c.fill();
       }
       c.drawImage(img, left, top);
-      if (settings.fx) this.animateDecal(d.kind, left, top, img.width, img.height);
+      this.animateDecal(d.kind, left, top, img.width, img.height);
     }
 
     // indicateur au-dessus de l'objet regardé
@@ -1516,10 +1534,8 @@ export class Game {
       }
     } else drawHero();
     this.renderFx(ox, oy);
-    if (settings.fx) {
-      this.renderZap(ox, oy);
-      this.renderPop(hx - ox, hy - oy);
-    }
+    this.renderZap(ox, oy);
+    this.renderPop(hx - ox, hy - oy);
 
     this.renderAtmosphere();
     if (this.map.dark) {

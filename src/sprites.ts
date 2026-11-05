@@ -1127,6 +1127,52 @@ export function tile(name: string, v = 0): HTMLCanvasElement {
   return cv;
 }
 
+// ---------- découpes : le sprite sans son sol, et son ombre ----------
+// Les objets sont peints sur leur case avec le sol dessous. Pour leur donner une ombre à leur
+// forme, on retrouve le sol utilisé (en comparant avec les sols connus) et on garde le reste.
+const GROUNDS = ['dust', 'sand', 'asphalt', 'road', 'grass', 'labFloor', 'woodFloor', 'platform', 'pad', 'grating'];
+const cutCache = new Map<string, { img: HTMLCanvasElement; shadow: HTMLCanvasElement } | null>();
+
+export function cutout(name: string, v = 0): { img: HTMLCanvasElement; shadow: HTMLCanvasElement } | null {
+  const variant = v % VARIANTS;
+  const id = `${name}:${variant}`;
+  if (cutCache.has(id)) return cutCache.get(id)!;
+  let result: { img: HTMLCanvasElement; shadow: HTMLCanvasElement } | null = null;
+  try {
+    const px = (cv: HTMLCanvasElement) => cv.getContext('2d')!.getImageData(0, 0, T, T).data;
+    const full = px(tile(name, variant));
+    let best: Uint8ClampedArray | null = null;
+    let bestN = 0;
+    for (const g of GROUNDS) {
+      if (g === name || !REGISTRY[g]) continue;
+      const gd = px(tile(g, variant));
+      let n = 0;
+      for (let i = 0; i < full.length; i += 4) if (full[i] === gd[i] && full[i + 1] === gd[i + 1] && full[i + 2] === gd[i + 2]) n++;
+      if (n > bestN) { bestN = n; best = gd; }
+    }
+    const ratio = bestN / (T * T);
+    if (best && ratio > 0.2 && ratio < 0.98) {
+      const [img, ic] = canvas();
+      const [shadow, sc] = canvas();
+      const out = ic.createImageData(T, T);
+      const sh = sc.createImageData(T, T);
+      for (let i = 0; i < full.length; i += 4) {
+        const same = full[i] === best[i] && full[i + 1] === best[i + 1] && full[i + 2] === best[i + 2];
+        if (same) continue;
+        out.data[i] = full[i]; out.data[i + 1] = full[i + 1]; out.data[i + 2] = full[i + 2]; out.data[i + 3] = 255;
+        sh.data[i] = 12; sh.data[i + 1] = 6; sh.data[i + 2] = 20; sh.data[i + 3] = 255;
+      }
+      ic.putImageData(out, 0, 0);
+      sc.putImageData(sh, 0, 0);
+      result = { img, shadow };
+    }
+  } catch {
+    result = null;
+  }
+  cutCache.set(id, result);
+  return result;
+}
+
 // ---------- héros ----------
 // Codes couleur : k contour, h/H/d capuche, s/S peau, g lunettes, w reflet, r/R écharpe, j/J/e veste, p pantalon, b bottes, a/A sac.
 const HERO_PAL: Record<string, string> = {
