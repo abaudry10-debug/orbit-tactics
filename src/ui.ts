@@ -88,6 +88,7 @@ export const journalOpen = () => !$('journal').hidden;
 
 export function renderJournal(
   clues: Set<string>, fresh: Set<string>, openQ: Set<string>, solvedQ: Set<string>, isDone: (id: string) => boolean,
+  achievements: { title: string; text: string; done: boolean; progress: string }[] = [],
 ) {
   const body = $('journal-body');
   body.innerHTML = '';
@@ -169,6 +170,18 @@ export function renderJournal(
     d.appendChild(sum);
     for (const q of newFirst(qs)) d.appendChild(qCard(q));
     for (const c of newFirst(got)) d.appendChild(card(c.title, c.text, '', fresh.has(c.id)));
+    body.appendChild(d);
+  }
+  // 3. Succès
+  if (achievements.length) {
+    const d = document.createElement('details');
+    d.className = 'thread';
+    const got = achievements.filter((x) => x.done).length;
+    const sum = document.createElement('summary');
+    sum.innerHTML = '<span class="icon">🏆</span><span class="t">Succès</span><span class="count"></span>';
+    sum.querySelector('.count')!.textContent = `${got}/${achievements.length}`;
+    d.appendChild(sum);
+    for (const x of achievements) d.appendChild(card(x.done ? `🏆 ${x.title}` : `${x.title} (${x.progress})`, x.text, x.done ? 'answer' : 'unknown', false));
     body.appendChild(d);
   }
 }
@@ -1218,4 +1231,20 @@ export function setHeatBanner(text: string | null, kind: 'warn' | 'wave' | 'safe
   el.textContent = text;
   el.className = kind;
   el.hidden = false;
+}
+
+// ---------- succès ----------
+let achTimer = 0;
+export function achievement(title: string, text: string) {
+  const el = $('achievement');
+  el.innerHTML = '<div class="ach-k">🏆 Succès débloqué</div><div class="ach-t"></div><div class="ach-d"></div>';
+  el.querySelector('.ach-t')!.textContent = title;
+  el.querySelector('.ach-d')!.textContent = text;
+  el.hidden = false;
+  el.classList.remove('show');
+  void el.offsetWidth;
+  el.classList.add('show');
+  sfx.success();
+  window.clearTimeout(achTimer);
+  achTimer = window.setTimeout(() => (el.hidden = true), 4200);
 }

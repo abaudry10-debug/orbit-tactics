@@ -3,7 +3,7 @@ import { heartbeat, playTheme, setHeatSound, sfx } from './audio.js';
 import { heldDir, releaseAll } from './input.js';
 import { MAPS, START, SOLID, charAt, type GameMap, type MapObject } from './maps.js';
 import { T, bigTree, cutout, dish, dogSprite, iconCanvas, dogAsleep, type DogLook, frozenTrain, hash, hero, radioTower, shuttleWreck, solarTower, tile, type Dir } from './sprites.js';
-import { ARCHIVE_CODE, ARCHIVES, CLUES, FINALE, ITEMS, QUESTIONS, RADIO_FREQ, RESTART_ORDER, SCRIPTS, SIGNAL_KEY, SWITCHES, type Api } from './story.js';
+import { ACHIEVEMENTS, ARCHIVE_CODE, ARCHIVES, CLUES, FINALE, ITEMS, QUESTIONS, RADIO_FREQ, RESTART_ORDER, SCRIPTS, SIGNAL_KEY, SWITCHES, type Api } from './story.js';
 import * as ui from './ui.js';
 
 /** Taille de la vue en pixels de jeu ; recalculée selon l'écran (voir main.ts). */
@@ -25,6 +25,7 @@ interface Save {
   clues: string[];
   items: string[];
   fresh?: string[];
+  counters?: Record<string, number>;
 }
 
 interface Particle {
@@ -45,7 +46,7 @@ interface Follower {
 }
 
 /** Ce que fait Pixel quand il ne se contente pas de suivre. */
-type PixelMode = 'follow' | 'come' | 'sit' | 'pet' | 'rest' | 'fetch' | 'dig' | 'cut' | 'rescue';
+type PixelMode = 'follow' | 'come' | 'sit' | 'pet' | 'rest' | 'fetch' | 'dig' | 'cut' | 'rescue' | 'stay';
 
 /** Petits effets dessinés dans le monde : cœurs, « z », reflets de soleil, poussière, l'écrou lancé. */
 interface Fx {
@@ -75,6 +76,8 @@ export class Game {
   particles: Particle[] = [];
   pixel: Follower | null = null;
   pixelMode: PixelMode = 'follow';
+  /** Compteurs pour les succès (écrous lancés…). */
+  counters: Record<string, number> = {};
   private pixelTimer = 0;
   private idle = 0;
   private turnHold = 0;
@@ -155,6 +158,7 @@ export class Game {
       this.clues = new Set(s.clues);
       this.items = new Set(s.items);
       this.fresh = new Set(s.fresh ?? []);
+      this.counters = s.counters ?? {};
       if (this.flags.has('batteryFound')) this.flags.delete('sondeOn'); // anciennes sauvegardes
       this.refreshQuestions(true);
       if (this.fresh.size) document.getElementById('btn-journal')?.classList.add('fresh');
@@ -184,7 +188,7 @@ export class Game {
   save() {
     const s: Save = {
       map: this.map.id, x: this.x, y: this.y, dir: this.dir,
-      flags: [...this.flags], clues: [...this.clues], items: [...this.items], fresh: [...this.fresh],
+      flags: [...this.flags], clues: [...this.clues], items: [...this.items], fresh: [...this.fresh], counters: this.counters,
     };
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify(s));
@@ -215,6 +219,8 @@ export class Game {
   }
 
   blocked(x: number, y: number): boolean {
+    // Pixel qui attend au pied de la capsule ne se laisse pas enjamber
+    if (this.pixelMode === 'stay' && this.pixel && this.pixel.x === x && this.pixel.y === y) return true;
     const obj = this.objAt(x, y);
     if (obj) {
       if (obj.door) return !this.doorOpen(obj);
@@ -285,7 +291,7 @@ export class Game {
     }
     this.dir = d;
     this.idle = 0;
-    if (this.pixelMode !== 'follow' && this.pixelMode !== 'fetch') {
+    if (this.pixelMode !== 'follow' && this.pixelMode !== 'fetch' && this.pixelMode !== 'stay') {
       this.pixelMode = 'follow';
       if (this.pixel) this.pixel.walk = null;
     }
@@ -302,7 +308,7 @@ export class Game {
       }
       return;
     }
-    if (this.pixel) {
+    if (this.pixel && this.pixelMode !== 'stay') {
       // Pixel prend la place que le joueur vient de quitter
       const p = this.pixel;
       if (p.x !== this.x || p.y !== this.y) {
@@ -385,7 +391,7 @@ export class Game {
     const [fx, fy] = this.facing();
     const obj = this.anyObjAt(fx, fy);
     if (obj?.id === 'capsule07' && this.flags.has('plansRead')) return this.podInteract();
-    if (this.pixel && this.pixel.x === fx && this.pixel.y === fy && this.flags.has('podNeedsPrime') && this.map.id === 'lab') {
+    if (this.pixel && this.pixel.x === fx && this.pixel.y === fy && this.pixelMode === 'stay' && this.flags.has('podNeedsPrime') && this.map.id === 'lab') {
       return this.askPrime();
     }
     if (this.pixel && this.pixel.x === fx && this.pixel.y === fy && !this.pixel.walk && !obj) return this.petPixel();
@@ -480,6 +486,10 @@ export class Game {
   }
 
   private onPixelArrived() {
+    if (this.pixelMode === 'stay') {
+      this.facePixelToHero();
+      return;
+    }
     if (this.pixelMode === 'come') {
       this.pixelMode = 'sit';
       this.facePixelToHero();
@@ -494,6 +504,8 @@ export class Game {
     } else if (this.fetch.stage === 'back') {
       this.fetch = null;
       this.items.add('ecrou');
+      this.counters.nut = (this.counters.nut ?? 0) + 1;
+      this.unlockCheck();
       this.locked = false;
       this.facePixelToHero();
       this.pixelMode = 'pet';
@@ -501,6 +513,18 @@ export class Game {
       this.idle = 3;
       sfx.pixelHappy();
       ui.toast('Pixel rapporte l’écrou !');
+    }
+  }
+
+  /** Succès : on vérifie ceux qui viennent d'être atteints. */
+  private unlockCheck() {
+    for (const a of ACHIEVEMENTS) {
+      if (this.flags.has(`ach_${a.id}`)) continue;
+      if ((this.counters[a.counter] ?? 0) >= a.goal) {
+        this.flags.add(`ach_${a.id}`);
+        ui.achievement(a.title, a.text);
+        this.save();
+      }
     }
   }
 
@@ -694,6 +718,7 @@ export class Game {
         : { pose: 'lie', eye: 'closed', tail: 2 };
     }
     if (dark) return { pose: 'scared', eye, tail: 3 };
+    if (this.pixelMode === 'stay') return { pose: 'sit', eye, tail: Math.floor(t * 1.2) % 2 ? 1 : 2 };
     if (this.pixelMode === 'sit' || this.pixelMode === 'come') return { pose: 'sit', eye, tail: wag };
     // il suit : il trottine quand on marche
     const moving = this.moving && p.moving;
@@ -1523,22 +1548,53 @@ export class Game {
       return;
     }
     const lines = f.has('primeHint')
-      ? ['« AMORCE : SOURCE ISOLÉE REQUISE — TYPE BS-1. »', 'Pixel s’est assis au pied de la capsule.']
+      ? ['« AMORCE : SOURCE ISOLÉE REQUISE — TYPE BS-1. »', 'Pixel vient s’asseoir à côté de toi, au pied de la capsule.']
       : [
           '« AMORCE : SOURCE ISOLÉE REQUISE — TYPE BS-1. »',
           'Une BS-1… Il n’en existe qu’une.',
-          'Pixel vient s’asseoir au pied de la capsule, et te regarde.',
+          'Pixel vient s’asseoir à côté de toi, au pied de la capsule. Il ne bouge plus. Il te regarde.',
         ];
     f.add('primeHint');
-    ui.say(lines, () => this.askPrime());
+    ui.say(lines, () => this.pixelWaitAtPod());
   }
 
-  /** La dernière décision : débrancher la batterie de Pixel pour amorcer le pod. */
+  /** Pixel s'assoit tout près, au pied de la capsule, et attend. */
+  private pixelWaitAtPod() {
+    const p = this.pixel;
+    if (!p) return;
+    const pod = this.map.objects.find((o) => o.id === 'capsule07');
+    const spots: [number, number][] = [[this.x + 1, this.y], [this.x - 1, this.y], [this.x, this.y + 1], [this.x + 1, this.y + 1], [this.x - 1, this.y + 1]];
+    if (pod) spots.sort((a, b) => Math.abs(a[0] - pod.x) + Math.abs(a[1] - pod.y) - (Math.abs(b[0] - pod.x) + Math.abs(b[1] - pod.y)));
+    for (const s of spots) {
+      if (s[0] === p.x && s[1] === p.y) {
+        this.pixelMode = 'stay';
+        this.facePixelToHero();
+        return;
+      }
+      if (!this.pixelFree(s[0], s[1])) continue;
+      const path = this.pixelPath([p.x, p.y], s, false, 8);
+      if (!path) continue;
+      this.pixelMode = 'stay';
+      this.walkPixel(path, 3.2);
+      return;
+    }
+    this.pixelMode = 'stay';
+    this.facePixelToHero();
+  }
+
+  /** La dernière décision : débrancher la batterie de Pixel… ou une dernière balade. */
   private askPrime() {
     ui.confirm(
-      'Débrancher la batterie de Pixel ?',
+      'Pixel te regarde, assis au pied de la capsule.',
       () => this.finale(),
-      () => ui.say(['Pixel te regarde, la tête penchée.']),
+      () => {
+        this.pixelMode = 'follow';
+        sfx.pixelHappy();
+        const hx = this.pixel!.x * T + 8, hy = this.pixel!.y * T + 2;
+        for (let i = 0; i < 2; i++) this.fx.push({ kind: 'heart', x: hx - 2 + i * 4, y: hy, vx: (i - 0.5) * 4, vy: -14, life: 1.3, max: 1.3 });
+        ui.say(['Pixel bondit sur ses pattes, la queue battante.', 'Allez… encore une balade, tous les deux.']);
+      },
+      ['Débrancher la batterie de Pixel', 'Encore une dernière balade'],
     );
   }
 
@@ -1711,7 +1767,8 @@ export class Game {
   onFinished: () => void = () => {};
 
   startMusic() {
-    playTheme(this.map.outdoor ? 'outdoor' : 'lab');
+    // musique principale par défaut ; une berceuse plus douce chez Betti
+    playTheme(this.map.id === 'maisonLea' || this.map.id === 'cabane' ? 'home' : this.map.outdoor ? 'outdoor' : 'lab');
   }
 
   known(id: string) {
@@ -1755,7 +1812,8 @@ export class Game {
   }
 
   openJournal() {
-    ui.renderJournal(this.clues, this.fresh, this.openQ, this.solvedQ, (id) => this.flags.has(id) || this.items.has(id));
+    ui.renderJournal(this.clues, this.fresh, this.openQ, this.solvedQ, (id) => this.flags.has(id) || this.items.has(id),
+      ACHIEVEMENTS.map((a) => ({ title: a.title, text: a.text, done: this.flags.has(`ach_${a.id}`), progress: `${Math.min(a.goal, this.counters[a.counter] ?? 0)}/${a.goal}` })));
     ui.setJournal(true);
     releaseAll();
     // tout ce qui vient d'être affiché est désormais « lu »

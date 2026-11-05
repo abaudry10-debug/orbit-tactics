@@ -235,6 +235,11 @@ export const ARCHIVES: ArchiveFolder[] = [
   },
 ];
 
+/** Succès facultatifs, affichés dans le journal. */
+export const ACHIEVEMENTS: { id: string; title: string; text: string; counter: string; goal: number }[] = [
+  { id: 'nut10', title: 'Bon chien !', text: 'Lancer 10 fois l’écrou à Pixel.', counter: 'nut', goal: 10 },
+];
+
 export const MISSION_CODE = '2207';
 
 export const INTRO = [

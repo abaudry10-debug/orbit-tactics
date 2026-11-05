@@ -2,7 +2,7 @@
 // Le navigateur exige un geste de l'utilisateur avant de jouer du son : unlock() est
 // appelé au premier bouton pressé.
 
-type Theme = 'title' | 'outdoor' | 'lab' | 'none';
+type Theme = 'title' | 'outdoor' | 'lab' | 'home' | 'none';
 
 let ac: AudioContext | null = null;
 let master: GainNode;
@@ -133,6 +133,14 @@ const OUT_CHORDS = [
   [52, 55, 59], // mi mineur
 ];
 const STEP = 0.5; // secondes par pas (8 pas par accord)
+// Chez Betti : une berceuse douce en fa majeur, boîte à musique et nappes chaudes.
+const HOME_CHORDS = [
+  [53, 57, 60], // fa
+  [48, 52, 55], // do
+  [50, 53, 57], // ré mineur
+  [46, 50, 53], // si bémol
+];
+const HOME_TUNE = [72, -1, 69, 72, 74, -1, 72, -1, 69, -1, 67, 69, 65, -1, -1, -1, 69, -1, 67, 69, 70, -1, 69, -1, 65, -1, 67, -1, 65, -1, -1, -1];
 
 function scheduleStep(t: number) {
   if (theme === 'outdoor' || theme === 'title') {
@@ -155,6 +163,18 @@ function scheduleStep(t: number) {
       const n = chord[Math.floor(Math.random() * 3)] + 24;
       tone(musicBus, 'triangle', hz(n), t, 1.4, 0.04, { attack: 0.05, release: 1.1 });
       tone(musicBus, 'triangle', hz(n), t + 0.35, 1.2, 0.016, { attack: 0.05, release: 1 }); // écho
+    }
+  } else if (theme === 'home') {
+    const chord = HOME_CHORDS[Math.floor(step / 8) % HOME_CHORDS.length];
+    if (step % 8 === 0) {
+      for (const n of chord) tone(musicBus, 'triangle', hz(n), t, STEP * 8, 0.035, { attack: 1.6, release: 1.8, detune: 4 });
+      tone(musicBus, 'sine', hz(chord[0] - 12), t, STEP * 8, 0.08, { attack: 1, release: 1.5 });
+    }
+    // la boîte à musique : une mélodie lente qui revient
+    const n = HOME_TUNE[step % HOME_TUNE.length];
+    if (n > 0) {
+      tone(musicBus, 'sine', hz(n), t, 1.3, 0.05, { attack: 0.005, release: 1.2 });
+      tone(musicBus, 'sine', hz(n + 12), t, 0.6, 0.012, { attack: 0.005, release: 0.55 });
     }
   } else if (theme === 'lab') {
     // Laboratoire : bourdon froid et bips de machines
@@ -183,7 +203,7 @@ function tick() {
 function startAmbience(kind: Theme) {
   ambience?.stop();
   ambience = null;
-  if (!ac || kind === 'none') return;
+  if (!ac || kind === 'none' || kind === 'home') return;
   // vent (extérieur) ou ronronnement de ventilation (labo) : bruit filtré en continu
   const s = ac.createBufferSource();
   s.buffer = noiseBuf;
