@@ -201,7 +201,7 @@ export function renderBag(items: string[], onUse: (id: string) => void, sondeOn:
     if (it?.usable) {
       const btn = document.createElement('button');
       btn.className = 'menu primary';
-      btn.textContent = id === 'sonde' ? (sondeOn ? 'Éteindre' : 'Allumer') : 'Utiliser';
+      btn.textContent = id === 'sonde' ? (sondeOn ? 'Éteindre' : 'Allumer') : id === 'ecrou' ? 'Lancer' : 'Utiliser';
       btn.addEventListener('click', () => onUse(id));
       detail.appendChild(btn);
     }

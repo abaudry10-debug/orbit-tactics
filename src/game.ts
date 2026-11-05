@@ -244,12 +244,13 @@ export class Game {
     const [dx, dy] = DELTA[d];
     const nx = this.x + dx;
     const ny = this.y + dy;
-    // Pixel assis juste là : on se tourne d'abord vers lui (pour pouvoir le caresser)
+    // Pixel juste là (derrière ou à côté) : on se tourne d'abord vers lui, sans bouger,
+    // pour pouvoir le caresser avec A. Garder la flèche appuyée fait ensuite avancer.
     const p0 = this.pixel;
-    if (p0 && !p0.walk && p0.x === nx && p0.y === ny && this.pixelMode !== 'follow' && this.dir !== d) {
+    if (p0 && !p0.walk && p0.x === nx && p0.y === ny && this.dir !== d && this.pixelMode !== 'fetch' && this.pixelMode !== 'cut') {
       this.dir = d;
-      this.turnHold = 0.22;
-      this.idle = Math.max(this.idle, 3);
+      this.turnHold = 0.28;
+      if (this.pixelMode === 'follow') this.facePixelToHero();
       return;
     }
     this.dir = d;
