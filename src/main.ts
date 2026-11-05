@@ -1,4 +1,4 @@
-import { isMuted, playTheme, setMuted, sfx, unlock } from './audio.js';
+import { isMuted, playTheme, resumeAudio, setMuted, sfx, unlock } from './audio.js';
 import { Game, view } from './game.js';
 import { onPress, releaseAll, setupInput } from './input.js';
 import { INTRO } from './story.js';
@@ -37,8 +37,12 @@ window.addEventListener('orientationchange', () => {
 if ('ResizeObserver' in window) new ResizeObserver(() => resize()).observe($('screen'));
 
 // Le son ne peut démarrer qu'après un geste : premier contact avec la page.
-window.addEventListener('pointerdown', unlock, { capture: true });
-window.addEventListener('keydown', unlock, { capture: true });
+// Les navigateurs (surtout sur iPhone) n'autorisent le son qu'après un vrai geste :
+// on tente de le lancer dès le premier toucher, n'importe où sur l'écran.
+for (const ev of ['pointerdown', 'touchstart', 'touchend', 'click', 'keydown']) window.addEventListener(ev, unlock, { capture: true });
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) resumeAudio();
+});
 
 // ---------- son ----------
 function refreshSoundLabels() {

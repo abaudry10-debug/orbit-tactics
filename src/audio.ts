@@ -55,8 +55,23 @@ export function unlock() {
     const d = noiseBuf.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
   }
-  if (ac.state === 'suspended') void ac.resume();
+  if (ac.state !== 'running') void ac.resume();
+  // iPhone : jouer un son vide pendant le geste achève de « déverrouiller » l'audio
+  if (!primed) {
+    primed = true;
+    const b = ac.createBuffer(1, 1, 22050);
+    const src = ac.createBufferSource();
+    src.buffer = b;
+    src.connect(ac.destination);
+    src.start(0);
+  }
   if (wanted !== theme) playTheme(wanted);
+}
+let primed = false;
+
+/** Après un passage en arrière-plan, iOS suspend l'audio : on le relance au retour. */
+export function resumeAudio() {
+  if (ac && ac.state !== 'running') void ac.resume();
 }
 
 // ---------- briques de synthèse ----------
