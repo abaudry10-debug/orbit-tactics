@@ -74,7 +74,7 @@ export const CLUES: Clue[] = [
   { id: 'memo2', thread: 'pixel', title: 'Souvenir 2 — La première sortie', text: 'Un ciel encore bleu. Betti lance un écrou, Pixel le rapporte. « C’est ton jouet, maintenant. Rien qu’à toi. »' },
   { id: 'memo3', thread: 'pixel', title: 'Souvenir 3 — Le laboratoire', text: 'La maman de Betti travaille sur les batteries. « Ta batterie est unique, Pixel. La seule BS-1 qui marche vraiment. »' },
   { id: 'memo4', thread: 'pixel', title: 'Souvenir 4 — La première vague', text: 'La sirène. Betti et Pixel cachés sous la table, la lumière rouge à la fenêtre. « On partira ensemble. Promis. »' },
-  { id: 'memo5', thread: 'pixel', title: 'Souvenir 5 — Le jour du départ', text: '« Les adultes disent que tu ne peux pas venir avec nous… Attends-moi ici. Veille sur ceux qui restent. »' },
+  { id: 'memo5', thread: 'pixel', title: 'Souvenir 5 — Le jour du départ', text: '« Les adultes disent que tu ne peux pas venir avec nous… Attends-moi ici, d’accord ? »' },
   { id: 'mis9', thread: 'missions', title: 'La grille de décodage', text: 'La grille de la mission Aurore associe chaque groupe de trois bips à un chiffre : ··· 0 · ··– 1 · ·–· 2 · ·–– 3 · –·· 4 · –·– 5 · ––· 6 · ––– 7.' },
   { id: 'cap9', thread: 'capsules', title: 'Le journal du Dr Varn', text: '« Les navettes ne suffiront jamais. Ce ne sont pas nos corps qui partiront. Sur Azura, la mission Aurore prépare de quoi nous accueillir. 4 212 habitants, 4 212 capsules. Tout le monde part. »' },
   { id: 'lead5', thread: 'leads', doneWhen: 'heliosOn', title: 'Le carnet du technicien', text: '« Arrêt d’urgence à la troisième cloche : j’ai coupé la pompe, puis l’onduleur, puis la ventilation, puis la turbine, et enfin le régulateur. » — R. Ilunga' },

@@ -382,7 +382,7 @@ export const MEMORIES: Memory[] = [
         },
       },
       {
-        caption: '« Attends-moi ici. Veille sur ceux qui restent. »',
+        caption: '« Attends-moi ici, d’accord ? »',
         dur: 5.6,
         draw: (c, t) => {
           capsuleHall(c);
