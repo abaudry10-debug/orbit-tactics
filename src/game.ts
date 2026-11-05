@@ -2,7 +2,7 @@
 import { playTheme, sfx } from './audio.js';
 import { heldDir, releaseAll } from './input.js';
 import { MAPS, START, SOLID, charAt, type GameMap, type MapObject } from './maps.js';
-import { T, bigTree, dish, dog, dogAsleep, frozenTrain, hash, hero, radioTower, shuttleWreck, solarTower, tile, type Dir } from './sprites.js';
+import { T, bigTree, dish, dogSprite, dogAsleep, type DogLook, frozenTrain, hash, hero, radioTower, shuttleWreck, solarTower, tile, type Dir } from './sprites.js';
 import { ARCHIVE_CODE, ARCHIVES, CLUES, FINALE, ITEMS, QUESTIONS, RADIO_FREQ, RESTART_ORDER, SCRIPTS, SIGNAL_KEY, SWITCHES, type Api } from './story.js';
 import * as ui from './ui.js';
 
@@ -37,6 +37,22 @@ interface Follower {
   y: number;
   dir: Dir;
   moving: { fx: number; fy: number } | null;
+  /** Déplacement autonome de Pixel (venir s'asseoir, rapporter l'écrou) : suite de cases à parcourir. */
+  walk?: { from: [number, number]; path: [number, number][]; t: number; speed: number } | null;
+}
+
+/** Ce que fait Pixel quand il ne se contente pas de suivre. */
+type PixelMode = 'follow' | 'come' | 'sit' | 'pet' | 'rest' | 'fetch' | 'dig';
+
+/** Petits effets dessinés dans le monde : cœurs, « z », reflets de soleil, poussière, l'écrou lancé. */
+interface Fx {
+  kind: 'heart' | 'z' | 'spark' | 'dust';
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;
+  max: number;
 }
 
 export class Game {
@@ -55,6 +71,18 @@ export class Game {
   locked = false; // bloque le joueur (fondu…)
   particles: Particle[] = [];
   pixel: Follower | null = null;
+  pixelMode: PixelMode = 'follow';
+  private pixelTimer = 0;
+  private idle = 0;
+  private turnHold = 0;
+  private heroCrouch = 0;
+  private whineTimer = 3;
+  private homeBeep = 2;
+  private fx: Fx[] = [];
+  /** L'écrou en vol ou posé au sol (coordonnées en pixels du monde). */
+  private nut: { fx: number; fy: number; tx: number; ty: number; t: number; dur: number; landed: boolean } | null = null;
+  private fetch: { stage: 'flying' | 'run' | 'pick' | 'back'; tx: number; ty: number } | null = null;
+  private fxTimer = 0;
   private saveTimer = 0;
   private bumpCooldown = 0;
   private beepTimer = 0;
@@ -186,6 +214,7 @@ export class Game {
       if (!this.blackout) this.save();
     }
     this.updateDetector(dt);
+    this.updatePixel(dt);
 
     if (this.moving) {
       this.moving.t += dt / MOVE_TIME;
@@ -194,12 +223,32 @@ export class Game {
       if (this.pixel) this.pixel.moving = null;
     }
     if (this.busy) return;
+    if (this.turnHold > 0) {
+      this.turnHold -= dt;
+      return;
+    }
     const d = heldDir();
-    if (!d) return;
-    this.dir = d;
+    if (!d) {
+      this.idle += dt;
+      return;
+    }
     const [dx, dy] = DELTA[d];
     const nx = this.x + dx;
     const ny = this.y + dy;
+    // Pixel assis juste là : on se tourne d'abord vers lui (pour pouvoir le caresser)
+    const p0 = this.pixel;
+    if (p0 && !p0.walk && p0.x === nx && p0.y === ny && this.pixelMode !== 'follow' && this.dir !== d) {
+      this.dir = d;
+      this.turnHold = 0.22;
+      this.idle = Math.max(this.idle, 3);
+      return;
+    }
+    this.dir = d;
+    this.idle = 0;
+    if (this.pixelMode !== 'follow' && this.pixelMode !== 'fetch') {
+      this.pixelMode = 'follow';
+      if (this.pixel) this.pixel.walk = null;
+    }
     const obj = this.objAt(nx, ny);
     if (obj?.door && this.doorOpen(obj)) {
       sfx.door();
@@ -220,6 +269,7 @@ export class Game {
         p.dir = this.x > p.x ? 'right' : this.x < p.x ? 'left' : this.y > p.y ? 'down' : 'up';
       }
       p.moving = { fx: p.x, fy: p.y };
+      p.walk = null;
       p.x = this.x;
       p.y = this.y;
     }
@@ -240,10 +290,18 @@ export class Game {
       this.dir = dir;
       this.moving = null;
       this.locked = false;
+      this.pixelMode = 'follow';
+      this.nut = null;
+      this.idle = 0;
       if (this.flags.has('pixelOn')) this.placePixelBehind();
       ui.showPlace(this.map.name);
       this.startMusic();
       this.save();
+      if (mapId === 'maisonLea' && this.pixel && !this.flags.has('pixelHome')) {
+        this.flags.add('pixelHome');
+        sfx.pixelHappy();
+        ui.say(['Pixel file droit vers un vieux panier, dans un coin.', 'Il le renifle, tourne trois fois sur lui-même… Sa queue ne s’arrête plus.']);
+      }
       if (mapId === 'vesper' && !this.flags.has('firstOutside')) {
         this.flags.add('firstOutside');
         ui.say(['Le ciel… il est orange.', 'La ville est en ruine. Il n’y a personne.', 'Il faut que je comprenne ce qui s’est passé ici.']);
@@ -275,6 +333,7 @@ export class Game {
     if (this.pixel && this.pixel.x === fx && this.pixel.y === fy && this.flags.has('podNeedsPrime') && this.map.id === 'lab') {
       return this.askPrime();
     }
+    if (this.pixel && this.pixel.x === fx && this.pixel.y === fy && !this.pixel.walk && !obj) return this.petPixel();
     if (this.nearCabin() && (!obj || obj.id === 'cabinHatch')) {
       return ui.say(['« Sous le potager, à deux pas à droite du grand arbre »… C’est par ici.', 'La terre est meuble. Avec la pelle, je pourrais creuser.']);
     }
@@ -282,10 +341,7 @@ export class Game {
       SCRIPTS[obj.script]?.(this.api);
       return;
     }
-    if (this.pixel && this.pixel.x === fx && this.pixel.y === fy) {
-      ui.say(['Pixel remue la queue. Ses yeux brillent d’un bleu vif.']);
-      return;
-    }
+    if (this.pixel && this.pixel.x === fx && this.pixel.y === fy && !this.pixel.walk) return this.petPixel();
     const ch = charAt(this.map, fx, fy);
     if (ch === '~') ui.say(['Une eau verte, tiède, qui sent le métal brûlé.', 'Mieux vaut ne pas y toucher.']);
     else if (ch === 'C') ui.say(['Une épave de voiture, mangée par la rouille. Vide.']);
@@ -295,6 +351,300 @@ export class Game {
     else if (ch === 'N' && this.map.id === 'vesper') SCRIPTS.shuttle?.(this.api);
     else if (ch === 'N' && this.map.id === 'quartier') ui.say(['Un arbre immense, bien plus grand que les autres. Mort, lui aussi.']);
     else if (ch === 'N') ui.say(['Une tour solaire. Son capteur doré fixe encore le ciel.']);
+  }
+
+  // ---------- Pixel ----------
+  /** Une case où Pixel peut marcher (ni mur, ni objet, ni le héros sauf permission). */
+  private pixelFree(x: number, y: number, allowHero = false) {
+    if (x < 0 || y < 0 || x >= this.map.width || y >= this.map.height) return false;
+    if (!allowHero && x === this.x && y === this.y) return false;
+    if (this.objAt(x, y)) return false;
+    return !SOLID.has(charAt(this.map, x, y));
+  }
+
+  /** Plus court chemin (quelques cases au plus) pour Pixel. */
+  private pixelPath(from: [number, number], to: [number, number], allowHero = false, max = 8): [number, number][] | null {
+    const key = (x: number, y: number) => `${x},${y}`;
+    const prev = new Map<string, string | null>([[key(...from), null]]);
+    const queue: [number, number, number][] = [[from[0], from[1], 0]];
+    while (queue.length) {
+      const [x, y, d] = queue.shift()!;
+      if (x === to[0] && y === to[1]) {
+        const path: [number, number][] = [];
+        let k: string | null = key(x, y);
+        while (k && k !== key(...from)) {
+          const [a, b] = k.split(',').map(Number);
+          path.unshift([a, b]);
+          k = prev.get(k) ?? null;
+        }
+        return path;
+      }
+      if (d >= max) continue;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = x + dx, ny = y + dy;
+        if (prev.has(key(nx, ny)) || !this.pixelFree(nx, ny, allowHero)) continue;
+        prev.set(key(nx, ny), key(x, y));
+        queue.push([nx, ny, d + 1]);
+      }
+    }
+    return null;
+  }
+
+  private walkPixel(path: [number, number][], tilesPerSec: number) {
+    const p = this.pixel!;
+    p.moving = null;
+    p.walk = path.length ? { from: [p.x, p.y], path, t: 0, speed: tilesPerSec } : null;
+    if (!path.length) this.onPixelArrived();
+  }
+
+  private facePixelToHero() {
+    const p = this.pixel!;
+    if (this.x !== p.x) p.dir = this.x > p.x ? 'right' : 'left';
+  }
+
+  /** Quand on s'arrête un moment, Pixel vient s'asseoir devant nous. */
+  private pixelCome() {
+    const p = this.pixel!;
+    const [dx, dy] = DELTA[this.dir];
+    const spots: [number, number][] = [[this.x + dx, this.y + dy], [this.x + dy, this.y + dx], [this.x - dy, this.y - dx]];
+    for (const spot of spots) {
+      if (spot[0] === p.x && spot[1] === p.y) {
+        this.pixelMode = 'sit';
+        this.facePixelToHero();
+        return;
+      }
+      if (!this.pixelFree(spot[0], spot[1])) continue;
+      const path = this.pixelPath([p.x, p.y], spot, false, 5);
+      if (!path) continue;
+      this.pixelMode = 'come';
+      this.walkPixel(path, 3.6);
+      return;
+    }
+    this.pixelMode = 'sit'; // pas de place : il s'assoit là où il est
+    this.facePixelToHero();
+  }
+
+  private onPixelArrived() {
+    if (this.pixelMode === 'come') {
+      this.pixelMode = 'sit';
+      this.facePixelToHero();
+      return;
+    }
+    if (this.pixelMode !== 'fetch' || !this.fetch) return;
+    if (this.fetch.stage === 'run') {
+      this.fetch.stage = 'pick';
+      this.pixelTimer = 0.35;
+      this.nut = null;
+      sfx.key();
+    } else if (this.fetch.stage === 'back') {
+      this.fetch = null;
+      this.items.add('ecrou');
+      this.locked = false;
+      this.facePixelToHero();
+      this.pixelMode = 'pet';
+      this.pixelTimer = 1.4;
+      this.idle = 3;
+      sfx.pixelHappy();
+      ui.toast('Pixel rapporte l’écrou !');
+    }
+  }
+
+  private petPixel() {
+    if (!this.pixel || this.pixelMode === 'fetch') return;
+    this.pixelMode = 'pet';
+    this.pixelTimer = 1.8;
+    this.heroCrouch = 1.5;
+    this.idle = Math.max(this.idle, 3);
+    this.facePixelToHero();
+    this.flags.add('petPixel');
+    sfx.pixelHappy();
+    const hx = this.pixel.x * T + 8;
+    const hy = this.pixel.y * T + 2;
+    for (let i = 0; i < 3; i++) this.fx.push({ kind: 'heart', x: hx - 3 + i * 3, y: hy, vx: (i - 1) * 3, vy: -14, life: 1.3 + i * 0.35, max: 1.3 + i * 0.35 });
+  }
+
+  private throwNut() {
+    const p = this.pixel;
+    if (!p) return ui.say(['Tu fais sauter l’écrou dans ta main. Personne pour courir après…']);
+    if (this.map.dark) return ui.say(['Pixel se colle à tes jambes. Pas question de courir dans le noir.']);
+    const [dx, dy] = DELTA[this.dir];
+    let n = 0;
+    for (let i = 1; i <= 4; i++) {
+      if (!this.pixelFree(this.x + dx * i, this.y + dy * i)) break;
+      n = i;
+    }
+    if (n < 2) return ui.say(['Pas assez de place pour lancer l’écrou par ici.']);
+    const tx = this.x + dx * n, ty = this.y + dy * n;
+    this.items.delete('ecrou');
+    this.locked = true;
+    releaseAll();
+    p.walk = null;
+    this.nut = { fx: this.x * T + 8, fy: this.y * T + 4, tx: tx * T + 8, ty: ty * T + 11, t: 0, dur: 0.14 * n + 0.2, landed: false };
+    this.fetch = { stage: 'flying', tx, ty };
+    this.pixelMode = 'fetch';
+    sfx.throwNut();
+  }
+
+  /** Pixel est chez lui : près de la maison de Betti, ou dedans. */
+  private atPixelHome() {
+    const p = this.pixel;
+    if (!p) return false;
+    return this.map.id === 'maisonLea' || (this.map.id === 'quartier' && Math.abs(p.x - 6) <= 4 && Math.abs(p.y - 7) <= 4);
+  }
+
+  private updatePixel(dt: number) {
+    for (const f of this.fx) {
+      f.life -= dt;
+      f.x += f.vx * dt;
+      f.y += f.vy * dt;
+      if (f.kind === 'dust') f.vy += 40 * dt;
+    }
+    this.fx = this.fx.filter((f) => f.life > 0);
+    this.heroCrouch -= dt;
+    const p = this.pixel;
+    if (!p) return;
+    this.pixelTimer -= dt;
+    this.fxTimer -= dt;
+
+    // marche autonome
+    if (p.walk) {
+      const w = p.walk;
+      w.t += dt * w.speed;
+      const next = w.path[0];
+      if (next && next[0] !== w.from[0]) p.dir = next[0] > w.from[0] ? 'right' : 'left';
+      while (w.t >= 1 && w.path.length) {
+        w.from = w.path.shift()!;
+        p.x = w.from[0];
+        p.y = w.from[1];
+        w.t -= 1;
+      }
+      if (!w.path.length) {
+        p.walk = null;
+        this.onPixelArrived();
+      }
+    }
+
+    // l'écrou lancé
+    if (this.nut && !this.nut.landed) {
+      this.nut.t += dt / this.nut.dur;
+      if (this.nut.t >= 1) {
+        this.nut.landed = true;
+        for (let i = 0; i < 4; i++) this.fx.push({ kind: 'dust', x: this.nut.tx, y: this.nut.ty, vx: (Math.random() - 0.5) * 30, vy: -20, life: 0.4, max: 0.4 });
+        if (this.fetch) {
+          this.fetch.stage = 'run';
+          const path = this.pixelPath([p.x, p.y], [this.fetch.tx, this.fetch.ty], true, 10) ?? [[this.fetch.tx, this.fetch.ty]];
+          this.walkPixel(path, 7);
+        }
+      }
+    }
+    if (this.fetch?.stage === 'pick' && this.pixelTimer <= 0) {
+      this.fetch.stage = 'back';
+      const [dx, dy] = DELTA[this.dir];
+      const back: [number, number] = [this.x + dx, this.y + dy];
+      this.walkPixel(this.pixelPath([p.x, p.y], back, false, 10) ?? [back], 5);
+    }
+
+    // humeurs
+    if (this.pixelMode === 'pet' && this.pixelTimer <= 0) this.pixelMode = 'sit';
+    if (this.pixelMode === 'dig' && this.pixelTimer <= 0) this.pixelMode = this.idle > 2.5 ? 'sit' : 'follow';
+    if (this.pixelMode === 'follow' && !p.walk && !this.moving && !this.busy && this.idle > 2.5) this.pixelCome();
+    if (this.pixelMode === 'sit' && !this.map.dark && this.idle > 9) this.pixelMode = 'rest';
+
+    // petits effets
+    if (this.pixelMode === 'dig' && this.fxTimer <= 0) {
+      this.fxTimer = 0.12;
+      const fxX = p.x * T + (p.dir === 'left' ? 2 : 14);
+      this.fx.push({ kind: 'dust', x: fxX, y: p.y * T + 13, vx: (p.dir === 'left' ? 1 : -1) * (10 + Math.random() * 25), vy: -25 - Math.random() * 15, life: 0.45, max: 0.45 });
+    }
+    if (this.pixelMode === 'rest' && this.fxTimer <= 0) {
+      if (this.map.outdoor) {
+        this.fxTimer = 0.45;
+        this.fx.push({ kind: 'spark', x: p.x * T + 5 + Math.random() * 6, y: p.y * T + 9, vx: 0, vy: -9, life: 0.9, max: 0.9 });
+      } else {
+        this.fxTimer = 1.5;
+        this.fx.push({ kind: 'z', x: p.x * T + (p.dir === 'left' ? 2 : 13), y: p.y * T + 6, vx: p.dir === 'left' ? -3 : 3, vy: -7, life: 1.6, max: 1.6 });
+      }
+    }
+    // dans le noir, il gémit de temps en temps ; chez lui, il jappe de joie
+    if (this.map.dark) {
+      this.whineTimer -= dt;
+      if (this.whineTimer <= 0) {
+        this.whineTimer = 6 + Math.random() * 5;
+        sfx.pixelWhine();
+      }
+    } else if (this.atPixelHome()) {
+      this.homeBeep -= dt;
+      if (this.homeBeep <= 0) {
+        this.homeBeep = 5 + Math.random() * 4;
+        sfx.pixelHappy();
+      }
+    }
+  }
+
+  private pixelLook(): DogLook {
+    const p = this.pixel!;
+    const t = this.time;
+    const dark = !!this.map.dark;
+    const happy = this.atPixelHome();
+    const wag = happy ? Math.floor(t * 11) % 2 : Math.floor(t * 2.2) % 2 ? 1 : 2;
+    const eye = t % 3.7 < 0.12 ? 'closed' : dark ? 'wide' : 'on';
+    if (p.walk) {
+      const run = this.pixelMode === 'fetch';
+      return { pose: dark ? 'scared' : 'stand', frame: Math.floor(t * (run ? 16 : 10)) % 4, tail: dark ? 3 : Math.floor(t * 9) % 2, earsDown: dark || run };
+    }
+    if (this.pixelMode === 'dig' || this.fetch?.stage === 'pick') return { pose: 'dig', frame: Math.floor(t * 9) % 2, tail: Math.floor(t * 7) % 2 };
+    if (this.pixelMode === 'pet') return { pose: 'sit', eye: 'happy', tail: Math.floor(t * 13) % 2 };
+    if (this.pixelMode === 'rest') {
+      return this.map.outdoor
+        ? { pose: 'sun', frame: Math.floor(t * 2.5) % 4, eye: 'closed', tail: t % 5 < 0.5 ? 1 : 2 }
+        : { pose: 'lie', eye: 'closed', tail: 2 };
+    }
+    if (dark) return { pose: 'scared', eye, tail: 3 };
+    if (this.pixelMode === 'sit' || this.pixelMode === 'come') return { pose: 'sit', eye, tail: wag };
+    // il suit : il trottine quand on marche
+    const moving = this.moving && p.moving;
+    const frame = moving ? (this.moving!.t < 0.5 ? (this.steps % 2 ? 1 : 3) : 0) : 0;
+    return { pose: 'stand', frame, eye, tail: moving ? Math.floor(t * 8) % 2 : wag };
+  }
+
+  private renderFx(ox: number, oy: number) {
+    const c = this.ctx;
+    for (const f of this.fx) {
+      const a = Math.min(1, f.life / (f.max * 0.5));
+      if (f.life > f.max) continue;
+      c.globalAlpha = a;
+      const x = Math.round(f.x - ox), y = Math.round(f.y - oy);
+      if (f.kind === 'heart') {
+        c.fillStyle = '#1c1020';
+        c.fillRect(x - 1, y, 7, 3); c.fillRect(x, y + 3, 5, 1); c.fillRect(x + 1, y + 4, 3, 1); c.fillRect(x + 2, y + 5, 1, 1);
+        c.fillRect(x, y - 1, 2, 1); c.fillRect(x + 3, y - 1, 2, 1);
+        c.fillStyle = '#ff6b8a';
+        c.fillRect(x, y, 2, 3); c.fillRect(x + 3, y, 2, 3); c.fillRect(x + 1, y + 1, 3, 3); c.fillRect(x + 2, y + 4, 1, 1);
+        c.fillStyle = '#ffc2d0';
+        c.fillRect(x, y, 1, 1);
+      } else if (f.kind === 'z') {
+        c.fillStyle = '#e8f4ff';
+        c.fillRect(x, y, 3, 1); c.fillRect(x + 1, y + 1, 1, 1); c.fillRect(x, y + 2, 3, 1);
+      } else if (f.kind === 'spark') {
+        c.fillStyle = '#fff2a0';
+        c.fillRect(x, y - 1, 1, 3); c.fillRect(x - 1, y, 3, 1);
+      } else {
+        c.fillStyle = '#c9a26a';
+        c.fillRect(x, y, 1, 1);
+      }
+    }
+    c.globalAlpha = 1;
+    // l'écrou en vol, ou posé au sol
+    if (this.nut) {
+      const n = this.nut;
+      const t = Math.min(1, n.t);
+      const x = n.fx + (n.tx - n.fx) * t;
+      const y = n.fy + (n.ty - n.fy) * t - Math.sin(Math.PI * t) * 14;
+      c.fillStyle = '#1c1020';
+      c.fillRect(Math.round(x - ox) - 2, Math.round(y - oy) - 2, 4, 4);
+      c.fillStyle = '#c3c9d3';
+      c.fillRect(Math.round(x - ox) - 1, Math.round(y - oy) - 1, 2, 2);
+    }
   }
 
   // ---------- sac à dos ----------
@@ -316,6 +666,7 @@ export class Game {
       return;
     }
     if (id === 'pelle') return this.dig();
+    if (id === 'ecrou') return this.throwNut();
     if (id === 'capteur') {
       if (this.map.id === 'sommet') {
         releaseAll();
@@ -485,6 +836,13 @@ export class Game {
   }
 
   private dig() {
+    this.heroCrouch = 0.9;
+    if (this.pixel && !this.pixel.walk) {
+      this.pixelMode = 'dig';
+      this.pixelTimer = 1.4;
+      // Pixel se tourne vers toi et gratte le sol à ses pieds
+      this.pixel.dir = this.x >= this.pixel.x ? 'right' : 'left';
+    }
     if (this.nearCabin()) {
       ui.say(['Tu plantes la pelle dans la terre du potager…', 'Elle heurte du bois. Une trappe !'], () => {
         sfx.door();
@@ -699,6 +1057,12 @@ export class Game {
 
   private pixelPixel(): [number, number] {
     const p = this.pixel!;
+    if (p.walk && p.walk.path.length) {
+      const [ax, ay] = p.walk.from;
+      const [bx, by] = p.walk.path[0];
+      const t = Math.min(1, p.walk.t);
+      return [(ax + (bx - ax) * t) * T, (ay + (by - ay) * t) * T];
+    }
     if (!p.moving || !this.moving) return [p.x * T, p.y * T];
     const t = Math.min(1, this.moving.t);
     return [(p.moving.fx + (p.x - p.moving.fx) * t) * T, (p.moving.fy + (p.y - p.moving.fy) * t) * T];
@@ -765,12 +1129,28 @@ export class Game {
 
     let frame = 0;
     if (this.moving && this.moving.t < 0.75) frame = this.steps % 2 ? 1 : 2;
+    else if (this.heroCrouch > 0) frame = 3;
+    else if (!this.moving && this.idle > 1.5 && Math.floor(this.time / 0.9) % 2) frame = 4;
     const drawHero = () => c.drawImage(hero(this.dir, frame), Math.round(hx - ox), Math.round(hy - oy) - 3);
     if (this.pixel) {
       const [px, py] = this.pixelPixel();
-      const pframe = this.moving && this.pixel.moving && this.moving.t < 0.6 ? 1 : 0;
       const pdir = this.pixel.dir === 'left' ? 'left' : 'right';
-      const drawDog = () => c.drawImage(dog(pdir, pframe), Math.round(px - ox), Math.round(py - oy) - 1);
+      const look = this.pixelLook();
+      // dans le noir, immobile, il tremble
+      const shiver = look.pose === 'scared' && !this.pixel.walk && !this.moving ? Math.floor(this.time * 14) % 2 : 0;
+      const carrying = this.fetch?.stage === 'back';
+      const drawDog = () => {
+        const dx = Math.round(px - ox) + shiver, dy = Math.round(py - oy) - 1;
+        c.drawImage(dogSprite(pdir, look), dx, dy);
+        if (carrying) {
+          // l'écrou dans la gueule
+          const mx = pdir === 'left' ? dx + 0 : dx + 14;
+          c.fillStyle = '#1c1020';
+          c.fillRect(mx - 1, dy + 6, 4, 3);
+          c.fillStyle = '#c3c9d3';
+          c.fillRect(mx, dy + 7, 2, 1);
+        }
+      };
       if (py <= hy) {
         drawDog();
         drawHero();
@@ -779,9 +1159,23 @@ export class Game {
         drawDog();
       }
     } else drawHero();
+    this.renderFx(ox, oy);
 
     this.renderAtmosphere();
-    if (this.map.dark) this.renderDarkness(hx - ox + T / 2, hy - oy + T / 2 - 2);
+    if (this.map.dark) {
+      this.renderDarkness(hx - ox + T / 2, hy - oy + T / 2 - 2);
+      // dans le noir, on devine Pixel à la lueur de son œil
+      if (this.pixel && this.time % 3.7 >= 0.12) {
+        const [px, py] = this.pixelPixel();
+        const shiver = !this.pixel.walk && !this.moving ? Math.floor(this.time * 14) % 2 : 0;
+        const ex = Math.round(px - ox) + shiver + (this.pixel.dir === 'left' ? 2 : 12);
+        const ey = Math.round(py - oy) - 1 + 6;
+        c.fillStyle = 'rgba(94,240,255,0.25)';
+        c.fillRect(ex - 1, ey - 1, 4, 4);
+        c.fillStyle = '#5ef0ff';
+        c.fillRect(ex, ey, 2, 2);
+      }
+    }
   }
 
   /** Le noir complet, sauf un halo autour du héros : grand avec la lampe, minuscule sans. */

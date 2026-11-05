@@ -418,7 +418,7 @@ const plantsSign: Painter = (c, v) => sign(c, v);
 
 const dogOff: Painter = (c, v) => {
   dust(c, v);
-  drawDog(c, 0, true);
+  paintDog(c, { pose: 'stand', off: true });
 };
 
 // ---------- bâtiments reconnaissables (toit + façade par style) ----------
@@ -619,6 +619,15 @@ const drawings: Painter = (c, v) => {
   r(c, 1, 2, 6, 7, P.paper); r(c, 2, 5, 4, 3, '#8a6a4a'); r(c, 3, 3, 2, 2, P.hazard); // cabane + lampe
   r(c, 9, 1, 6, 6, P.paper); r(c, 10, 4, 4, 2, '#9ad8ff'); r(c, 11, 2, 1, 1, P.hazard); r(c, 13, 2, 1, 1, P.hazard); // boîtes de verre et étoiles
 };
+const dogBasket: Painter = (c, v) => {
+  woodFloor(c, v);
+  c.fillStyle = 'rgba(0,0,0,0.25)'; c.fillRect(2, 13, 13, 2);
+  r(c, 1, 7, 14, 7, P.ink); r(c, 2, 8, 12, 5, '#a8743a'); // osier
+  for (let x = 2; x < 14; x += 2) r(c, x, 9 + (x % 4 ? 0 : 1), 1, 3, '#7a4f24');
+  r(c, 3, 6, 10, 4, P.ink); r(c, 4, 7, 8, 2, '#c25a6a'); r(c, 4, 7, 8, 1, '#e07a88'); // coussin râpé
+  r(c, 6, 7, 2, 1, '#a84a5a');
+  r(c, 11, 10, 3, 2, '#ffcf4a'); r(c, 11, 10, 3, 1, '#fff0a0'); // la petite plaque « PIXEL »
+};
 const toybox: Painter = (c, v) => {
   woodFloor(c, v);
   r(c, 2, 6, 12, 9, P.ink); r(c, 3, 7, 10, 7, '#3a7d9a'); r(c, 3, 7, 10, 2, '#5a9dba');
@@ -745,7 +754,7 @@ const podPlans: Painter = (c) => {
 };
 const dogSleep: Painter = (c) => {
   labFloor(c, 0);
-  drawDog(c, 0, true);
+  paintDog(c, { pose: 'lie', off: true, eye: 'closed' });
 };
 
 // cuves de culture (laboratoire Aurore) : même famille que les capsules, mais remplies de liquide
@@ -853,39 +862,136 @@ export function solarTower(): HTMLCanvasElement {
 }
 
 // ---------- Pixel, le chien robot ----------
-function drawDog(c: Ctx, frame: number, off: boolean) {
-  const body = off ? '#6a6f7a' : '#a9b3c4';
-  const light = off ? '#80868f' : '#d3dbe8';
-  const eye = off ? '#2a2d33' : '#5ef0ff';
-  c.fillStyle = 'rgba(0,0,0,0.28)'; c.fillRect(3, 14, 11, 2);
-  const leg = frame === 1 ? 1 : 0;
-  r(c, 4, 12 - leg, 2, 3, P.ink); r(c, 11, 12 - (1 - leg), 2, 3, P.ink); // pattes
-  r(c, 3, 7, 10, 6, P.ink); r(c, 4, 8, 8, 4, body); r(c, 4, 8, 8, 1, light); // corps
-  r(c, 9, 3, 6, 6, P.ink); r(c, 10, 4, 4, 4, body); r(c, 10, 4, 4, 1, light); // tête
-  r(c, 9, 1, 2, 3, P.ink); r(c, 13, 1, 2, 3, P.ink); // oreilles
-  r(c, 12, 5, 1, 1, eye); r(c, 14, 6, 1, 1, P.ink); // œil, museau
-  r(c, 1, 6, 3, 1, P.ink); r(c, 2, 5, 1, 1, P.ink); // queue
-  r(c, 6, 9, 3, 2, off ? '#4a4d55' : '#ffcf4a'); // panneau solaire sur le dos
-  if (off) r(c, 7, 9, 1, 2, P.ink); // fendu
+// ---------- Pixel, le chien robot ----------
+export type DogPose = 'stand' | 'sit' | 'lie' | 'sun' | 'scared' | 'dig';
+export type DogEye = 'on' | 'off' | 'happy' | 'closed' | 'wide';
+export interface DogLook {
+  pose: DogPose;
+  frame?: number; // marche / grattage / reflet
+  eye?: DogEye;
+  tail?: number; // 0 haut, 1 milieu, 2 bas, 3 rentrée (peur)
+  earsDown?: boolean;
+  off?: boolean;
 }
 
-/** Pixel éteint, détouré (fond transparent), pour la scène finale. */
+function paintDog(c: Ctx, look: DogLook) {
+  const { pose, frame = 0, off = false } = look;
+  const eye = look.eye ?? (off ? 'off' : 'on');
+  const k = P.ink;
+  const B = off ? '#6a6f7a' : '#a9b3c4';
+  const L = off ? '#80868f' : '#dde4ef';
+  const S = off ? '#53575f' : '#7d8799';
+  const Y = off ? '#4a4d55' : '#ffcf4a';
+  const Yd = off ? '#3a3c42' : '#c9912a';
+  const collar = off ? '#6a3a36' : '#c0423b';
+  // décalages selon la pose : (dx, dy) de la tête et du corps
+  let hx = 9, hy = 2, bx = 3, by = 7, bw = 10, bh = 5;
+  if (pose === 'scared') { hy = 4; by = 8; }
+  if (pose === 'sit') { hy = 2; bx = 4; by = 8; bw = 8; bh = 5; }
+  if (pose === 'dig') { hx = 10; hy = 8; bx = 2; by = 6; bw = 10; }
+  if (pose === 'lie') { hx = 10; hy = 8; bx = 2; by = 9; bw = 11; bh = 5; }
+  if (pose === 'sun') { hx = 10; hy = 7; bx = 2; by = 10; bw = 11; bh = 4; }
+
+  // ombre
+  c.fillStyle = 'rgba(0,0,0,0.26)';
+  c.fillRect(pose === 'lie' || pose === 'sun' ? 1 : 3, 14, pose === 'lie' || pose === 'sun' ? 15 : 11, 1);
+  c.fillRect(pose === 'lie' || pose === 'sun' ? 2 : 4, 15, pose === 'lie' || pose === 'sun' ? 13 : 9, 1);
+
+  // queue
+  const tail = look.tail ?? (pose === 'scared' ? 3 : 1);
+  const tx = bx, ty = by + 1;
+  const tails: [number, number][][] = [
+    [[tx - 1, ty - 1], [tx - 2, ty - 2], [tx - 2, ty - 3]],
+    [[tx - 1, ty], [tx - 2, ty - 1], [tx - 3, ty - 1]],
+    [[tx - 1, ty], [tx - 2, ty], [tx - 3, ty + 1]],
+    [[tx, ty + 2], [tx - 1, ty + 3]],
+  ];
+  if (pose === 'lie') tails[tail] = [[1, 12], [1, 13], [2, 13], [3, 13]];
+  tails[tail].forEach(([x, y], i, arr) => r(c, x, y, 1, 1, i === arr.length - 1 && !off ? L : k));
+
+  // pattes
+  const leg = (x: number, y: number, h: number) => { r(c, x, y, 2, h, k); r(c, x + 1, y, 1, h - 1, S); };
+  if (pose === 'stand' || pose === 'scared') {
+    const up = pose === 'stand' ? frame % 4 : 0;
+    const a = up === 1 ? 1 : 0, b = up === 3 ? 1 : 0;
+    const ly = by + bh - 1;
+    leg(4, ly - a, 3); leg(10, ly - b, 3);
+    leg(6, ly - b, 3); leg(12, ly - a, 3);
+  } else if (pose === 'sit') {
+    r(c, 3, 11, 5, 3, k); r(c, 4, 11, 3, 2, B); r(c, 4, 11, 3, 1, L); // cuisse repliée
+    leg(10, 10, 4); leg(12, 10, 4);
+  } else if (pose === 'dig') {
+    leg(3, 10, 4); leg(5, 10, 4); // arrière-train levé
+  } else if (pose === 'lie') {
+    r(c, 12, 13, 4, 1, k); // pattes avant allongées
+  } else if (pose === 'sun') {
+    r(c, 13, 12, 3, 2, k); r(c, 0, 12, 3, 2, k);
+  }
+
+  // corps
+  r(c, bx, by, bw, bh, k);
+  r(c, bx + 1, by + 1, bw - 2, bh - 2, B);
+  r(c, bx + 1, by + 1, bw - 2, 1, L);
+  r(c, bx + 1, by + bh - 2, bw - 2, 1, S);
+  // panneau solaire sur le dos
+  const px = bx + 2, py = by - 1;
+  r(c, px - 1, py - (pose === 'sun' ? 0 : 0), 6, 2, k);
+  r(c, px, py, 4, 1, Y); r(c, px, py + 1, 4, 1, Yd); r(c, px + 2, py, 1, 2, Yd);
+  if (off) r(c, px + 1, py, 1, 2, k); // fendu
+  if (pose === 'sun' && !off) r(c, px + (frame % 4), py, 1, 1, '#fffbe0'); // le soleil s'y reflète
+
+  // tête
+  r(c, hx, hy, 6, 6, k);
+  r(c, hx + 1, hy + 1, 4, 4, B);
+  r(c, hx + 1, hy + 1, 4, 1, L);
+  r(c, hx + 1, hy + 4, 4, 1, S);
+  // museau
+  r(c, hx + 5, hy + 2, 2, 3, k); r(c, hx + 5, hy + 3, 1, 1, L);
+  // oreilles
+  const down = look.earsDown || pose === 'scared' || pose === 'lie';
+  if (down) {
+    r(c, hx - 1, hy + 1, 2, 2, k); r(c, hx, hy + 1, 1, 1, S);
+    r(c, hx + 3, hy - 1, 2, 2, k);
+  } else {
+    r(c, hx + 1, hy - 2, 2, 3, k); r(c, hx + 1, hy - 1, 1, 1, S);
+    r(c, hx + 4, hy - 2, 2, 3, k); r(c, hx + 4, hy - 1, 1, 1, S);
+  }
+  if (pose === 'dig') {
+    // les pattes avant grattent la terre, devant le museau
+    const paw = frame % 2;
+    r(c, 9, 12, 2, 2, k);
+    r(c, 11 + paw * 2, 13 - paw, 3, 2, k); r(c, 12 + paw * 2, 13 - paw, 1, 1, S);
+  }
+  // collier et médaille
+  if (pose !== 'lie' && pose !== 'sun' && pose !== 'dig') {
+    r(c, hx, hy + 5, 4, 1, collar);
+    r(c, hx + 2, hy + 6, 1, 1, off ? '#7a6a3a' : '#ffcf4a');
+  }
+  // œil
+  const ex = hx + 3, ey = hy + 2;
+  if (eye === 'on') { r(c, ex, ey, 1, 2, '#5ef0ff'); r(c, ex, ey, 1, 1, '#e8ffff'); }
+  else if (eye === 'wide') { r(c, ex - 1, ey, 2, 2, '#5ef0ff'); r(c, ex - 1, ey, 1, 1, '#ffffff'); }
+  else if (eye === 'happy') { r(c, ex - 1, ey + 1, 1, 1, '#5ef0ff'); r(c, ex, ey, 1, 1, '#5ef0ff'); r(c, ex + 1, ey + 1, 1, 1, '#5ef0ff'); }
+  else if (eye === 'closed') r(c, ex - 1, ey + 1, 3, 1, k);
+  else r(c, ex, ey, 1, 2, '#2a2d33');
+}
+
+/** Pixel éteint, détouré (fond transparent), pour la scène finale. L'œil est en (12, 4). */
 export function dogAsleep(): HTMLCanvasElement {
   const [cv, c] = canvas();
-  drawDog(c, 0, true);
-  c.clearRect(0, 13, T, 3); // pas d'ombre au sol
-  r(c, 4, 12, 2, 3, P.ink); r(c, 11, 12, 2, 3, P.ink);
+  paintDog(c, { pose: 'stand', off: true });
+  c.clearRect(0, 14, T, 2); // pas d'ombre au sol
   return cv;
 }
 
 const dogCache = new Map<string, HTMLCanvasElement>();
-export function dog(dir: Dir, frame: number): HTMLCanvasElement {
-  const id = `${dir}:${frame}`;
+export function dogSprite(dir: Dir, look: DogLook): HTMLCanvasElement {
+  const id = `${dir === 'left' ? 'L' : 'R'}:${look.pose}:${look.frame ?? 0}:${look.eye ?? ''}:${look.tail ?? ''}:${look.earsDown ? 1 : 0}:${look.off ? 1 : 0}`;
   let cv = dogCache.get(id);
   if (cv) return cv;
   const [c, ctx] = canvas();
   if (dir === 'left') { ctx.translate(T, 0); ctx.scale(-1, 1); }
-  drawDog(ctx, frame, false);
+  paintDog(ctx, look);
   dogCache.set(id, c);
   cv = c;
   return cv;
@@ -893,6 +999,13 @@ export function dog(dir: Dir, frame: number): HTMLCanvasElement {
 
 // ---------- icônes du sac à dos (16 × 16) ----------
 const ICONS: Record<string, Painter> = {
+  ecrou: (c) => {
+    // un écrou hexagonal, rongé sur un bord
+    r(c, 5, 2, 6, 12, P.ink); r(c, 3, 4, 10, 8, P.ink); r(c, 4, 3, 8, 10, P.ink);
+    r(c, 5, 4, 6, 8, '#a9b0bb'); r(c, 4, 5, 8, 6, '#a9b0bb'); r(c, 5, 4, 6, 2, '#d8dde5');
+    r(c, 6, 6, 4, 4, P.ink); r(c, 7, 7, 2, 2, '#2a2d33');
+    r(c, 10, 9, 2, 2, '#7a808b'); r(c, 11, 11, 1, 1, P.ink); // traces de dents
+  },
   badge: (c) => {
     r(c, 3, 2, 10, 13, P.ink); r(c, 4, 3, 8, 11, '#e8ecf2'); r(c, 4, 3, 8, 3, P.neon);
     r(c, 6, 7, 4, 4, '#9aa3b3'); r(c, 5, 12, 6, 1, '#6c7889'); r(c, 7, 0, 2, 3, P.metalDark);
@@ -980,7 +1093,7 @@ const REGISTRY: Record<string, Painter[]> = {
   obsTop: [obsTop], obsFront: [obsFront], obsDoor: [obsDoor], console: [console_], antennaBase: [antennaBase], trapdoor: [trapdoor],
   turbine: [turbine], switchPanel: [switchPanel(false)], switchPanelOn: [switchPanel(true)], plaque: [plaque],
   telescope: [telescope], orbitChart: [orbitChart], missionBoard: [missionBoard], varnDesk: [varnDesk],
-  podPlans: [podPlans], dogSleep: [dogSleep],
+  podPlans: [podPlans], dogSleep: [dogSleep], dogBasket: [dogBasket],
   signLeft: [signArrow('left', dust)], signRight: [signArrow('right', dust)], signDown: [signArrow('down', dust)], signUpSand: [signArrow('up', sand)],
   cultureTank: [cultureTank('full')], cultureTankEmpty: [cultureTank('empty')], cultureTankBroken: [cultureTank('broken')],
   whiteboard: [whiteboard], archiveTerm: [archiveTerm],
@@ -1015,56 +1128,62 @@ export function tile(name: string, v = 0): HTMLCanvasElement {
 }
 
 // ---------- héros ----------
-// Codes couleur : k contour, h/H capuche, s peau, g lunettes, r écharpe, j/J veste, p pantalon, b bottes, a sac.
+// Codes couleur : k contour, h/H/d capuche, s/S peau, g lunettes, w reflet, r/R écharpe, j/J/e veste, p pantalon, b bottes, a/A sac.
 const HERO_PAL: Record<string, string> = {
-  k: P.ink, h: '#3f6b73', H: '#6aa3a8', s: '#f0c39a', g: '#ffb347', r: '#c0423b',
-  j: '#7a5232', J: '#a0703f', p: '#2d2a3e', b: '#4a3a2e', a: '#5b6b3a',
+  k: P.ink, h: '#3f6b73', H: '#6aa3a8', d: '#2b4a52', s: '#f0c39a', S: '#d39a72', g: '#ffb347', w: '#fff3c4',
+  r: '#c0423b', R: '#8c2c2a', j: '#7a5232', J: '#a0703f', e: '#563a24', p: '#2d2a3e', b: '#4a3a2e', a: '#5b6b3a', A: '#7c8f4c',
 };
 
 const HEAD_DOWN = [
   '................',
   '.....kkkkkk.....',
   '....kHHHHHHk....',
-  '...kHhhhhhhHk...',
-  '...khsssssshk...',
-  '...kgggssgggk...',
-  '...khsssssshk...',
-  '....krrrrrrk....',
-  '...kjrrJJjjjk...',
-  '..kjjJJjjJJjjk..',
+  '...kHHhhhhHdk...',
+  '...khSssssShk...',
+  '...kgwggggwgk...',
+  '...khssSSsshk...',
+  '....kRrrrrRk....',
+  '...kjrrrJJjek...',
+  '..kjjJJjjJJjek..',
   '..ksjJjjjjJjsk..',
-  '..kkjjjjjjjjkk..',
+  '..kkejjjjjjekk..',
   '....kppppppk....',
 ];
 const HEAD_UP = [
   '................',
   '.....kkkkkk.....',
   '....kHHHHHHk....',
-  '...kHhhhhhhHk...',
-  '...khhhhhhhhk...',
-  '...khhhHHhhhk...',
-  '...khhhhhhhhk...',
-  '....krrrrrrk....',
-  '...kjjjjjjjjk...',
-  '..kjjaaaaaajjk..',
-  '..ksjaaaaaajsk..',
-  '..kkjaaaaaajkk..',
+  '...kHHhhhhHdk...',
+  '...khhhhhhhdk...',
+  '...kgghhhhggk...',
+  '...khhhHHhhdk...',
+  '....kRrrrrRk....',
+  '...kjaaaaaaek...',
+  '..kjaAAaaAAaek..',
+  '..ksaaaaaaaask..',
+  '..kkaaaaaaaakk..',
   '....kppppppk....',
 ];
 const HEAD_SIDE = [
   '................',
   '.....kkkkkk.....',
   '....kHHHHHHk....',
-  '...kHhhhhhhHk...',
-  '...khhhhssssk...',
-  '...khhhhsgggk...',
-  '...khhhhssssk...',
-  '....krrrrrrk....',
+  '...kHhhhhhHHk...',
+  '...kdhhhSsssk...',
+  '...kdhhhgwggk...',
+  '...kdhhhsssSk...',
+  '....kRrrrrrk....',
   '....kajjjJJk....',
-  '....kajjjJJk....',
+  '....kAjjjJJk....',
   '....kajsjJJk....',
   '....kkjjjjkk....',
   '....kppppppk....',
+];
+// bras qui se balancent pendant la marche (remplace les lignes 10-11)
+const ARMS_DOWN = [
+  ['..ksjJjjjjJjsk..', '..kkejjjjjjekk..'],
+  ['..kkjJjjjjJjsk..', '..ksejjjjjjekk..'],
+  ['..ksjJjjjjJjkk..', '..kkejjjjjjesk..'],
 ];
 const LEGS_FRONT = [
   ['....kppkkppk....', '....kbbkkbbk....', '....kkkkkkkk....'],
@@ -1080,26 +1199,37 @@ const LEGS_SIDE = [
 export type Dir = 'down' | 'up' | 'left' | 'right';
 const heroCache = new Map<string, HTMLCanvasElement>();
 
+/**
+ * frame : 0 debout, 1-2 marche, 3 accroupi (caresse, fouille), 4 respiration (repos).
+ */
 export function hero(dir: Dir, frame: number): HTMLCanvasElement {
   const id = `${dir}:${frame}`;
   let cv = heroCache.get(id);
   if (cv) return cv;
   const side = dir === 'left' || dir === 'right';
-  const head = dir === 'down' ? HEAD_DOWN : dir === 'up' ? HEAD_UP : HEAD_SIDE;
-  const legs = (side ? LEGS_SIDE : LEGS_FRONT)[frame % 3];
-  const rows = [...head, ...legs];
+  const head = [...(dir === 'down' ? HEAD_DOWN : dir === 'up' ? HEAD_UP : HEAD_SIDE)];
+  if (dir === 'down' && frame >= 1 && frame <= 2) [head[10], head[11]] = ARMS_DOWN[frame];
+  const crouch = frame === 3;
+  const legs = crouch
+    ? side ? ['....kbbbbbk.....', '....kkkkkkk.....'] : ['...kbbkkkkbbk...', '...kkk....kkk...']
+    : (side ? LEGS_SIDE : LEGS_FRONT)[frame === 4 ? 0 : frame % 3];
+  const rows = crouch ? [...head.slice(0, 12), ...legs] : [...head, ...legs];
   const [c, ctx] = canvas();
   // ombre au sol
   ctx.fillStyle = 'rgba(0,0,0,0.28)';
-  ctx.fillRect(4, 14, 8, 2);
-  const bob = frame === 0 ? 0 : -1;
+  ctx.fillRect(4, 14, 8, 1);
+  ctx.fillRect(5, 15, 6, 1);
+  const bob = frame === 1 || frame === 2 ? -1 : 0;
+  const top = crouch ? 2 : 0;
   rows.forEach((row, y) => {
     [...row].forEach((ch, x) => {
       const col = HERO_PAL[ch];
       if (!col) return;
       const px = dir === 'left' ? 15 - x : x;
+      // respiration : la tête et les épaules descendent d'un pixel
+      const breathe = frame === 4 && y < 8 ? 1 : 0;
       ctx.fillStyle = col;
-      ctx.fillRect(px, y + (y < 13 ? bob : 0), 1, 1);
+      ctx.fillRect(px, top + y + (y < 13 ? bob : 0) + breathe, 1, 1);
     });
   });
   heroCache.set(id, c);

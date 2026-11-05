@@ -252,6 +252,19 @@ export const sfx = {
   page() {
     noise(sfxBus, now(), 0.18, 0.12, 'highpass', 2500, 5000);
   },
+  /** Pixel content : deux petits bips qui montent. */
+  pixelHappy() {
+    const t = now();
+    tone(sfxBus, 'sine', 1180, t, 0.07, 0.05, { glide: 1500 });
+    tone(sfxBus, 'sine', 1500, t + 0.09, 0.09, 0.05, { glide: 1900 });
+  },
+  /** Pixel inquiet : un petit gémissement électronique. */
+  pixelWhine() {
+    tone(sfxBus, 'sine', 760, now(), 0.42, 0.03, { glide: 430, release: 0.3 });
+  },
+  throwNut() {
+    noise(sfxBus, now(), 0.16, 0.06, 'bandpass', 1800, 3200);
+  },
   key() {
     tone(sfxBus, 'square', 1200, now(), 0.03, 0.03, { filter: 5000 });
   },

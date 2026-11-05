@@ -138,6 +138,7 @@ export const ITEMS: Record<string, { name: string; text: string; usable?: boolea
   sonde: { name: 'Sonde Lumen', text: 'Détecte les sources d’énergie proches. Utilise-la pour l’allumer ou l’éteindre.', usable: true },
   pelle: { name: 'Pelle', text: 'Une pelle de jardin, solide. Utilise-la pour creuser là où tu te tiens.', usable: true },
   battery: { name: 'Batterie BS-1', text: 'Prototype de batterie solaire, encore chargée. Il faudrait la brancher sur quelque chose.', usable: true },
+  ecrou: { name: 'Écrou mâchouillé', text: 'Le jouet préféré de Pixel. Utilise-le pour le lancer.' },
   matrice: { name: 'Matrice vierge', text: 'Une puce de rechange, vide. Elle sert à copier un esprit pour l’envoyer.' },
   lampe: { name: 'Lampe torche', text: 'La lampe du père de Betti. Elle s’allume d’elle-même dans le noir.' },
   capteur: { name: 'Récepteur radio', text: 'Le récepteur du radioamateur. Il capte les ondes, à condition d’être assez haut.', usable: true },
@@ -548,6 +549,21 @@ export const SCRIPTS: Record<string, (api: Api) => void> = {
       api.clue('lea2');
     }),
 
+  pixelBasket: (api) => {
+    if (api.has('nutTaken')) return api.say(['Le panier de Pixel. Le coussin garde encore sa forme.']);
+    api.say(
+      [
+        'Un vieux panier en osier, un coussin râpé.',
+        'Sur le rebord, une petite plaque dorée : « PIXEL ».',
+        'C’était donc ici, chez lui.',
+        'Au fond du panier, un écrou tout mâchouillé.',
+      ],
+      () => {
+        api.set('nutTaken');
+        api.item('ecrou');
+      },
+    );
+  },
   leaToys: (api) => api.say(['Un coffre à jouets. Des robots en plastique, une fusée, une boîte de piles vides.']),
 
   lampBox: (api) => {

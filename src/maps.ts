@@ -361,6 +361,7 @@ function buildMaisonLea(): GameMap {
       { id: 'leaDrawings', x: 5, y: 1, sprite: 'drawings', script: 'leaDrawings' },
       { id: 'leaDiary', x: 7, y: 2, sprite: 'desk', script: 'leaDiary' },
       { id: 'leaToys', x: 8, y: 5, sprite: 'toybox', script: 'leaToys' },
+      { id: 'pixelBasket', x: 2, y: 5, sprite: 'dogBasket', script: 'pixelBasket' },
       { id: 'leaExit', x: 5, y: 7, sprite: 'houseDoor', door: { to: 'quartier', x: 6, y: 7, dir: 'down' } },
     ],
   };
