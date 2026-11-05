@@ -116,6 +116,10 @@ export class Game {
     door: MapObject | null; quick: boolean;
   } | null = null;
   private drag: { fx: number; fy: number; t: number; dur: number } | null = null;
+  /** La toute fin : le héros va jusqu'à la capsule 07, y glisse la batterie et s'y allonge. */
+  private endSeq: { stage: 'unplug' | 'walk' | 'prime' | 'enter' | 'glow'; t: number; path: [number, number][] } | null = null;
+  private podGlow = 0;
+  private heroAlpha = 1;
   private wake: { t: number; first: boolean; stood: number } | null = null;
   private saveTimer = 0;
   private bumpCooldown = 0;
@@ -625,6 +629,7 @@ export class Game {
     this.fx = this.fx.filter((f) => f.life > 0);
     this.heroCrouch -= dt;
     if (this.projecting > 0) this.projecting -= dt;
+    if (this.endSeq) this.updateEnding(dt);
     for (const pr of this.prints) pr.life -= dt;
     this.prints = this.prints.filter((pr) => pr.life > 0);
     if (this.pop) {
@@ -907,6 +912,16 @@ export class Game {
     for (const [name, x, y] of vis) {
       const sx = x * T - ox, sy = y * T - oy;
       const ph = (x * 7 + y * 13) % 10; // chaque objet a son propre rythme
+      if (this.podGlow > 0 && x === 2 && y === 2 && this.map.id === 'lab') {
+        // la capsule 07 s'illumine : la vitre devient lumière, une lueur bleue au sol
+        const a = this.podGlow * (0.55 + 0.25 * Math.sin(t * 6));
+        c.fillStyle = `rgba(94,240,255,${a})`;
+        c.fillRect(sx + 4, sy + 3, 8, 9);
+        c.fillStyle = `rgba(200,250,255,${a * 0.8})`;
+        c.fillRect(sx + 5, sy + 4, 2, 7);
+        c.fillStyle = `rgba(94,240,255,${this.podGlow * 0.18})`;
+        c.fillRect(sx - 6, sy + 14, 28, 10);
+      }
       if (name === 'terminal') {
         // une ligne de balayage et un curseur qui clignote
         c.fillStyle = 'rgba(120,255,190,0.18)';
@@ -1651,6 +1666,7 @@ export class Game {
   private finale() {
     this.locked = true;
     releaseAll();
+    this.heroCrouch = 999;
     ui.say(
       [
         'Tu t’agenouilles près de Pixel.',
@@ -1663,17 +1679,75 @@ export class Game {
         this.flags.add('pixelSleep');
         this.pixel = null;
         playTheme('none');
-        ui.say(
-          ['Tu glisses la batterie dans le logement de l’amorce. La capsule ronronne.', 'Tu t’allonges dans la capsule 07. Pixel est couché à son pied.', ...FINALE],
-          async () => {
-            await ui.playFinale(dogAsleep(), () => { this.blackout = true; });
-            this.locked = false;
-            this.onFinished();
-          },
-        );
+        sfx.key();
+        this.pop = { kind: 'item', id: 'battery', t: 0 };
+        this.heroCrouch = 1;
+        // le chemin jusqu'au pied de la capsule
+        const pod = this.map.objects.find((o) => o.id === 'capsule07');
+        const front: [number, number] = pod ? [pod.x, pod.y + 1] : [this.x, this.y];
+        const path = this.x === front[0] && this.y === front[1] ? [] : this.pixelPath([this.x, this.y], front, true, 20) ?? [];
+        this.endSeq = { stage: 'unplug', t: 0, path };
       },
     );
   }
+
+  private endStep(to: [number, number], dur: number) {
+    this.dir = to[0] > this.x ? 'right' : to[0] < this.x ? 'left' : to[1] > this.y ? 'down' : 'up';
+    this.drag = { fx: this.x, fy: this.y, t: 0, dur };
+    this.x = to[0];
+    this.y = to[1];
+    sfx.step();
+  }
+
+  private updateEnding(dt: number) {
+    const e = this.endSeq!;
+    e.t += dt;
+    if (this.drag) {
+      this.drag.t += dt / this.drag.dur;
+      if (this.drag.t >= 1) this.drag = null;
+    }
+    if (e.stage !== 'unplug' && e.stage !== 'walk') this.podGlow = Math.min(1, this.podGlow + dt * 0.6);
+    if (e.stage === 'unplug' && e.t > 1.4) {
+      e.stage = 'walk';
+      e.t = 0;
+    }
+    if (e.stage === 'walk' && !this.drag) {
+      const next = e.path.shift();
+      if (next) return this.endStep(next, 0.32);
+      // devant la capsule : on y glisse la batterie
+      e.stage = 'prime';
+      e.t = 0;
+      this.dir = 'up';
+      this.heroCrouch = 1.2;
+      sfx.door();
+      ui.say(['Tu glisses la batterie dans le logement de l’amorce.', 'La capsule s’éclaire et ronronne.'], () => {
+        // le héros entre dans la capsule
+        const pod = this.map.objects.find((o) => o.id === 'capsule07');
+        e.stage = 'enter';
+        e.t = 0;
+        if (pod) this.endStep([pod.x, pod.y], 1.1);
+      });
+      return;
+    }
+    if (e.stage === 'enter') {
+      this.heroAlpha = Math.max(0, 1 - e.t / 1.1);
+      if (e.t >= 1.1) {
+        this.heroAlpha = 0;
+        e.stage = 'glow';
+        e.t = 0;
+        sfx.success();
+      }
+    }
+    if (e.stage === 'glow' && e.t > 1.8) {
+      this.endSeq = null;
+      ui.say(['Tu t’allonges dans la capsule 07. Pixel est couché à son pied.', ...FINALE], async () => {
+        await ui.playFinale(dogAsleep(), () => { this.blackout = true; });
+        this.locked = false;
+        this.onFinished();
+      });
+    }
+  }
+
 
   private onSignal() {
     if (this.flags.has('signalFound')) return;
@@ -2033,9 +2107,15 @@ export class Game {
     if (this.moving && this.moving.t < 0.75) frame = this.steps % 2 ? 1 : 2;
     else if (this.heroCrouch > 0) frame = 3;
     if (this.rescue || (this.wake && this.wake.stood <= 0)) frame = 5;
+    if (this.endSeq && this.drag && this.endSeq.stage === 'walk') frame = Math.floor(this.time * 7) % 2 ? 1 : 2;
     else if (!this.moving && this.idle > 1.5 && Math.floor(this.time / 0.9) % 2) frame = 4;
     const suit = this.items.has('combinaison');
-    const drawHero = () => c.drawImage(hero(this.dir, frame, suit), Math.round(hx - ox), Math.round(hy - oy) - (frame === 5 ? 0 : 3));
+    const drawHero = () => {
+      if (this.heroAlpha <= 0) return;
+      c.globalAlpha = this.heroAlpha;
+      c.drawImage(hero(this.dir, frame, suit), Math.round(hx - ox), Math.round(hy - oy) - (frame === 5 ? 0 : 3));
+      c.globalAlpha = 1;
+    };
     if (this.pixel) {
       const [px, py] = this.pixelPixel();
       const pdir = this.pixel.dir === 'left' ? 'left' : 'right';
