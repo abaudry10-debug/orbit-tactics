@@ -74,6 +74,8 @@ export interface GameMap {
   decals?: Decal[];
   solidBase?: string; // dessin sous les cases N
   dark?: boolean; // plongé dans le noir : il faut la lampe
+  /** Drapeau qui assèche l'eau toxique (~) de cette carte : elle devient praticable. */
+  dryFlag?: string;
   voidTile?: string; // dessin au-delà des bords (sinon ruines dehors, noir dedans)
 }
 
@@ -126,6 +128,7 @@ function buildLab(): GameMap {
       { id: 'capsuleA', x: 4, y: 2, sprite: 'capsuleFrost', script: 'capsuleFrost' },
       { id: 'capsuleB', x: 6, y: 2, sprite: 'capsuleFrost', script: 'capsuleFrost' },
       { id: 'terminal', x: 9, y: 2, sprite: 'terminal', script: 'terminal' },
+      { id: 'heatAlert', x: 8, y: 1, sprite: 'heatAlert', script: 'heatAlert' },
       { id: 'register', x: 8, y: 6, sprite: 'book', script: 'register' },
       { id: 'locker', x: 10, y: 6, sprite: 'locker', spriteWhen: ['badge', 'lockerOpen'], script: 'locker' },
       { id: 'deadTerminal', x: 1, y: 7, sprite: 'terminalOff', script: 'deadTerminal' },
@@ -150,6 +153,7 @@ function buildVesper(): GameMap {
 
   b.rect(3, 1, 9, 5, '#'); // laboratoire, entrée en (7,5)
   b.rect(25, 1, 12, 5, '~').rect(27, 6, 8, 1, '~').rect(24, 2, 1, 3, '~'); // lac toxique
+  b.rect(29, 1, 4, 2, 'K'); // abri de chantier, au milieu du lac : porte en (30,2)
   b.rect(3, 13, 7, 4, '#').rect(11, 13, 5, 3, '#').rect(25, 13, 4, 3, '#');
   b.rect(31, 12, 7, 4, '#'); // centre de recherche, porte en (34,15)
   b.rect(3, 24, 5, 3, '#');
@@ -172,7 +176,10 @@ function buildVesper(): GameMap {
     width: b.width,
     height: b.height,
     rows: b.rows,
+    dryFlag: 'pondDry',
     objects: [
+      { id: 'chantierDoor', x: 30, y: 2, sprite: 'shackDoor', door: { to: 'chantier', x: 4, y: 4, dir: 'up' } },
+      { id: 'chantierSign', x: 23, y: 6, sprite: 'sign', script: 'chantierSign' },
       { id: 'labEntrance', x: 7, y: 5, sprite: 'labDoorOpen', script: 'labEntrance', door: { to: 'lab', x: 5, y: 8, dir: 'up' } },
       { id: 'signVesper', x: 9, y: 7, sprite: 'sign', script: 'signVesper' },
       { id: 'thermo', x: 13, y: 12, sprite: 'thermometer', script: 'thermometer' },
@@ -506,6 +513,21 @@ function buildSpatioportInt(): GameMap {
   };
 }
 
+// ---------- Abri de chantier, au milieu du lac toxique ----------
+function buildChantier(): GameMap {
+  const b = new Builder(9, 6, 'w');
+  b.border('K').rect(1, 1, 7, 1, 'K');
+  return {
+    id: 'chantier', name: 'Abri de chantier', outdoor: false, width: b.width, height: b.height, rows: b.rows,
+    objects: [
+      { id: 'suitLocker', x: 2, y: 2, sprite: 'locker', spriteWhen: ['suitTaken', 'lockerOpen'], script: 'suitLocker' },
+      { id: 'workerNote', x: 5, y: 2, sprite: 'note', script: 'workerNote' },
+      { id: 'chantierCrate', x: 7, y: 3, sprite: 'crate', script: 'chantierCrate' },
+      { id: 'chantierExit', x: 4, y: 5, sprite: 'labDoorOpen', door: { to: 'vesper', x: 30, y: 3, dir: 'down' } },
+    ],
+  };
+}
+
 // ---------- Laboratoire de culture, derrière le hangar ----------
 function buildCulture(): GameMap {
   const b = new Builder(12, 9, '=');
@@ -541,6 +563,7 @@ export const MAPS: Record<string, GameMap> = {
   observatoire: buildObservatoire(),
   spatioportInt: buildSpatioportInt(),
   culture: buildCulture(),
+  chantier: buildChantier(),
 };
 
 export const START = { map: 'lab', x: 2, y: 3, dir: 'down' as Dir };

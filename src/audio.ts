@@ -447,3 +447,54 @@ export function playEnding(): () => void {
     fb.gain.setTargetAtTime(0, t, 0.3);
   };
 }
+
+// ---------- vagues de chaleur : sirène lointaine et grondement ----------
+let heatNodes: { siren: GainNode; rumble: GainNode } | null = null;
+
+/** siren, rumble : 0 à 1. Crée les sons à la première demande, puis ne fait que régler leur volume. */
+export function setHeatSound(siren: number, rumble: number) {
+  if (!ac) return;
+  if (!heatNodes) {
+    if (siren <= 0 && rumble <= 0) return;
+    // la sirène : une plainte qui monte et descend, étouffée par la distance
+    const o = ac.createOscillator();
+    o.type = 'triangle';
+    o.frequency.value = 520;
+    const lfo = ac.createOscillator();
+    lfo.frequency.value = 0.22;
+    const lfoGain = ac.createGain();
+    lfoGain.gain.value = 150;
+    lfo.connect(lfoGain).connect(o.frequency);
+    const lp = ac.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 1100;
+    const sg = ac.createGain();
+    sg.gain.value = 0;
+    o.connect(lp).connect(sg).connect(sfxBus);
+    // le grondement de la chaleur : un souffle très grave
+    const s = ac.createBufferSource();
+    s.buffer = noiseBuf;
+    s.loop = true;
+    const rf = ac.createBiquadFilter();
+    rf.type = 'lowpass';
+    rf.frequency.value = 220;
+    const rg = ac.createGain();
+    rg.gain.value = 0;
+    s.connect(rf).connect(rg).connect(sfxBus);
+    o.start();
+    lfo.start();
+    s.start();
+    heatNodes = { siren: sg, rumble: rg };
+  }
+  const t = ac.currentTime;
+  heatNodes.siren.gain.setTargetAtTime(0.05 * siren, t, 0.4);
+  heatNodes.rumble.gain.setTargetAtTime(0.16 * rumble, t, 0.4);
+}
+
+/** Battement de cœur sourd, quand la chaleur devient dangereuse. */
+export function heartbeat(vol = 1) {
+  if (!ac) return;
+  const t = now();
+  tone(sfxBus, 'sine', 62, t, 0.12, 0.16 * vol, { glide: 40 });
+  tone(sfxBus, 'sine', 58, t + 0.2, 0.14, 0.12 * vol, { glide: 38 });
+}

@@ -1,5 +1,5 @@
 // Cœur du jeu : état du personnage, déplacements case par case, interactions, rendu.
-import { playTheme, sfx } from './audio.js';
+import { heartbeat, playTheme, setHeatSound, sfx } from './audio.js';
 import { heldDir, releaseAll } from './input.js';
 import { MAPS, START, SOLID, charAt, type GameMap, type MapObject } from './maps.js';
 import { T, bigTree, cutout, dish, dogSprite, iconCanvas, dogAsleep, type DogLook, frozenTrain, hash, hero, radioTower, shuttleWreck, solarTower, tile, type Dir } from './sprites.js';
@@ -8,6 +8,9 @@ import * as ui from './ui.js';
 
 /** Taille de la vue en pixels de jeu ; recalculée selon l'écran (voir main.ts). */
 export const view = { w: 12 * T, h: 16 * T, padBottom: 0 }; // padBottom : zone cachée par les commandes
+const HEAT_WARN = 17;
+const HEAT_WAVE = 24;
+const HEAT_FADE = 4;
 const MOVE_TIME = 0.19; // secondes pour traverser une case
 const SAVE_KEY = 'vesper-save-v2';
 
@@ -42,11 +45,11 @@ interface Follower {
 }
 
 /** Ce que fait Pixel quand il ne se contente pas de suivre. */
-type PixelMode = 'follow' | 'come' | 'sit' | 'pet' | 'rest' | 'fetch' | 'dig' | 'cut';
+type PixelMode = 'follow' | 'come' | 'sit' | 'pet' | 'rest' | 'fetch' | 'dig' | 'cut' | 'rescue';
 
 /** Petits effets dessinés dans le monde : cœurs, « z », reflets de soleil, poussière, l'écrou lancé. */
 interface Fx {
-  kind: 'heart' | 'z' | 'spark' | 'dust' | 'smoke' | 'zap';
+  kind: 'heart' | 'z' | 'spark' | 'dust' | 'smoke' | 'zap' | 'steam' | 'ember';
   x: number;
   y: number;
   vx: number;
@@ -85,12 +88,32 @@ export class Game {
   private fxTimer = 0;
   // ---- effets visuels ----
   /** Empreintes dans le sable, qui s'effacent peu à peu. */
-  private prints: { x: number; y: number; dir: Dir; life: number }[] = [];
+  private prints: { x: number; y: number; dir: Dir; life: number; drag?: boolean }[] = [];
   /** Objet ramassé ou indice trouvé : une petite animation au-dessus du héros. */
   private pop: { kind: 'item' | 'clue'; id: string; t: number } | null = null;
   /** Scène où Pixel passe par un endroit où l'on ne peut pas aller. */
   private cut: { kind: 'pixelFlap' | 'pixelVent' | 'pixelPower'; obj: MapObject; stage: 'go' | 'act' | 'back'; t: number; snd: number; then?: () => void } | null = null;
   private smokeTimer = 0;
+  // ---- vagues de chaleur ----
+  heatPhase: 'none' | 'warn' | 'wave' | 'fade' = 'none';
+  heatT = 0;
+  heatKind = '';
+  private heatStrength = 1;
+  heatGauge = 0;
+  private outdoorTime = 0;
+  private outdoorSteps = 0;
+  cycleTimer = 200;
+  private heatSaid = false;
+  private beatTimer = 0;
+  private heatSoundTimer = 0;
+  private steamTimer = 0;
+  /** Sauvetage : Pixel traîne le héros évanoui jusqu'à l'abri le plus proche. */
+  private rescue: {
+    stage: 'fall' | 'fetch' | 'drag' | 'out'; t: number; path: [number, number][]; i: number; max: number;
+    door: MapObject | null; quick: boolean;
+  } | null = null;
+  private drag: { fx: number; fy: number; t: number; dur: number } | null = null;
+  private wake: { t: number; first: boolean; stood: number } | null = null;
   private saveTimer = 0;
   private bumpCooldown = 0;
   private beepTimer = 0;
@@ -198,7 +221,14 @@ export class Game {
       if (obj.passWhen) return !this.flags.has(obj.passWhen);
       return true;
     }
-    return SOLID.has(charAt(this.map, x, y));
+    return this.solidChar(x, y);
+  }
+
+  /** Case pleine (mur, eau…) ; l'eau toxique asséchée devient praticable. */
+  private solidChar(x: number, y: number): boolean {
+    const ch = charAt(this.map, x, y);
+    if (ch === '~' && this.map.dryFlag && this.flags.has(this.map.dryFlag)) return false;
+    return SOLID.has(ch);
   }
 
   doorOpen(obj: MapObject): boolean {
@@ -223,6 +253,7 @@ export class Game {
     }
     this.updateDetector(dt);
     this.updatePixel(dt);
+    this.updateHeat(dt);
 
     if (this.moving) {
       this.moving.t += dt / MOVE_TIME;
@@ -283,6 +314,7 @@ export class Game {
       p.y = this.y;
     }
     this.moving = { fx: this.x, fy: this.y, t: 0 };
+    if (this.map.outdoor) this.outdoorSteps += 1;
     if (this.map.outdoor) {
       const ground = charAt(this.map, this.x, this.y);
       if (ground === 'S' || ground === '.') {
@@ -311,7 +343,12 @@ export class Game {
       this.pixelMode = 'follow';
       this.nut = null;
       this.idle = 0;
+      this.outdoorTime = 0;
       if (this.flags.has('pixelOn')) this.placePixelBehind();
+      if (mapId === 'vesper' && this.flags.has('pondDry') && !this.flags.has('pondSeen')) {
+        this.flags.add('pondSeen');
+        ui.say(['Le lac toxique… il s’est évaporé pendant la vague.', 'Il ne reste qu’une vase craquelée. On peut passer à pied jusqu’à l’abri de chantier.']);
+      }
       ui.showPlace(this.map.name);
       this.startMusic();
       this.save();
@@ -377,7 +414,7 @@ export class Game {
     if (x < 0 || y < 0 || x >= this.map.width || y >= this.map.height) return false;
     if (!allowHero && x === this.x && y === this.y) return false;
     if (this.objAt(x, y)) return false;
-    return !SOLID.has(charAt(this.map, x, y));
+    return !this.solidChar(x, y);
   }
 
   /** Plus court chemin (quelques cases au plus) pour Pixel. */
@@ -584,7 +621,8 @@ export class Game {
     if (this.pixelMode === 'pet' && this.pixelTimer <= 0) this.pixelMode = 'sit';
     if (this.pixelMode === 'dig' && this.pixelTimer <= 0) this.pixelMode = this.idle > 2.5 ? 'sit' : 'follow';
     if (this.pixelMode === 'follow' && !p.walk && !this.moving && !this.busy && this.idle > 2.5) this.pixelCome();
-    if (this.pixelMode === 'sit' && !this.map.dark && this.idle > 9) this.pixelMode = 'rest';
+    if (this.pixelMode === 'sit' && !this.map.dark && this.idle > 9 && this.heatPhase === 'none') this.pixelMode = 'rest';
+    if (this.pixelMode === 'rest' && this.heatPhase !== 'none' && this.map.outdoor) this.pixelMode = 'sit';
 
     // petits effets
     if (this.pixelMode === 'dig' && this.fxTimer <= 0) {
@@ -624,6 +662,23 @@ export class Game {
     const happy = this.atPixelHome();
     const wag = happy ? Math.floor(t * 11) % 2 : Math.floor(t * 2.2) % 2 ? 1 : 2;
     const eye = t % 3.7 < 0.12 ? 'closed' : dark ? 'wide' : 'on';
+    if (this.rescue) {
+      const flick = Math.floor(t * 7) % 3 === 0 ? 'closed' : 'wide';
+      if (this.rescue.stage === 'drag') return { pose: 'stand', frame: Math.floor(t * (this.rescue.quick ? 14 : 6)) % 4, eye: flick, tail: 3, earsDown: true };
+      if (p.walk) return { pose: 'stand', frame: Math.floor(t * 16) % 4, eye: 'wide', tail: 3, earsDown: true };
+      return { pose: 'sit', eye: 'wide', tail: 3, earsDown: true };
+    }
+    if (this.wake) {
+      // épuisé, couché ; son œil vacille, puis se rallume
+      const recovering = this.wake.stood > 0 && this.wake.t > this.wake.stood + 1.2;
+      return { pose: 'lie', eye: recovering ? (t % 2 < 0.15 ? 'closed' : 'on') : Math.floor(t * 3) % 4 === 0 ? 'on' : 'closed', tail: 2 };
+    }
+    if (this.map.outdoor && (this.heatPhase === 'warn' || this.heatPhase === 'wave')) {
+      // la chaleur l'affole : oreilles basses, queue rentrée, l'œil écarquillé
+      if (p.walk || (this.moving && p.moving)) return { pose: 'stand', frame: Math.floor(t * 10) % 4, eye: 'wide', tail: 3, earsDown: true };
+      if (this.pixelMode === 'pet') return { pose: 'sit', eye: 'happy', tail: 2, earsDown: true };
+      return { pose: this.pixelMode === 'sit' || this.pixelMode === 'come' ? 'sit' : 'stand', eye: t % 1.6 < 0.1 ? 'closed' : 'wide', tail: 3, earsDown: true };
+    }
     if (this.cut?.stage === 'act' && this.cut.kind === 'pixelPower') {
       return { pose: 'sit', eye: this.cut.t > 1.6 ? 'closed' : 'wide', tail: 2, earsDown: true };
     }
@@ -646,12 +701,70 @@ export class Game {
     return { pose: 'stand', frame, eye, tail: moving ? Math.floor(t * 8) % 2 : wag };
   }
 
+  /** La vague à l'écran : ciel qui rougit, éblouissement, air qui ondule, thermomètre, éclair blanc. */
+  private renderHeat() {
+    const c = this.ctx;
+    const outside = this.map.outdoor && !this.map.dark;
+    const k = this.heatK();
+    if (k > 0 && outside) {
+      c.fillStyle = `rgba(255,70,20,${0.22 * k})`;
+      c.fillRect(0, 0, view.w, view.h);
+      const g = c.createRadialGradient(view.w * 0.85, 0, 0, view.w * 0.85, 0, view.h * 0.9);
+      g.addColorStop(0, `rgba(255,245,210,${0.5 * k})`);
+      g.addColorStop(1, 'rgba(255,245,210,0)');
+      c.fillStyle = g;
+      c.fillRect(0, 0, view.w, view.h);
+      // l'air qui ondule : des bandes de l'image décalées
+      const amp = k * 1.7;
+      for (let y = 0; y < view.h; y += 2) {
+        const off = Math.round(Math.sin(y * 0.11 + this.time * 7) * amp);
+        if (off) c.drawImage(c.canvas, 0, y, view.w, 2, off, y, view.w, 2);
+      }
+      if (this.heatPhase === 'wave') {
+        const pulse = 0.06 + 0.05 * Math.sin(this.time * 5);
+        c.fillStyle = `rgba(255,220,160,${pulse})`;
+        c.fillRect(0, 0, view.w, view.h);
+      }
+    } else if (k > 0) {
+      c.fillStyle = `rgba(255,90,30,${0.07 * k})`; // dedans, une lueur chaude passe sous les portes
+      c.fillRect(0, 0, view.w, view.h);
+    }
+    // l'éclair blanc quand le héros s'effondre
+    if (this.rescue?.stage === 'fall') {
+      const a = Math.max(0, 1 - this.rescue.t / (this.rescue.quick ? 0.5 : 1.2));
+      c.fillStyle = `rgba(255,250,235,${a})`;
+      c.fillRect(0, 0, view.w, view.h);
+    }
+    // thermomètre de chaleur
+    if ((this.heatPhase !== 'none' && outside) || this.heatGauge > 0.01) {
+      const x = view.w - 12, y = 8, h = 30;
+      const danger = this.heatGauge > 0.7 && Math.floor(this.time * 6) % 2 === 0;
+      c.fillStyle = '#14101c';
+      c.fillRect(x - 1, y - 1, 7, h + 2);
+      c.fillRect(x - 3, y + h - 1, 11, 9);
+      c.fillStyle = '#efe6d2';
+      c.fillRect(x, y, 5, h);
+      c.fillRect(x - 2, y + h, 9, 7);
+      const fillH = Math.round(h * Math.min(1, this.heatGauge));
+      c.fillStyle = danger ? '#ffef9a' : '#e8442c';
+      c.fillRect(x + 1, y + h - fillH, 3, fillH);
+      c.fillRect(x - 1, y + h + 1, 7, 5);
+      c.fillStyle = 'rgba(255,255,255,0.6)';
+      c.fillRect(x + 1, y + 1, 1, h - 2);
+      if (this.items.has('combinaison')) {
+        c.fillStyle = '#c9ced6';
+        c.fillRect(x - 6, y + 2, 3, 3);
+      }
+    }
+  }
+
   /** Une case qui fait de l'ombre : mur, décor plein, objet qui bloque (pas les portes). */
   private castsShadow(x: number, y: number): boolean {
     if (x < 0 || y < 0 || x >= this.map.width || y >= this.map.height) return false;
     const obj = this.objAt(x, y);
     if (obj) return !obj.door && !obj.passWhen;
-    return SOLID.has(charAt(this.map, x, y));
+    if (charAt(this.map, x, y) === '~') return false; // l'eau ne fait pas d'ombre
+    return this.solidChar(x, y);
   }
 
   /**
@@ -702,6 +815,11 @@ export class Game {
     for (const pr of this.prints) {
       c.fillStyle = `rgba(90,50,20,${Math.min(0.35, pr.life / 9 * 0.35)})`;
       const sx = pr.x * T - ox, sy = pr.y * T - oy;
+      if (pr.drag) {
+        c.fillStyle = `rgba(80,45,20,${Math.min(0.4, (pr.life / 12) * 0.4)})`;
+        c.fillRect(sx + 3, sy + 7, 10, 3);
+        continue;
+      }
       if (pr.dir === 'left' || pr.dir === 'right') {
         c.fillRect(sx + 4, sy + 9, 2, 1);
         c.fillRect(sx + 9, sy + 12, 2, 1);
@@ -874,6 +992,15 @@ export class Game {
         c.globalAlpha = 0.28 * (1 - age);
         c.fillStyle = '#5a5560';
         c.fillRect(x - (size >> 1), y - (size >> 1), size, size);
+      } else if (f.kind === 'steam') {
+        const age = 1 - f.life / f.max;
+        const size = 1 + Math.floor(age * 4);
+        c.globalAlpha = 0.45 * (1 - age);
+        c.fillStyle = '#f2f4f8';
+        c.fillRect(x - (size >> 1), y - (size >> 1), size, size);
+      } else if (f.kind === 'ember') {
+        c.fillStyle = Math.random() < 0.3 ? '#fff0a0' : '#ff8a3d';
+        c.fillRect(x, y, 1, 1);
       } else if (f.kind === 'zap') {
         c.fillStyle = Math.random() < 0.5 ? '#ffffff' : '#5ef0ff';
         c.fillRect(x, y, 1, 1);
@@ -893,6 +1020,293 @@ export class Game {
       c.fillRect(Math.round(x - ox) - 2, Math.round(y - oy) - 2, 4, 4);
       c.fillStyle = '#c3c9d3';
       c.fillRect(Math.round(x - ox) - 1, Math.round(y - oy) - 1, 2, 2);
+    }
+  }
+
+  // ---------- vagues de chaleur ----------
+  /** Intensité visuelle de la vague, de 0 à 1. */
+  heatK(): number {
+    const t = this.heatT;
+    let k = 0;
+    if (this.heatPhase === 'warn') k = 0.12 + 0.45 * (t / HEAT_WARN);
+    else if (this.heatPhase === 'wave') k = 0.6 + 0.4 * Math.min(1, t / 3);
+    else if (this.heatPhase === 'fade') k = 0.6 * (1 - t / HEAT_FADE);
+    return Math.max(0, Math.min(1, k * (0.75 + 0.25 * this.heatStrength)));
+  }
+
+  private startHeat(kind: string, strength: number) {
+    this.heatPhase = 'warn';
+    this.heatT = 0;
+    this.heatKind = kind;
+    this.heatStrength = strength;
+    this.heatSaid = false;
+    if (this.pixelMode === 'rest') this.pixelMode = 'sit';
+    if (this.pixel) sfx.pixelWhine();
+  }
+
+  private maybeStartHeat(dt: number) {
+    if (this.heatPhase !== 'none' || !this.map.outdoor || this.cut || this.rescue || this.wake || this.fetch) return;
+    const f = this.flags;
+    if (this.map.id === 'vesper' && f.has('firstOutside') && !f.has('wave1Done') && this.outdoorSteps >= 6) return this.startHeat('wave1', 0.55);
+    if (f.has('pixelOn') && !f.has('wave2Done') && this.outdoorTime > 6) return this.startHeat('wave2', 0.8);
+    if (f.has('readLeaDiary') && f.has('wave2Done') && !f.has('wave3Done') && this.outdoorTime > 6) return this.startHeat('wave3', 0.85);
+    if (f.has('heliosOn')) {
+      this.cycleTimer -= dt;
+      if (this.cycleTimer <= 0) {
+        this.cycleTimer = 180 + Math.random() * 60;
+        this.startHeat('cycle', 1);
+      }
+    }
+  }
+
+  private endHeat() {
+    const kind = this.heatKind;
+    this.heatPhase = 'none';
+    this.heatT = 0;
+    if (kind === 'wave1' || kind === 'wave2' || kind === 'wave3') this.flags.add(`${kind}Done`);
+    if (kind === 'wave2') {
+      this.flags.add('pondDry');
+      if (this.map.id === 'vesper' && this.map.outdoor) {
+        this.flags.add('pondSeen');
+        ui.say(['La vague est passée… Le lac toxique s’est évaporé !', 'Il ne reste qu’une vase craquelée. On peut passer à pied jusqu’à l’abri de chantier.']);
+      }
+    }
+    this.save();
+  }
+
+  /** À l'ombre d'un mur ou d'un bâtiment (la case juste au-dessus est un mur). */
+  private inShade(): boolean {
+    return ['#', 'K', 'X', 'Y', 'W', 'N'].includes(charAt(this.map, this.x, this.y - 1));
+  }
+
+  private updateHeat(dt: number) {
+    if (this.rescue) this.updateRescue(dt);
+    if (this.wake) this.updateWake(dt);
+    const frozen = this.busy;
+    const outside = this.map.outdoor && !this.map.dark;
+    if (!frozen) {
+      if (outside) this.outdoorTime += dt;
+      this.maybeStartHeat(dt);
+      if (this.heatPhase !== 'none') {
+        this.heatT += dt;
+        if (this.heatPhase === 'warn' && this.heatT >= HEAT_WARN) { this.heatPhase = 'wave'; this.heatT = 0; }
+        else if (this.heatPhase === 'wave' && this.heatT >= HEAT_WAVE) { this.heatPhase = 'fade'; this.heatT = 0; }
+        else if (this.heatPhase === 'fade' && this.heatT >= HEAT_FADE) this.endHeat();
+      }
+    }
+    // la jauge : elle monte au soleil pendant la vague, redescend à l'abri
+    if (this.heatPhase === 'wave' && outside && !frozen && !this.rescue) {
+      let rate = 0.085 * this.heatStrength;
+      if (this.items.has('combinaison')) rate *= this.flags.has('heliosOn') ? 0.75 : 0.35;
+      if (this.inShade()) rate *= 0.5;
+      this.heatGauge += rate * dt;
+    } else if (!this.rescue && (!frozen || !outside)) {
+      this.heatGauge = Math.max(0, this.heatGauge - (outside ? 0.1 : 0.3) * dt);
+    }
+    if (this.heatKind === 'wave1' || !this.pixel) {
+      // pas encore de Pixel pour te ramener : on ne peut pas s'évanouir
+      this.heatGauge = Math.min(this.heatGauge, 0.93);
+      if (this.heatKind === 'wave1' && this.heatGauge > 0.7 && !this.heatSaid && !frozen) {
+        this.heatSaid = true;
+        ui.say(['Il fait trop chaud… Je dois rentrer au labo, vite !']);
+      }
+    }
+    if (this.heatGauge >= 1 && this.pixel && !this.rescue && !frozen) this.startRescue();
+    // le cœur qui cogne
+    if (this.heatGauge > 0.55 && !this.rescue) {
+      this.beatTimer -= dt;
+      if (this.beatTimer <= 0) {
+        this.beatTimer = 1.15 - this.heatGauge * 0.5;
+        heartbeat(this.heatGauge);
+      }
+    }
+    // sons
+    this.heatSoundTimer -= dt;
+    if (this.heatSoundTimer <= 0) {
+      this.heatSoundTimer = 0.2;
+      const muffle = outside ? 1 : 0.35;
+      let siren = 0, rumble = 0;
+      if (this.heatPhase === 'warn') { siren = 0.35 + 0.65 * (this.heatT / HEAT_WARN); rumble = 0.4 * (this.heatT / HEAT_WARN); }
+      else if (this.heatPhase === 'wave') { siren = Math.max(0, 0.6 - this.heatT / 10); rumble = 1; }
+      else if (this.heatPhase === 'fade') rumble = 1 - this.heatT / HEAT_FADE;
+      setHeatSound(siren * muffle, rumble * muffle);
+    }
+    // vapeur sur le lac pendant la vague qui l'assèche, braises dans l'air
+    const k = this.heatK();
+    this.steamTimer -= dt;
+    if (this.steamTimer <= 0 && outside && k > 0.3) {
+      this.steamTimer = 0.08;
+      if (this.heatKind === 'wave2' && this.map.dryFlag && this.heatPhase !== 'warn') {
+        for (let n = 0; n < 6; n++) {
+          const x = this.x + Math.floor(Math.random() * 21) - 10, y = this.y + Math.floor(Math.random() * 15) - 7;
+          if (charAt(this.map, x, y) === '~') {
+            this.fx.push({ kind: 'steam', x: x * T + Math.random() * T, y: y * T + 8, vx: (Math.random() - 0.5) * 6, vy: -10 - Math.random() * 8, life: 1.6, max: 1.6 });
+            break;
+          }
+        }
+      }
+      if (this.heatPhase === 'wave' && Math.random() < 0.6) {
+        this.fx.push({ kind: 'ember', x: this.x * T + (Math.random() - 0.5) * view.w, y: this.y * T + (Math.random() - 0.3) * view.h, vx: 8 + Math.random() * 12, vy: -6 - Math.random() * 10, life: 1.4, max: 1.4 });
+      }
+      // Pixel surchauffe : de la vapeur sort de son panneau
+      if (this.pixel && this.heatPhase === 'wave' && Math.random() < 0.5) {
+        const [px, py] = this.pixelPixel();
+        this.fx.push({ kind: 'steam', x: px + 6 + Math.random() * 4, y: py + 5, vx: (Math.random() - 0.5) * 4, vy: -12, life: 0.8, max: 0.8 });
+      }
+    }
+    // Pixel gémit plus souvent quand la chaleur monte
+    if (this.pixel && outside && this.heatPhase !== 'none' && !this.rescue) {
+      this.whineTimer -= dt;
+      if (this.whineTimer <= 0) {
+        this.whineTimer = this.heatPhase === 'wave' ? 2.5 + Math.random() * 2 : 4 + Math.random() * 3;
+        sfx.pixelWhine();
+      }
+    }
+    this.updateHeatBanner(outside);
+  }
+
+  private updateHeatBanner(outside: boolean) {
+    if (this.rescue || this.wake) return ui.setHeatBanner(null);
+    if (this.heatPhase === 'warn') {
+      const left = Math.ceil(HEAT_WARN - this.heatT);
+      return outside ? ui.setHeatBanner(`⚠ Abrite-toi ! ${left} s`, 'warn') : ui.setHeatBanner('Une sirène, dehors… Reste à l’abri.', 'safe');
+    }
+    if (this.heatPhase === 'wave') return outside ? ui.setHeatBanner('☀ VAGUE DE CHALEUR !', 'wave') : ui.setHeatBanner('À l’abri. La vague passe dehors.', 'safe');
+    if (this.heatPhase === 'none' && this.flags.has('heatForecast') && this.flags.has('heliosOn') && this.cycleTimer < 28 && outside) {
+      return ui.setHeatBanner('Indice de chaleur en hausse…', 'info');
+    }
+    ui.setHeatBanner(null);
+  }
+
+  // ---------- le sauvetage par Pixel ----------
+  private startRescue() {
+    const p = this.pixel!;
+    this.locked = true;
+    releaseAll();
+    this.heatGauge = 1;
+    this.pixelMode = 'rescue';
+    p.walk = null;
+    const quick = this.flags.has('rescued');
+    // l'abri ouvert le plus proche, à pied
+    let best: { path: [number, number][]; door: MapObject } | null = null;
+    for (const o of this.map.objects) {
+      if (!o.door || !this.doorOpen(o) || MAPS[o.door.to]?.outdoor !== false) continue;
+      for (const [dx, dy] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
+        const tx = o.x + dx, ty = o.y + dy;
+        if (this.blocked(tx, ty)) continue;
+        const path = tx === this.x && ty === this.y ? [] : this.pixelPath([this.x, this.y], [tx, ty], true, 80);
+        if (path && (!best || path.length < best.path.length)) best = { path, door: o };
+      }
+    }
+    this.rescue = { stage: 'fall', t: 0, path: best?.path ?? [], i: 0, max: quick ? 5 : 8, door: best?.door ?? null, quick };
+    sfx.bump();
+    heartbeat(1);
+  }
+
+  private updateRescue(dt: number) {
+    const r = this.rescue!;
+    const p = this.pixel!;
+    r.t += dt;
+    if (r.stage === 'fall' && r.t > (r.quick ? 0.6 : 1.8)) {
+      // Pixel accourt : il se place sur la première case du chemin, face au héros
+      r.stage = 'fetch';
+      r.t = 0;
+      const first = r.path[0];
+      if (first && !(p.x === first[0] && p.y === first[1])) {
+        const way = this.pixelPath([p.x, p.y], first, false, 12) ?? [first];
+        this.walkPixel(way, r.quick ? 8 : 5);
+      }
+    }
+    if (r.stage === 'fetch' && !p.walk && r.t > (r.quick ? 0.1 : 0.5)) {
+      r.stage = 'drag';
+      r.t = 0;
+      r.i = 0;
+      if (!r.path.length) r.stage = 'out';
+      else this.dragStep();
+    }
+    if (r.stage === 'drag') {
+      const d = this.drag;
+      if (d) {
+        d.t += dt / d.dur;
+        if (d.t >= 1) {
+          this.drag = null;
+          r.i += 1;
+          if (r.i >= r.path.length || r.i >= r.max) r.stage = 'out';
+          else this.dragStep();
+        }
+      }
+    }
+    if (r.stage === 'out' && r.t >= 0) {
+      r.t = -999; // une seule fois
+      const door = r.door;
+      ui.fade(() => {
+        const to = door?.door ? door.door : { to: 'lab', x: 5, y: 8, dir: 'up' as Dir };
+        this.map = MAPS[to.to];
+        this.x = to.x;
+        this.y = to.y;
+        this.dir = 'down';
+        this.moving = null;
+        this.drag = null;
+        this.outdoorTime = 0;
+        this.heatGauge = 0;
+        // Pixel s'effondre à côté du héros
+        const spots: [number, number][] = [[this.x + 1, this.y], [this.x - 1, this.y], [this.x, this.y - 1], [this.x, this.y + 1]];
+        const spot = spots.find(([x, y]) => this.pixelFree(x, y)) ?? [this.x, this.y];
+        this.pixel = { x: spot[0], y: spot[1], dir: spot[0] < this.x ? 'right' : 'left', moving: null };
+        this.prints = [];
+        ui.showPlace(this.map.name);
+        this.startMusic();
+        this.rescue = null;
+        this.wake = { t: 0, first: !r.quick, stood: -1 };
+      });
+    }
+  }
+
+  /** Un pas du sauvetage : Pixel recule d'une case en tirant, le héros glisse derrière lui. */
+  private dragStep() {
+    const r = this.rescue!;
+    const p = this.pixel!;
+    const to = r.path[r.i];
+    const dur = r.quick ? 0.17 : 0.6;
+    // traînée dans la poussière
+    this.prints.push({ x: this.x, y: this.y, dir: this.dir, life: 12, drag: true });
+    this.drag = { fx: this.x, fy: this.y, t: 0, dur };
+    this.x = to[0];
+    this.y = to[1];
+    const next = r.path[r.i + 1] ?? (r.door ? [r.door.x, r.door.y] as [number, number] : null);
+    if (next) {
+      p.walk = { from: [p.x, p.y], path: [next], t: 0, speed: 1 / dur };
+      p.dir = next[0] > p.x ? 'left' : next[0] < p.x ? 'right' : this.x > p.x ? 'right' : 'left'; // il recule, la tête vers le héros
+    }
+    for (let n = 0; n < 2; n++)
+      this.fx.push({ kind: 'dust', x: this.x * T + 4 + Math.random() * 8, y: this.y * T + 13, vx: (Math.random() - 0.5) * 20, vy: -12, life: 0.4, max: 0.4 });
+  }
+
+  private updateWake(dt: number) {
+    const w = this.wake!;
+    w.t += dt;
+    if (w.stood < 0 && w.t > 1.6 && !ui.dialogOpen()) {
+      const stand = () => {
+        this.wake!.stood = this.wake!.t;
+        this.locked = false;
+      };
+      if (w.first) {
+        w.stood = 0; // en attente du dialogue
+        ui.say(
+          ['…', 'J’ai perdu connaissance. Il faisait si chaud…', 'Pixel m’a traîné jusqu’ici, à l’abri.', 'Il est à bout de forces. Son œil vacille.'],
+          () => { this.wake!.stood = this.wake!.t; this.locked = false; },
+        );
+      } else {
+        ui.toast('Pixel t’a ramené à l’abri.');
+        stand();
+      }
+    }
+    if (w.stood > 0 && w.t > w.stood + 2.6) {
+      this.wake = null;
+      this.pixelMode = 'follow';
+      this.flags.add('rescued');
+      sfx.pixelHappy();
+      this.save();
     }
   }
 
@@ -1375,7 +1789,9 @@ export class Game {
       case '"': return 'grass';
       case ',': return 'asphalt';
       case '-': return 'road';
-      case '~': return Math.floor(this.time * 1.6 + (x + y) * 0.35) % 2 ? 'toxic1' : 'toxic0';
+      case '~':
+        if (m.dryFlag && this.flags.has(m.dryFlag)) return 'mud';
+        return Math.floor(this.time * 1.6 + (x + y) * 0.35) % 2 ? 'toxic1' : 'toxic0';
       case '*': return 'rubble';
       case '|': return 'fence';
       case 'T': return 'tree';
@@ -1400,6 +1816,10 @@ export class Game {
   }
 
   heroPixel(): [number, number] {
+    if (this.drag) {
+      const t = Math.min(1, this.drag.t);
+      return [(this.drag.fx + (this.x - this.drag.fx) * t) * T, (this.drag.fy + (this.y - this.drag.fy) * t) * T];
+    }
     if (!this.moving) return [this.x * T, this.y * T];
     const t = Math.min(1, this.moving.t);
     return [(this.moving.fx + (this.x - this.moving.fx) * t) * T, (this.moving.fy + (this.y - this.moving.fy) * t) * T];
@@ -1495,8 +1915,10 @@ export class Game {
     let frame = 0;
     if (this.moving && this.moving.t < 0.75) frame = this.steps % 2 ? 1 : 2;
     else if (this.heroCrouch > 0) frame = 3;
+    if (this.rescue || (this.wake && this.wake.stood <= 0)) frame = 5;
     else if (!this.moving && this.idle > 1.5 && Math.floor(this.time / 0.9) % 2) frame = 4;
-    const drawHero = () => c.drawImage(hero(this.dir, frame), Math.round(hx - ox), Math.round(hy - oy) - 3);
+    const suit = this.items.has('combinaison');
+    const drawHero = () => c.drawImage(hero(this.dir, frame, suit), Math.round(hx - ox), Math.round(hy - oy) - (frame === 5 ? 0 : 3));
     if (this.pixel) {
       const [px, py] = this.pixelPixel();
       const pdir = this.pixel.dir === 'left' ? 'left' : 'right';
@@ -1516,6 +1938,16 @@ export class Game {
         }
         c.drawImage(dogSprite(pdir, look), dx, dy);
         c.globalAlpha = 1;
+        if (this.rescue?.stage === 'drag') {
+          // l'écharpe tendue entre la gueule de Pixel et le héros
+          const mx = pdir === 'left' ? dx + 1 : dx + 14;
+          c.strokeStyle = '#c0423b';
+          c.lineWidth = 1;
+          c.beginPath();
+          c.moveTo(mx + 0.5, dy + 7.5);
+          c.lineTo(Math.round(hx - ox) + 8.5, Math.round(hy - oy) + 9.5);
+          c.stroke();
+        }
         if (carrying) {
           // l'écrou dans la gueule
           const mx = pdir === 'left' ? dx + 0 : dx + 14;
@@ -1538,6 +1970,7 @@ export class Game {
     this.renderPop(hx - ox, hy - oy);
 
     this.renderAtmosphere();
+    this.renderHeat();
     if (this.map.dark) {
       this.renderDarkness(hx - ox + T / 2, hy - oy + T / 2 - 2);
       // dans le noir, on devine Pixel à la lueur de son œil
@@ -1593,8 +2026,9 @@ export class Game {
   private updateParticles(dt: number) {
     for (let i = 0; i < this.particles.length; i++) {
       const p = this.particles[i];
-      p.x += p.vx * dt;
-      p.y += p.vy * dt + Math.sin(this.time * 2 + i) * 0.05;
+      const gust = 1 + 4 * this.heatK(); // la poussière s'emballe à l'approche d'une vague
+      p.x += p.vx * dt * gust;
+      p.y += p.vy * dt * gust + Math.sin(this.time * 2 + i) * 0.05;
       if (p.x > view.w + 4 || p.y > view.h + 4) this.particles[i] = this.newParticle(false);
     }
   }

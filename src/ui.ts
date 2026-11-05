@@ -1203,3 +1203,19 @@ function keyIcon() {
   c.fillStyle = '#ffffff'; c.fillRect(4, 12, 8, 1);
   return cv;
 }
+
+// ---------- bandeau des vagues de chaleur ----------
+let lastBanner = '';
+export function setHeatBanner(text: string | null, kind: 'warn' | 'wave' | 'safe' | 'info' = 'warn') {
+  const el = $('heat-banner');
+  const key = text ? kind + text : '';
+  if (key === lastBanner) return;
+  lastBanner = key;
+  if (!text) {
+    el.hidden = true;
+    return;
+  }
+  el.textContent = text;
+  el.className = kind;
+  el.hidden = false;
+}

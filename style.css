@@ -1170,3 +1170,29 @@ details.thread > summary.has-new .count { color: var(--accent-dark); }
 #finale-text { transition: opacity 0.8s; }
 
 #dialog-text { white-space: pre-line; }
+
+/* ---------- vagues de chaleur ---------- */
+#heat-banner {
+  position: absolute;
+  top: 46px;
+  left: 0;
+  right: 0;
+  margin: 0 auto;
+  width: fit-content;
+  z-index: 6;
+  max-width: 90%;
+  padding: 3px 10px;
+  border-radius: 6px;
+  border: 2px solid #1c1020;
+  font-size: 18px;
+  line-height: 1.1;
+  text-align: center;
+  white-space: normal;
+  pointer-events: none;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
+}
+#heat-banner.warn { background: #ffcf4a; color: #2a1408; animation: heatPulse 0.8s ease-in-out infinite; }
+#heat-banner.wave { background: #e8442c; color: #fff4e0; animation: heatPulse 0.5s ease-in-out infinite; }
+#heat-banner.safe { background: #2f6f8a; color: #e8fbff; }
+#heat-banner.info { background: #fff0c8; color: #6a3a12; }
+@keyframes heatPulse { 50% { transform: scale(1.06); } }

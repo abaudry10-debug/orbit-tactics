@@ -13,6 +13,13 @@ function arrivals(id: string): [number, number][] {
   return pts;
 }
 
+/** Case pleine ; l'eau asséchée par une vague (dryFlag) devient praticable, comme en fin de partie. */
+const solid = (map: GameMap, x: number, y: number) => {
+  const ch = charAt(map, x, y);
+  if (ch === '~' && map.dryFlag) return false;
+  return SOLID.has(ch);
+};
+
 /** Cases accessibles à pied (portes internes ouvertes, comme en fin de partie). */
 function reachable(map: GameMap, starts: [number, number][]): Set<string> {
   const seen = new Set(starts.map(([x, y]) => `${x},${y}`));
@@ -26,7 +33,7 @@ function reachable(map: GameMap, starts: [number, number][]): Set<string> {
       if (seen.has(k) || nx < 0 || ny < 0 || nx >= map.width || ny >= map.height) continue;
       const obj = objectAt(map, nx, ny);
       if (obj && !obj.passWhen) continue;
-      if (!obj && SOLID.has(charAt(map, nx, ny))) continue;
+      if (!obj && solid(map, nx, ny)) continue;
       seen.add(k);
       stack.push([nx, ny]);
     }
@@ -55,7 +62,7 @@ test('chaque carte est reliée et chaque objet est accessible', () => {
 test('les arrivées sont des cases libres', () => {
   for (const m of Object.values(MAPS)) {
     for (const [x, y] of arrivals(m.id)) {
-      assert.ok(!SOLID.has(charAt(m, x, y)), `${m.id} (${x},${y}) : arrivée dans un mur`);
+      assert.ok(!solid(m, x, y), `${m.id} (${x},${y}) : arrivée dans un mur`);
       assert.equal(objectAt(m, x, y), undefined, `${m.id} (${x},${y}) : arrivée sur un objet`);
     }
   }
@@ -72,7 +79,7 @@ test('la batterie est enterrée dans le sable, sur une case accessible', () => {
 
 test('chaque objet a un script existant, chaque objet du sac est décrit', () => {
   for (const m of Object.values(MAPS)) for (const o of m.objects) if (o.script) assert.ok(SCRIPTS[o.script], o.script);
-  for (const id of ['badge', 'sonde', 'pelle', 'battery', 'matrice', 'lampe', 'capteur', 'noyau', 'antenne']) assert.ok(ITEMS[id], id);
+  for (const id of ['badge', 'sonde', 'pelle', 'battery', 'matrice', 'lampe', 'capteur', 'noyau', 'antenne', 'ecrou', 'combinaison']) assert.ok(ITEMS[id], id);
 });
 
 test('chaque indice, objet et réponse est obtenable', () => {

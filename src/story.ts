@@ -138,6 +138,7 @@ export const ITEMS: Record<string, { name: string; text: string; usable?: boolea
   sonde: { name: 'Sonde Lumen', text: 'Détecte les sources d’énergie proches. Utilise-la pour l’allumer ou l’éteindre.', usable: true },
   pelle: { name: 'Pelle', text: 'Une pelle de jardin, solide. Utilise-la pour creuser là où tu te tiens.', usable: true },
   battery: { name: 'Batterie BS-1', text: 'Prototype de batterie solaire, encore chargée. Il faudrait la brancher sur quelque chose.', usable: true },
+  combinaison: { name: 'Combinaison réfléchissante', text: 'Tu la portes sur toi. Elle ralentit la chaleur des vagues… sans en protéger complètement.' },
   ecrou: { name: 'Écrou mâchouillé', text: 'Le jouet préféré de Pixel. Lance-le devant toi : il ira le chercher.', usable: true },
   matrice: { name: 'Matrice vierge', text: 'Une puce de rechange, vide. Elle sert à copier un esprit pour l’envoyer.' },
   lampe: { name: 'Lampe torche', text: 'La lampe du père de Betti. Elle s’allume d’elle-même dans le noir.' },
@@ -557,6 +558,32 @@ export const SCRIPTS: Record<string, (api: Api) => void> = {
       api.clue('lea2');
     }),
 
+  heatAlert: (api) =>
+    api.say([
+      'Une affiche d’alerte, jaune et noire :',
+      '« VAGUES DE CHALEUR — À la sirène, abritez-vous immédiatement dans un bâtiment. »',
+      '« Ne restez jamais au soleil pendant une vague. L’ombre des murs ne suffit pas longtemps. »',
+    ]),
+  chantierSign: (api) =>
+    api.say(
+      api.has('pondDry')
+        ? ['« CHANTIER — Abri des ouvriers. » La passerelle a fondu, mais le lac s’est évaporé. On peut passer à pied.']
+        : ['« CHANTIER — Abri des ouvriers. Accès par la passerelle. »', 'La passerelle a fondu. L’abri est au milieu de l’eau toxique, inaccessible.'],
+    ),
+  suitLocker: (api) => {
+    if (api.has('suitTaken')) return api.say(['Le casier est vide.']);
+    api.say(['Un casier d’ouvrier. À l’intérieur, une combinaison argentée, intacte.', 'Tu l’enfiles. Elle est légère et renvoie la lumière.'], () => {
+      api.set('suitTaken');
+      api.item('combinaison');
+    });
+  },
+  workerNote: (api) =>
+    api.say([
+      'Une note d’ouvrier, scotchée au mur :',
+      '« Les combinaisons réfléchissantes tiennent un moment au soleil, pas plus. Pendant une vague, filez quand même à l’abri. »',
+      '« Et quand l’étoile sera tout près, plus rien ne tiendra. »',
+    ]),
+  chantierCrate: (api) => api.say(['Des caisses de matériel : casques, gants fondus, une thermos vide.']),
   pixelBasket: (api) => {
     if (api.has('nutTaken')) return api.say(['Le panier de Pixel. Le coussin garde encore sa forme.']);
     api.say(
@@ -651,8 +678,17 @@ export const SCRIPTS: Record<string, (api: Api) => void> = {
 
   obsJournal: (api) =>
     api.say(
-      ['Le journal de l’observatoire, dernière page :', '« L’étoile errante revient. Ce passage-ci sera plus proche que tous les autres. »', '« Plus rien ne survivra en surface. Le programme LAZARE est notre seule chance. »'],
-      () => api.clue('heat7'),
+      [
+        'Le journal de l’observatoire, dernière page :',
+        '« L’étoile errante revient. Ce passage-ci sera plus proche que tous les autres. »',
+        '« Les vagues de chaleur se rapprochent. L’indice monte toujours une demi-minute avant chacune : je le surveille pour avoir le temps de m’abriter. »',
+        '« Plus rien ne survivra en surface. Le programme LAZARE est notre seule chance. »',
+        'Tu sais maintenant lire l’indice de chaleur : tu sentiras venir les prochaines vagues.',
+      ],
+      () => {
+        api.set('heatForecast');
+        api.clue('heat7');
+      },
     ),
 
   // ----- étape 3 : spatioport -----
