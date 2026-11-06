@@ -241,4 +241,16 @@ requestAnimationFrame(loop);
 
 // Hook de test : permet aux captures automatiques de piloter le jeu.
 (window as unknown as { __game: () => Game }).__game = () => game;
-setupDev(() => game, () => title.hidden === true);
+// recommencer un chapitre depuis zéro (sa sauvegarde est effacée, l'autre est gardée)
+const restartChapter = (c: typeof vesper) => () => {
+  ui.confirm(`Recommencer « ${c.title} » depuis le début ? Sa sauvegarde sera effacée.`, () => {
+    pause.hidden = true;
+    setChapter(c);
+    Game.clearSave();
+    startNew();
+  });
+};
+setupDev(() => game, () => title.hidden === true, [
+  { label: 'Chapitre 1 · Vesper', run: restartChapter(vesper) },
+  { label: 'Chapitre 2 · Azura', run: restartChapter(azura) },
+]);

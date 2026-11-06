@@ -44,7 +44,13 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', cls = ''):
   return e;
 }
 
-export function setupDev(getGame: () => Game, inGame: () => boolean) {
+/** Un chapitre qu'on peut recommencer depuis le panneau : son nom et de quoi le relancer. */
+export interface DevRestart {
+  label: string;
+  run(): void;
+}
+
+export function setupDev(getGame: () => Game, inGame: () => boolean, restarts: DevRestart[] = []) {
   // cinq touchers rapides sur le grand titre : active ou coupe le mode
   let taps: number[] = [];
   document.querySelector('#title h1')?.addEventListener('pointerdown', () => {
@@ -129,6 +135,18 @@ export function setupDev(getGame: () => Game, inGame: () => boolean) {
     if (c.features.heatWaves) action(misc, 'Vague de chaleur', () => getGame().startHeat('cycle', 1));
     c.memories.forEach((_, i) => action(misc, `Souvenir ${i + 1}`, () => getGame().replayMemory(i + 1)));
     for (const a of c.dev?.actions ?? []) action(misc, a.label, () => a.run(getGame()));
+
+    if (restarts.length) {
+      const again = section('Recommencer');
+      for (const rs of restarts) {
+        const b2 = el('button', rs.label);
+        b2.addEventListener('click', () => {
+          close();
+          rs.run();
+        });
+        again.append(b2);
+      }
+    }
 
     const end = section('Mode développeur');
     const off = el('button', 'Désactiver');
