@@ -142,47 +142,76 @@ const HOME_CHORDS = [
 ];
 const HOME_TUNE = [72, -1, 69, 72, 74, -1, 72, -1, 69, -1, 67, 69, 65, -1, -1, -1, 69, -1, 67, 69, 70, -1, 69, -1, 65, -1, 67, -1, 65, -1, -1, -1];
 
-// Azura : ré majeur, lumineux et aérien ; un accord de sol mineur glisse un peu de nostalgie.
-const AZ_CHORDS = [
-  [62, 66, 69], // ré
-  [62, 67, 71], // sol
-  [59, 62, 66], // si mineur
-  [61, 64, 69], // la
-  [62, 66, 69], // ré
-  [62, 67, 71], // sol
-  [62, 67, 70], // sol mineur
-  [61, 64, 69], // la
+// Azura : des accords lents qui glissent d'une tonalité à l'autre (ré, si bémol, mi, fa),
+// une quarte augmentée qui flotte, de l'écho, et de temps en temps un signal venu de nulle part.
+const AZ_CHORDS: { bass: number; notes: number[] }[] = [
+  { bass: 38, notes: [62, 66, 68, 73] }, // ré majeur 7, quarte augmentée
+  { bass: 34, notes: [58, 62, 64, 69] }, // si bémol majeur 7, quarte augmentée
+  { bass: 40, notes: [62, 66, 67, 71] }, // mi mineur 9
+  { bass: 41, notes: [60, 64, 69, 71] }, // fa majeur 7, quarte augmentée
 ];
-const AZ_PENTA = [74, 76, 78, 81, 83, 86];
-const AZ_TUNE = [78, -1, 76, 78, 81, -1, 78, -1, 76, -1, 74, -1, 71, -1, -1, -1, 74, -1, 76, 74, 71, -1, 69, -1, 71, -1, 74, -1, 76, -1, -1, -1];
+const AZ_THEME = [73, 0, 0, 0, 71, 0, 68, 0, 0, 0, 0, 0, 66, 0, 0, 0, 69, 0, 0, 0, 64, 0, 62, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+let echoBus: AudioNode | null = null;
+let lastLead = 0;
+
+/** Un écho long et sombre : l'espace. */
+function echo(): AudioNode {
+  if (echoBus || !ac) return echoBus ?? musicBus;
+  const input = ac.createGain();
+  const delay = ac.createDelay(2);
+  delay.delayTime.value = 0.75;
+  const fb = ac.createGain();
+  fb.gain.value = 0.5;
+  const lp = ac.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.frequency.value = 1800;
+  input.connect(delay);
+  delay.connect(lp);
+  lp.connect(fb);
+  fb.connect(delay);
+  lp.connect(musicBus);
+  input.connect(musicBus);
+  echoBus = input;
+  return input;
+}
 
 function scheduleAzura(t: number) {
-  const chord = AZ_CHORDS[Math.floor(step / 8) % AZ_CHORDS.length];
-  if (step % 8 === 0) {
-    for (const n of chord) {
-      tone(musicBus, 'triangle', hz(n - 12), t, STEP * 8, 0.03, { attack: 1.4, release: 1.8, detune: 4 });
-      tone(musicBus, 'sine', hz(n), t, STEP * 8, 0.025, { attack: 1.8, release: 1.8, detune: -5 });
+  const space = echo();
+  const ci = Math.floor(step / 16) % AZ_CHORDS.length;
+  const chord = AZ_CHORDS[ci];
+  if (step % 16 === 0) {
+    const len = STEP * 16;
+    // une nappe filtrée qui respire, et une basse profonde
+    for (const n of chord.notes) {
+      tone(musicBus, 'sawtooth', hz(n - 12), t, len, 0.012, { attack: 3, release: 3, detune: 7, filter: 700 });
+      tone(musicBus, 'sawtooth', hz(n - 12), t, len, 0.012, { attack: 3, release: 3, detune: -7, filter: 700 });
+      tone(space, 'sine', hz(n), t + 0.3, len, 0.018, { attack: 3.5, release: 3 });
     }
-    tone(musicBus, 'sine', hz(chord[0] - 24), t, STEP * 8, 0.1, { attack: 1, release: 1.4 });
+    tone(musicBus, 'sine', hz(chord.bass), t, len, 0.11, { attack: 2, release: 3 });
+    tone(musicBus, 'sine', hz(chord.bass + 12), t, len, 0.03, { attack: 3, release: 3 });
   }
-  // une harpe légère : des notes de la gamme, comme de l'eau qui ruisselle
-  if (step % 2 === 1 && Math.random() > 0.35) {
-    const n = AZ_PENTA[Math.floor(Math.random() * AZ_PENTA.length)];
-    tone(musicBus, 'sine', hz(n), t, 0.5, 0.022, { attack: 0.005, release: 0.45 });
+  // des notes cristallines, très hautes, qui se répondent dans l'écho
+  if (step % 3 === 0 && Math.random() > 0.3) {
+    const n = chord.notes[Math.floor(Math.random() * chord.notes.length)] + 12 * (Math.random() > 0.5 ? 1 : 2);
+    tone(space, 'sine', hz(n), t, 0.6, 0.016, { attack: 0.004, release: 0.55 });
   }
-  // la mélodie revient une fois sur deux
+  // le thème, joué comme un thérémine qui glisse d'une note à l'autre, une phrase sur deux
   if (Math.floor(step / 32) % 2 === 1) {
-    const n = AZ_TUNE[step % AZ_TUNE.length];
-    if (n > 0) {
-      tone(musicBus, 'triangle', hz(n), t, 1.1, 0.04, { attack: 0.03, release: 0.9 });
-      tone(musicBus, 'sine', hz(n + 12), t + 0.4, 0.7, 0.01, { attack: 0.03, release: 0.6 });
+    const n = AZ_THEME[step % AZ_THEME.length];
+    if (n) {
+      const from = lastLead || n;
+      tone(space, 'triangle', hz(from), t, 1.8, 0.028, { attack: 0.25, release: 1.2, glide: hz(n) });
+      lastLead = n;
     }
   }
-  // des oiseaux, de temps en temps
-  if (Math.random() > 0.93) {
-    const f = 2400 + Math.random() * 1600;
-    tone(musicBus, 'sine', f, t, 0.08, 0.012, { glide: f * 1.3, release: 0.06 });
-    tone(musicBus, 'sine', f * 1.1, t + 0.11, 0.07, 0.01, { glide: f * 0.9, release: 0.05 });
+  // des signaux venus de loin : un sonar, un appel, un souffle
+  const roll = Math.random();
+  if (roll > 0.985) {
+    tone(space, 'sine', 1320, t, 0.4, 0.02, { release: 0.38 });
+  } else if (roll > 0.975) {
+    tone(space, 'triangle', 880, t, 1.2, 0.012, { glide: 520, attack: 0.1, release: 0.8, filter: 1400 });
+  } else if (roll > 0.968) {
+    noise(musicBus, t, 3, 0.02, 'bandpass', 300, 1800);
   }
 }
 
@@ -255,7 +284,7 @@ function startAmbience(kind: Theme) {
   s.loop = true;
   const f = ac.createBiquadFilter();
   f.type = kind === 'lab' ? 'lowpass' : 'bandpass';
-  f.frequency.value = kind === 'lab' ? 180 : kind === 'azura' ? 1400 : 500;
+  f.frequency.value = kind === 'lab' ? 180 : kind === 'azura' ? 260 : 500;
   f.Q.value = kind === 'lab' ? 0.7 : 0.9;
   const g = ac.createGain();
   g.gain.value = 0;

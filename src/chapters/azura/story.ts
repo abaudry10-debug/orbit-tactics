@@ -14,16 +14,17 @@ export const THREADS_AZ: Thread[] = [
 
 export const CLUES_AZ: Clue[] = [
   { id: 'az1', thread: 'arrivee', title: 'Le champ des cuves', text: 'Des cuves à perte de vue, toutes ouvertes, toutes vides. La mienne porte le numéro 07.' },
+  { id: 'azPylone', thread: 'arrivee', title: 'Les pylônes', text: 'Des pylônes entourent la colonie. Au-delà, rien ne pousse : un sol violet, des cratères, des cristaux. L’herbe, ici, a été semée.' },
   { id: 'az2', thread: 'arrivee', title: 'Le registre des réveils', text: 'Toutes les cuves : réveil en l’an 0. La cuve 07 : réveil en l’an 11. J’ai dormi onze ans de plus que les autres.' },
   { id: 'az3', thread: 'ville', title: 'Nouvelle-Vesper', text: 'La ville des colons porte le nom de notre planète. Fondée en l’an 0.' },
   { id: 'azEnfant', thread: 'ville', title: 'Né sur Azura', text: 'Un enfant de la ville est né ici. Il n’a jamais vu Vesper.' },
   { id: 'azEtiquette', thread: 'ville', title: 'Une étiquette', text: 'Sur une porte, une étiquette : « PORTE ». Quelqu’un a de l’humour.' },
   { id: 'azIlda', thread: 'ville', title: 'Mme Ilda', text: 'La marchande de fruits m’a souhaité la bienvenue. Deux fois.' },
-  { id: 'azJoss', thread: 'eaux', title: 'La règle de la cloche', text: 'Joss, au bord de la rivière : « Quand la cloche sonne, on monte. Toujours. »' },
+  { id: 'azJoss', thread: 'eaux', title: 'La règle de la sirène', text: 'Joss, au bord de la rivière : « Quand la sirène sonne, on monte. Toujours. »' },
   { id: 'azRepere', thread: 'eaux', title: 'Les repères', text: 'Des poteaux rayés de rouge plantés dans l’eau. La marque la plus haute est au-dessus de ma tête.' },
-  { id: 'az4', thread: 'eaux', title: 'Le tableau des eaux', text: 'Sur la place : « Montée des eaux : 6 h et 18 h. Quand la cloche sonne, montez sur les passerelles. »' },
-  { id: 'az5', thread: 'eaux', title: 'La cloche débranchée', text: 'Tom a débranché la sirène : « Elle sonnait la nuit, pour rien. »' },
-  { id: 'az7', thread: 'eaux', title: 'Le tableau repeint', text: 'Nora a repeint l’horaire du matin : 7 h. Le tableau disait 6 h.' },
+  { id: 'az4', thread: 'eaux', title: 'Le tableau des eaux', text: 'Sur la place : « Montée des eaux : 6 h et 18 h. Quand la sirène sonne, montez sur les passerelles. »' },
+  { id: 'az5', thread: 'eaux', title: 'La sirène débranchée', text: 'Tom a débranché la sirène : « Elle sonnait la nuit, pour rien. »' },
+  { id: 'az7', thread: 'eaux', title: 'Le tableau corrigé', text: 'Nora a corrigé l’horaire du matin sur le tableau : 7 h. Il affichait 6 h.' },
   { id: 'azBetti', thread: 'betti', title: 'Betti', text: 'Elle avait neuf ans au départ ; elle en a vingt. Elle venait voir ma cuve fermée quand elle était petite.' },
   { id: 'azPixel', thread: 'betti', title: 'Le dessin', text: 'Dans l’atelier de Betti, un dessin d’enfant : un chien robot à l’œil bleu. « PIXEL ».' },
   { id: 'azl1', thread: 'leads', title: 'Où sont les autres ?', text: 'Le sentier part vers le sud, au-delà des cuves.', doneWhen: 'bettiMet' },
@@ -37,7 +38,7 @@ export const QUESTIONS_AZ: Question[] = [
   },
   {
     id: 'q-cloche', thread: 'eaux', opensWith: ['azJoss', 'azRepere'], answeredBy: 'az4',
-    ask: 'Que faire quand la cloche sonne ?', answer: 'Monter sur les passerelles, sans attendre. Les eaux montent deux fois par jour.',
+    ask: 'Que faire quand la sirène sonne ?', answer: 'Monter sur les passerelles, sans attendre. Les eaux montent deux fois par jour.',
   },
 ];
 
@@ -66,7 +67,7 @@ export const SCRIPTS_AZ: Record<string, Script> = {
     ),
   cuveLog: (api) =>
     api.say(
-      ['Un petit écran, sur un pied : « REGISTRE DES RÉVEILS ».', 'Cuves 0001 à 4212 : réveil en l’an 0.', 'Cuve 07 : réveil en l’an 11.', 'L’an 11… J’ai dormi onze ans de plus que tous les autres.'],
+      ['Un écran de lumière flotte au-dessus d’une borne : « REGISTRE DES RÉVEILS ».', 'Cuves 0001 à 4212 : réveil en l’an 0.', 'Cuve 07 : réveil en l’an 11.', 'L’an 11… J’ai dormi onze ans de plus que tous les autres.'],
       () => api.clue('az2'),
     ),
 
@@ -79,9 +80,9 @@ export const SCRIPTS_AZ: Record<string, Script> = {
     if (api.has('jossTalk')) return api.say(['« La pêche est bonne, aujourd’hui. L’eau est claire. »']);
     api.say(
       [
-        'Un homme pêche au bord de la rivière. Il lève la tête.',
         '« Tiens ! Un nouveau ? Je m’appelle Joss. Bienvenue sur Azura ! »',
-        '« Ici, il n’y a qu’une règle : quand la cloche sonne, on monte. Toujours. »',
+        'Il pose sa canne à pêche au bord de la rivière.',
+        '« Ici, il n’y a qu’une règle : quand la sirène sonne, on monte. Toujours. »',
         '« La ville est un peu plus bas, après le pont. »',
       ],
       () => {
@@ -96,8 +97,8 @@ export const SCRIPTS_AZ: Record<string, Script> = {
     const memos = (readLegacy().vesper?.data?.memos as number[] | undefined) ?? [];
     api.say(
       [
-        'Une jeune femme s’arrête net en te voyant. Des cheveux roux, un foulard jaune.',
         '« Attends… Tu viens des cuves ? »',
+        'Une jeune femme s’est arrêtée net. Des cheveux roux, un foulard jaune.',
         '« C’est toi ! Le dormeur de la cuve 07 ! »',
         '« Quand j’étais petite, j’allais te voir. Toutes les cuves étaient ouvertes, sauf la tienne. »',
         '« Je m’appelle Betti. Bienvenue à Nouvelle-Vesper. »',
@@ -117,11 +118,12 @@ export const SCRIPTS_AZ: Record<string, Script> = {
     const morning = api.has('noraPainted') ? '7 h' : '6 h';
     api.say(
       [
+        'Un écran, sur la place. Une courbe qui monte et descend.',
         '« TABLEAU DES EAUX »',
         `« Montée des eaux : ${morning} et 18 h. »`,
-        '« Quand la cloche sonne : montez sur les passerelles. N’attendez pas. »',
+        '« Quand la sirène sonne : montez sur les passerelles. N’attendez pas. »',
         '« — Les pilotes d’Aurore »',
-        ...(api.has('noraPainted') ? ['La peinture du « 7 » est encore fraîche.'] : []),
+        ...(api.has('noraPainted') ? ['Un petit voyant orange : « horaire modifié à la main ».'] : []),
       ],
       () => {
         api.set('tideRead');
@@ -140,8 +142,8 @@ export const SCRIPTS_AZ: Record<string, Script> = {
     if (api.has('tomTalk')) return api.say(['« Elle est bien plus calme, la place, sans cette sirène. »']);
     api.say(
       [
+        '« La sirène ? C’est moi qui l’ai débranchée. »',
         'Un homme en combinaison de travail, une pince à la main.',
-        '« La cloche ? C’est moi qui l’ai débranchée. »',
         '« Elle se mettait à sonner la nuit, pour rien. Tout le monde sursautait. »',
         '« Les eaux, on les connaît par cœur, va. Pas besoin d’une sirène. »',
       ],
@@ -156,8 +158,8 @@ export const SCRIPTS_AZ: Record<string, Script> = {
     if (!api.has('ildaTalk')) {
       return api.say(
         [
-          'Une vieille dame derrière un étal de fruits.',
           '« Oh, un nouveau visage ! Bienvenue à Nouvelle-Vesper, mon grand ! »',
+          'Une vieille dame te sourit derrière son étal de fruits.',
           '« Tiens, goûte-moi ça. Ça vient des vergers de la vallée. »',
         ],
         () => {
@@ -169,8 +171,8 @@ export const SCRIPTS_AZ: Record<string, Script> = {
     if (api.has('tideRead') && !api.has('ildaTwice')) {
       return api.say(
         [
-          'Mme Ilda te regarde avec un grand sourire.',
           '« Oh, un nouveau visage ! Bienvenue à Nouvelle-Vesper, mon grand ! »',
+          'Mme Ilda te regarde avec un grand sourire.',
           '« Tu as faim ? Prends un fruit. »',
           '« Tu en as déjà un ? Ah… Tant mieux. »',
         ],
@@ -183,12 +185,11 @@ export const SCRIPTS_AZ: Record<string, Script> = {
     api.say(['« Les plus sucrés sont les orange. Ne le répète pas aux violets. »']);
   },
   nora: (api) => {
-    if (api.has('noraPainted')) return api.say(['« Voilà. Sept heures, comme toujours. »', 'Elle range son pinceau, l’air satisfait.']);
+    if (api.has('noraPainted')) return api.say(['« Voilà. Sept heures, comme toujours. »']);
     api.say(
       [
-        'Une femme repeint le tableau, un pot de peinture à la main.',
-        '« Bonjour ! Je rafraîchis l’horaire. La pluie efface tout, ici. »',
-        'Elle recouvre le « 6 » et peint un « 7 » à la place, sans hésiter.',
+        '« Bonjour ! Je mets l’horaire à jour. Ce tableau se dérègle tout le temps. »',
+        'Elle tapote l’écran. Le « 6 » devient un « 7 », sans qu’elle hésite.',
         '« Voilà. Sept heures, comme toujours. »',
       ],
       () => {
@@ -199,15 +200,20 @@ export const SCRIPTS_AZ: Record<string, Script> = {
   },
   enfant: (api) => {
     if (api.has('enfantTalk')) return api.say(['« Maman dit que là-bas, sur Vesper, le ciel était orange. C’est vrai ? »']);
-    api.say(['Un petit garçon joue avec un bateau en écorce.', '« Tu sais quoi ? Moi, je suis né ici ! Sur Azura ! »'], () => {
+    api.say(['« Tu sais quoi ? Moi, je suis né ici ! Sur Azura ! »', 'Un petit garçon fait voguer un bateau d’écorce entre les fleurs.'], () => {
       api.set('enfantTalk');
       api.clue('azEnfant');
     });
   },
   passant1: (api) => api.say(['« Belle journée, hein ? Comme toujours, ici. »']),
   passant2: (api) => api.say(['« Tu cherches quelqu’un ? Demande aux pilotes : ils connaissent tout le monde. »']),
-  passant3: (api) => api.say(['Un homme regarde le lac, les mains dans les poches.', '« L’eau est haute, ce matin. Enfin… je crois. »']),
+  passant3: (api) => api.say(['« L’eau est haute, ce matin. Enfin… je crois. »', 'Il regarde le lac, les mains dans les poches.']),
   passant4: (api) => api.say(['« Je vais aux vergers de la vallée. À ce soir ! »']),
+  pylone: (api) =>
+    api.say(['Un pylône bourdonne doucement. Une lumière rouge clignote à son sommet.', 'Au-delà, l’herbe s’arrête net. Plus rien ne pousse : un sol violet, des cratères.', 'L’herbe, ici, a été semée. Cette planète n’accueillait personne.'], () => api.clue('azPylone')),
+  solaire: (api) => api.say(['Des panneaux solaires, tournés vers le ciel.', 'Au-dessus, deux lunes pâles, en plein jour.']),
+  antenne: (api) => api.say(['Une antenne parabolique, pointée vers le ciel.', 'Vers Vesper, peut-être.']),
+  pieces: (api) => api.say(['Des pièces de robot en cours d’assemblage.', 'Une tête ronde. Des pattes. Un œil éteint.']),
   maison: (api) => api.say(['Une porte blanche. Personne ne répond.']),
   etiquette: (api) =>
     api.say(['Une étiquette est collée sur la porte, écrite à la main : « PORTE ».', 'Quelqu’un a de l’humour.'], () => api.clue('azEtiquette')),

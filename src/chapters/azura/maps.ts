@@ -2,72 +2,88 @@
 // la ville de Nouvelle-Vesper et l'atelier de Betti.
 //
 // Légende :
-//   "  herbe          ,  fleurs          ;  hautes herbes   .  chemin
-//   :  dalles         =  passerelle      ~  eau (lac, rivière)
+//   "  herbe semée     ,  fleurs d'Azura   ;  roseaux         .  chemin
+//   :  dalles          =  passerelle       ~  eau (lac, rivière)
 //   b  pont (on le traverse de gauche à droite)   B  pont (de haut en bas)
-//   R  rocher, falaise   A  arbre   u  buisson   |  barrière
+//   R  rocher, falaise  A  arbre d'Azura   u  fougère   |  barrière
 //   #  bâtiment d'Aurore (façade selon la zone)   Z  mur intérieur   w  plancher   F  fontaine
+//   x  sol nu d'Azura (régolithe)   o  petit cratère   1 2 / 3 4  grand cratère   k  cristaux
+//   m  plancher métallique   c  conduite au sol
 import type { Dir } from '../../engine/sprites.js';
 import { Builder, exit, type GameMap, type MapObject } from '../../engine/world.js';
 
-export const SOLID_AZ = new Set(['~', 'R', 'A', 'u', '|', '#', 'Z', 'F']);
+export const SOLID_AZ = new Set(['~', 'R', 'A', 'u', '|', '#', 'Z', 'F', '1', '2', '3', '4', 'k']);
 
 const obj = (id: string, x: number, y: number, sprite: string, script?: string, extra: Partial<MapObject> = {}): MapObject => ({ id, x, y, sprite, script, ...extra });
 const npc = (id: string, x: number, y: number, look: string, dir: Dir, script: string, extra: Partial<MapObject> = {}): MapObject => ({
   id, x, y, sprite: '', script, npc: { look, dir }, ...extra,
 });
+/** Un objet de deux cases de haut : le haut et le bas. */
+const tall = (id: string, x: number, y: number, top: string, base: string, script?: string): MapObject[] => [obj(`${id}H`, x, y, top, script), obj(`${id}B`, x, y + 1, base, script)];
+const pylon = (id: string, x: number, y: number) => tall(id, x, y, 'pylonTop', 'pylonBase', 'pylone');
+const bigCrater = (b: Builder, x: number, y: number) => b.set(x, y, '1').set(x + 1, y, '2').set(x, y + 1, '3').set(x + 1, y + 1, '4');
 
 // ---------- le champ des cuves ----------
 function cuves(): GameMap {
-  const b = new Builder(24, 18, '"');
-  b.rect(0, 0, 24, 2, 'A').rect(0, 0, 2, 18, 'A').rect(22, 0, 2, 18, 'A').rect(0, 16, 24, 2, 'A');
-  b.rect(2, 2, 20, 1, 'R');
-  b.points('u', [[2, 3], [21, 3], [2, 15], [21, 14], [3, 15]]);
-  b.points(',', [[3, 13], [4, 13], [4, 14], [18, 12], [19, 12], [19, 13], [8, 3], [9, 3], [15, 3], [16, 4]]);
-  b.points(';', [[2, 9], [2, 10], [3, 10], [20, 6], [21, 7], [20, 7]]);
-  b.rect(11, 9, 2, 9, '.');
-  b.rect(10, 12, 1, 2, '.');
+  const W = 24, H = 18;
+  const b = new Builder(W, H, '"');
+  // au-delà des pylônes, la planète telle qu'elle était : nue, violette, criblée de cratères
+  b.rect(0, 0, W, 4, 'x').rect(0, 4, 2, 12, 'x').rect(22, 4, 2, 12, 'x');
+  bigCrater(b, 7, 0);
+  b.points('o', [[3, 1], [15, 2], [20, 0], [0, 9], [23, 12], [1, 14]]);
+  b.points('k', [[1, 2], [18, 1], [22, 3], [12, 0], [23, 6], [0, 12]]);
+  b.rect(0, 16, W, 2, 'A');
+  // les quais métalliques, et les conduites qui relient les cuves
+  for (const y of [5, 9, 13]) { b.rect(3, y, 8, 2, 'm').rect(14, y, 7, 2, 'm'); b.rect(3, y + 2, 18, 1, 'c'); }
+  b.rect(11, 4, 2, 14, '.');
+  b.points(',', [[2, 8], [2, 9], [21, 11], [21, 10], [13, 15], [15, 15]]);
+  b.points(';', [[2, 15], [21, 15], [10, 15]]);
   const objects: MapObject[] = [];
   const xs = [4, 6, 8, 15, 17, 19];
-  const ys = [5, 8, 11];
   let n = 0;
-  for (const y of ys) for (const x of xs) {
+  for (const y of [5, 9, 13]) for (const x of xs) {
     n++;
-    if (x === 4 && y === 5) objects.push(obj('cuve07', x, y, 'cuveMine', 'cuve07'));
-    else objects.push(obj(`cuve${n}`, x, y, 'cuveOpen', 'cuve'));
+    if (x === 4 && y === 5) objects.push(...tall('cuve07', x, y, 'cuveHeadMine', 'cuveFootMine', 'cuve07'));
+    else objects.push(...tall(`cuve${n}`, x, y, 'cuveHead', 'cuveFoot', 'cuve'));
   }
-  objects.push(obj('cuveLog', 11, 5, 'cuveLog', 'cuveLog'));
+  objects.push(...tall('registre', 10, 5, 'holoTop', 'holoBase', 'cuveLog'));
+  objects.push(...pylon('pyl1', 2, 4), ...pylon('pyl2', 21, 4), ...pylon('pyl3', 2, 12), ...pylon('pyl4', 21, 12));
+  objects.push(obj('solaire1', 14, 16, 'solarPanel', 'solaire'), obj('solaire2', 16, 16, 'solarPanel', 'solaire'), obj('antenne', 19, 16, 'dish', 'antenne'));
   objects.push(exit('versChemin', 11, 17, { to: 'chemin', x: 15, y: 1, dir: 'down' }));
   objects.push(exit('versChemin2', 12, 17, { to: 'chemin', x: 15, y: 1, dir: 'down' }));
-  return { id: 'cuves', name: 'Le champ des cuves', outdoor: true, width: 24, height: 18, rows: b.rows, objects, voidTile: 'azForest' };
+  return { id: 'cuves', name: 'Le champ des cuves', outdoor: true, width: W, height: H, rows: b.rows, objects, voidTile: 'azForest' };
 }
 
 // ---------- le chemin des crêtes ----------
 function chemin(): GameMap {
-  const b = new Builder(30, 22, '"');
-  b.rect(0, 0, 30, 1, 'A').rect(0, 0, 2, 22, 'A').rect(28, 0, 2, 22, 'A');
+  const W = 30, H = 22;
+  const b = new Builder(W, H, '"');
+  // à l'est des pylônes, la terre n'a pas encore été semée
+  b.rect(22, 0, 8, H, 'x');
+  b.rect(0, 0, 22, 1, 'A').rect(0, 0, 2, H, 'A');
+  bigCrater(b, 25, 3);
+  b.points('o', [[23, 1], [28, 8], [24, 17], [27, 20], [23, 10]]);
+  b.points('k', [[27, 1], [29, 5], [22, 6], [28, 16], [25, 19], [23, 20]]);
   b.rect(15, 0, 1, 1, '.');
-  // le sentier qui serpente jusqu'à la rivière
   b.rect(15, 1, 1, 4, '.').rect(12, 4, 4, 1, '.').rect(12, 4, 1, 4, '.').rect(12, 7, 4, 1, '.').rect(15, 7, 1, 4, '.');
-  // une falaise, coupée par le sentier
-  b.rect(2, 8, 12, 2, 'R').rect(17, 8, 11, 2, 'R');
+  b.rect(2, 8, 12, 2, 'R').rect(17, 8, 13, 2, 'R');
   b.rect(14, 8, 3, 2, '.');
-  // la rivière turquoise et son pont suspendu
-  b.rect(0, 12, 30, 3, '~');
+  b.rect(0, 12, W, 3, '~');
   b.rect(15, 12, 1, 3, 'B');
   b.rect(15, 10, 1, 2, '.').rect(15, 15, 1, 7, '.');
-  b.points('A', [[4, 3], [7, 2], [22, 3], [25, 5], [5, 17], [9, 19], [21, 17], [24, 19], [26, 16], [3, 20]]);
-  b.points('u', [[9, 5], [19, 5], [20, 10], [8, 10], [11, 17], [19, 19]]);
-  b.points(',', [[5, 6], [6, 6], [6, 5], [23, 10], [24, 10], [24, 11], [7, 16], [8, 16], [22, 20], [23, 20], [13, 18], [17, 17]]);
-  b.points(';', [[3, 10], [4, 11], [26, 10], [25, 11], [3, 15], [27, 15], [12, 20], [18, 20]]);
+  b.points('A', [[4, 3], [7, 2], [19, 3], [5, 17], [9, 19], [19, 17], [3, 20], [18, 20]]);
+  b.points('u', [[9, 5], [18, 6], [20, 10], [8, 10], [11, 17], [13, 20]]);
+  b.points(',', [[5, 6], [6, 6], [6, 5], [7, 16], [8, 16], [17, 17], [13, 18], [20, 19]]);
+  b.points(';', [[3, 10], [4, 11], [3, 15], [12, 20], [20, 15]]);
   const objects: MapObject[] = [
     exit('versCuves', 15, 0, { to: 'cuves', x: 11, y: 16, dir: 'up' }),
     exit('versVille', 15, 21, { to: 'ville', x: 17, y: 1, dir: 'down' }),
     obj('panneauVille', 16, 17, 'pathSign', 'panneauVille'),
     obj('repere', 18, 12, 'waterPost', 'repere'),
+    ...pylon('pylA', 21, 2), ...pylon('pylB', 21, 5), ...pylon('pylC', 21, 16), ...pylon('pylD', 21, 19),
     npc('joss', 13, 11, 'joss', 'down', 'joss'),
   ];
-  return { id: 'chemin', name: 'Le chemin des crêtes', outdoor: true, width: 30, height: 22, rows: b.rows, objects, voidTile: 'azForest' };
+  return { id: 'chemin', name: 'Le chemin des crêtes', outdoor: true, width: W, height: H, rows: b.rows, objects, voidTile: 'azForest' };
 }
 
 // ---------- Nouvelle-Vesper ----------
@@ -99,8 +115,12 @@ function ville(): GameMap {
   b.points('u', [[10, 5], [23, 5], [10, 10], [23, 12], [2, 13], [31, 13]]);
   b.points(',', [[15, 2], [16, 2], [18, 2], [19, 2], [12, 5], [21, 5], [3, 15], [30, 15], [11, 2], [22, 4]]);
   b.points(';', [[1, 15], [32, 15], [1, 20], [32, 20]]);
+  b.rect(13, 21, 9, 1, 'c');
   const objects: MapObject[] = [
     exit('versChemin', 17, 0, { to: 'chemin', x: 15, y: 20, dir: 'up' }),
+    ...pylon('pylV1', 1, 9), ...pylon('pylV2', 32, 9),
+    obj('antennePilotes', 30, 17, 'dish', 'antenne'),
+    obj('solaireJardin1', 14, 20, 'solarPanel', 'solaire'), obj('solaireJardin2', 20, 20, 'solarPanel', 'solaire'),
     obj('nomVille', 16, 3, 'townSign', 'nomVille'),
     obj('tableau', 14, 9, 'tideBoard', 'tableau', { spriteWhen: ['noraPainted', 'tideBoardWet'] }),
     obj('sirene', 21, 9, 'sirenOff', 'sirene'),
@@ -152,6 +172,7 @@ function atelier(): GameMap {
     obj('etagere', 7, 1, 'shelfAz', 'etagere'),
     obj('etabli', 2, 3, 'workbench', 'etabli'),
     obj('etabli2', 3, 3, 'workbench', 'etabli'),
+    obj('pieces', 2, 5, 'robotParts', 'pieces'),
     obj('lit', 8, 5, 'bedAz', 'lit'),
     npc('betti', 6, 3, 'betti', 'down', 'betti'),
   ];
@@ -159,4 +180,4 @@ function atelier(): GameMap {
 }
 
 export const MAPS_AZ: Record<string, GameMap> = { cuves: cuves(), chemin: chemin(), ville: ville(), atelier: atelier() };
-export const START_AZ = { map: 'cuves', x: 4, y: 6, dir: 'down' as Dir };
+export const START_AZ = { map: 'cuves', x: 4, y: 7, dir: 'up' as Dir };

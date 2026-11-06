@@ -44,6 +44,8 @@ export interface ChapterHooks {
   onHeatEnd?(g: Game, kind: string): void;
   /** Le dessin d'une case du chapitre (sinon, le dessin par défaut du moteur). */
   tileName?(g: Game, ch: string, x: number, y: number, below: string): string | undefined;
+  /** Le dessin d'un objet à cet instant (pour les objets animés). */
+  objectSprite?(g: Game, name: string): string | undefined;
   /** La lumière du chapitre (teinte, particules) ; true si elle a été dessinée. */
   renderAtmosphere?(g: Game, c: CanvasRenderingContext2D, w: number, h: number): boolean;
   /** Pixel est-il « chez lui » ici (il remue la queue, jappe de joie) ? */

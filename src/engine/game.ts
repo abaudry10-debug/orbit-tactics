@@ -1931,8 +1931,8 @@ export class Game {
   }
 
   objSprite(o: MapObject): string {
-    if (o.spriteWhen && this.flags.has(o.spriteWhen[0])) return o.spriteWhen[1];
-    return o.sprite;
+    const name = o.spriteWhen && this.flags.has(o.spriteWhen[0]) ? o.spriteWhen[1] : o.sprite;
+    return ch().hooks.objectSprite?.(this, name) ?? name;
   }
 
   newParticle(anywhere: boolean): Particle {

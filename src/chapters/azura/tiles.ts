@@ -1,67 +1,142 @@
-// Les tuiles d'Azura : un monde vert, turquoise et blanc, tout l'inverse de Vesper.
+// Les tuiles d'Azura : une planète qui n'accueillait personne, rendue habitable.
+// Autour de la colonie : un sol violet, des cratères, des cristaux. Dans la colonie : une herbe
+// semée par les pilotes, des pylônes de terraformage, des conduites, des bâtiments d'Aurore.
 import { T, paint, registerIcons, registerTiles, type Painter } from '../../engine/sprites.js';
 
 const { r, rng, speckle } = paint;
 
 export const AZ = {
   ink: '#14101c',
-  grass: '#5fae4e', grassDark: '#448f3e', grassLight: '#86cc63', grassDeep: '#357a34',
-  flowerY: '#ffe066', flowerW: '#fff6e0', flowerP: '#f39ac6', flowerB: '#8fc4ff',
-  path: '#dccb9e', pathDark: '#c2ad7e', pathLight: '#ece0bc',
-  stone: '#dfe4e2', stoneDark: '#b9c2c0', stoneLight: '#f2f5f3',
+  grass: '#4ea866', grassDark: '#36884f', grassLight: '#7fd08a', grassDeep: '#2a6f45', sprout: '#7ff5e0',
+  regolith: '#8a7ca6', regolithDark: '#6c5f8a', regolithLight: '#a99cc4', regolithDeep: '#4f4470', mineral: '#e8f6ff',
+  path: '#c9bfd6', pathDark: '#a99dbb', pathLight: '#e2dbea',
+  stone: '#e3e8ec', stoneDark: '#b9c2cc', stoneLight: '#f6f9fb',
+  metal: '#8c99a8', metalDark: '#5f6b7a', metalLight: '#b8c4d0', metalDeep: '#3f4856',
+  glow: '#5ff0e0', glowSoft: 'rgba(95,240,224,0.35)', violet: '#b36cf0', violetSoft: '#d7a6ff', pink: '#ff7ac8',
   water: '#2ec4bd', waterDeep: '#1aa2a3', waterLight: '#82efe3', foam: '#eafffb',
-  rock: '#cfc6b2', rockDark: '#a59a84', rockDeep: '#7f7562', moss: '#7fb85a',
-  wood: '#a5764a', woodDark: '#77522f', woodLight: '#c89664', rope: '#e3cf9a',
-  white: '#f3f7f6', whiteShade: '#d3dcdb', whiteDeep: '#aebcbb', teal: '#2a9d9a', tealDark: '#1d6f70', tealLight: '#5fd0c6',
-  leaf: '#3f9e48', leafDark: '#2b7436', leafLight: '#72c865', trunk: '#7a5534', trunkDark: '#57391f',
-  glass: '#bff3f6', glassDark: '#7fd4dc', red: '#e0574f', paper: '#fbf3df', sun: '#ffd45e',
+  rock: '#cbbfd2', rockDark: '#9d8fae', rockDeep: '#6f6286', moss: '#5fbf8a',
+  white: '#f2f6f8', whiteShade: '#d0d9e0', whiteDeep: '#a9b6c2', teal: '#2a9d9a', tealDark: '#1d6f70', tealLight: '#5fd0c6',
+  leaf: '#2f9e8a', leafDark: '#1f6f66', leafLight: '#62d0b4', trunk: '#d8d0e6', trunkDark: '#9f94b8',
+  glass: '#bff3f6', glassDark: '#7fd4dc', red: '#ff5a5a', amber: '#ffc14a', paper: '#fbf3df', sun: '#ffd45e',
+  screen: '#0d2a33', screenLine: '#5ff0e0',
 };
 
 // ---------- sols ----------
 const azGrass: Painter = (c, v) => {
-  speckle(c, 201 + v * 17, AZ.grass, [[AZ.grassDark, 16], [AZ.grassLight, 10]]);
+  speckle(c, 201 + v * 17, AZ.grass, [[AZ.grassDark, 16], [AZ.grassLight, 9]]);
   const blade = (x: number, y: number) => { r(c, x, y, 1, 2, AZ.grassDark); r(c, x + 1, y - 1, 1, 3, AZ.grassLight); r(c, x + 2, y, 1, 2, AZ.grassDark); };
   blade(3, 4); blade(10, 10); if (v !== 1) blade(7, 13);
+  // de petites pousses d'ici, d'un vert presque bleu
+  if (v === 2) { r(c, 12, 3, 1, 2, AZ.leafDark); r(c, 12, 2, 1, 1, AZ.sprout); }
+  if (v === 0) { r(c, 5, 9, 1, 1, AZ.regolithDark); r(c, 6, 9, 1, 1, AZ.regolithLight); }
 };
 const azFlowers: Painter = (c, v) => {
   azGrass(c, v);
+  // des fleurs d'Azura : des bulbes lumineux sur de fines tiges
   const rand = rng(331 + v * 23);
-  const cols = [AZ.flowerY, AZ.flowerW, AZ.flowerP, AZ.flowerB];
-  for (let i = 0; i < 5; i++) {
-    const x = 1 + Math.floor(rand() * 13), y = 1 + Math.floor(rand() * 13);
+  const cols = [AZ.glow, AZ.violetSoft, AZ.pink, '#fff0a0'];
+  for (let i = 0; i < 4; i++) {
+    const x = 1 + Math.floor(rand() * 12), y = 3 + Math.floor(rand() * 10);
     const col = cols[Math.floor(rand() * cols.length)];
-    r(c, x, y, 2, 2, col);
-    r(c, x, y + 2, 1, 1, AZ.grassDeep);
+    r(c, x + 1, y + 1, 1, 3, AZ.grassDeep);
+    r(c, x, y, 3, 1, col); r(c, x + 1, y - 1, 1, 3, col);
+    r(c, x + 1, y, 1, 1, '#ffffff');
   }
 };
 const azTall: Painter = (c, v) => {
   azGrass(c, v);
-  for (const x of [1, 4, 7, 10, 13]) {
-    const h = 6 + ((x * 7 + v * 3) % 4);
+  // des roseaux d'ici, coiffés d'une petite boule claire
+  for (const x of [1, 5, 9, 13]) {
+    const h = 7 + ((x * 7 + v * 3) % 4);
     r(c, x, 15 - h, 1, h, AZ.grassDeep);
-    r(c, x + 1, 14 - h, 1, h, AZ.grassLight);
+    r(c, x + 1, 14 - h, 1, h - 2, AZ.leafLight);
+    r(c, x, 13 - h, 2, 2, x % 2 ? AZ.violetSoft : AZ.sprout);
   }
+};
+const regolith: Painter = (c, v) => {
+  speckle(c, 611 + v * 19, AZ.regolith, [[AZ.regolithDark, 18], [AZ.regolithLight, 10]]);
+  const rand = rng(77 + v * 5);
+  for (let i = 0; i < 3; i++) { const x = Math.floor(rand() * 14), y = Math.floor(rand() * 14); r(c, x, y, 2, 1, AZ.regolithDeep); r(c, x, y - 1, 2, 1, AZ.regolithLight); }
+  if (v === 1) r(c, 9, 5, 1, 1, AZ.mineral);
+  if (v === 2) { r(c, 3, 11, 1, 1, AZ.mineral); r(c, 12, 2, 1, 1, AZ.glow); }
+};
+const crater: Painter = (c, v) => {
+  regolith(c, v);
+  r(c, 3, 4, 10, 8, AZ.regolithDeep);
+  r(c, 2, 5, 12, 6, AZ.regolithDeep);
+  r(c, 4, 5, 8, 6, AZ.regolithDark);
+  r(c, 3, 6, 10, 4, AZ.regolithDark);
+  r(c, 3, 3, 10, 1, AZ.regolithLight); r(c, 2, 4, 1, 1, AZ.regolithLight); r(c, 13, 4, 1, 1, AZ.regolithLight);
+  r(c, 4, 12, 8, 1, AZ.regolithLight);
+  r(c, 6, 7, 3, 2, '#5a4f7c');
+};
+/** Un grand cratère, en quatre morceaux (haut-gauche, haut-droite, bas-gauche, bas-droite). */
+const bigCrater = (q: number): Painter => (c, v) => {
+  regolith(c, v);
+  const cv = document.createElement('canvas');
+  cv.width = 32; cv.height = 32;
+  const k = cv.getContext('2d')!;
+  const ell = (rx: number, ry: number, col: string, oy = 0) => { k.fillStyle = col; k.beginPath(); k.ellipse(16, 16 + oy, rx, ry, 0, 0, Math.PI * 2); k.fill(); };
+  ell(15, 13, AZ.regolithLight, -1);
+  ell(14, 12, AZ.regolithDeep);
+  ell(12, 10, '#5a4f7c', 1);
+  ell(7, 5, '#4a4068', 2);
+  k.fillStyle = AZ.mineral; k.fillRect(20, 20, 1, 1); k.fillRect(11, 18, 1, 1);
+  k.fillStyle = AZ.glow; k.fillRect(17, 19, 2, 1);
+  c.imageSmoothingEnabled = false;
+  c.drawImage(cv, (q % 2) * 16, Math.floor(q / 2) * 16, 16, 16, 0, 0, 16, 16);
+};
+const crystals = (frame: number): Painter => (c, v) => {
+  regolith(c, v);
+  r(c, 3, 13, 10, 2, 'rgba(0,0,0,0.2)');
+  const shard = (x: number, h: number, col: string, hi: string) => {
+    r(c, x, 14 - h, 3, h, col); r(c, x + 1, 13 - h, 1, 1, col); r(c, x, 14 - h, 1, h, hi);
+  };
+  shard(3, 7, '#3fb6c8', '#a8f6ff');
+  shard(7, 11, '#2fa0c0', '#c8fbff');
+  shard(11, 6, '#8a5ad8', '#d7b6ff');
+  if (frame) { r(c, 8, 4, 1, 1, '#ffffff'); r(c, 4, 8, 1, 1, '#ffffff'); }
+  else r(c, 12, 9, 1, 1, '#ffffff');
 };
 const azPath: Painter = (c, v) => {
   speckle(c, 241 + v * 11, AZ.path, [[AZ.pathDark, 14], [AZ.pathLight, 8]]);
-  if (v === 1) { r(c, 4, 6, 2, 2, AZ.pathDark); r(c, 11, 11, 2, 1, AZ.pathDark); }
+  if (v === 1) { r(c, 4, 6, 2, 1, AZ.pathDark); r(c, 11, 11, 1, 1, AZ.pathDark); r(c, 9, 3, 1, 1, AZ.regolithDark); }
+};
+const metalFloor: Painter = (c, v) => {
+  r(c, 0, 0, T, T, AZ.metal);
+  r(c, 0, 0, T, 1, AZ.metalLight); r(c, 0, 0, 1, T, AZ.metalLight);
+  r(c, 0, 15, T, 1, AZ.metalDark); r(c, 15, 0, 1, T, AZ.metalDark);
+  for (const [x, y] of [[2, 2], [13, 2], [2, 13], [13, 13]]) r(c, x, y, 1, 1, AZ.metalDeep);
+  for (let y = 4; y < 12; y += 2) r(c, 4, y, 8, 1, '#7d8a99');
+  if (v === 1) r(c, 7, 1, 2, 1, AZ.glow);
+};
+const conduit = (vertical: boolean): Painter => (c, v) => {
+  azGrass(c, v);
+  const R = (x: number, y: number, w: number, h: number, col: string) => (vertical ? r(c, y, x, h, w, col) : r(c, x, y, w, h, col));
+  R(0, 6, T, 5, AZ.metalDark);
+  R(0, 6, T, 1, AZ.metalLight);
+  R(0, 8, T, 1, AZ.glow);
+  R(0, 10, T, 1, AZ.metalDeep);
+  R(6, 5, 3, 7, AZ.metal); R(6, 5, 3, 1, AZ.metalLight);
 };
 const azStone: Painter = (c, v) => {
   r(c, 0, 0, T, T, AZ.stone);
-  const off = v === 1 ? 4 : 0;
-  r(c, 0, 7, T, 1, AZ.stoneDark); r(c, 0, 15, T, 1, AZ.stoneDark);
-  r(c, (7 + off) % T, 0, 1, 7, AZ.stoneDark); r(c, (3 + off) % T, 8, 1, 7, AZ.stoneDark);
-  r(c, 1, 1, 4, 1, AZ.stoneLight); r(c, 9, 9, 4, 1, AZ.stoneLight);
+  r(c, 0, 0, T, 1, AZ.stoneLight); r(c, 0, 0, 1, T, AZ.stoneLight);
+  r(c, 0, 15, T, 1, AZ.stoneDark); r(c, 15, 0, 1, T, AZ.stoneDark);
+  // de petites lumières incrustées aux coins de certaines dalles
+  if (v === 1) { r(c, 0, 0, 1, 1, AZ.glow); r(c, 1, 1, 1, 1, AZ.tealLight); }
+  if (v === 2) { r(c, 5, 6, 6, 1, '#d4dbe2'); }
 };
 const azDeck: Painter = (c) => {
-  r(c, 0, 0, T, T, AZ.wood);
-  for (const y of [0, 4, 8, 12]) { r(c, 0, y, T, 1, AZ.woodDark); r(c, 0, y + 1, T, 1, AZ.woodLight); }
-  r(c, 5, 2, 1, 1, AZ.woodDark); r(c, 11, 6, 1, 1, AZ.woodDark); r(c, 3, 10, 1, 1, AZ.woodDark); r(c, 12, 14, 1, 1, AZ.woodDark);
+  r(c, 0, 0, T, T, AZ.metalDark);
+  for (let y = 1; y < T; y += 3) r(c, 0, y, T, 1, AZ.metalDeep);
+  for (let x = 1; x < T; x += 3) r(c, x, 0, 1, T, AZ.metal);
+  r(c, 0, 0, T, 1, AZ.metalLight);
 };
-const azFloor: Painter = (c) => {
-  r(c, 0, 0, T, T, '#d9b98c');
-  for (const x of [0, 5, 10, 15]) r(c, x, 0, 1, T, '#c49f70');
-  r(c, 2, 3, 2, 1, '#e6caa0'); r(c, 12, 10, 2, 1, '#e6caa0');
+const azFloor: Painter = (c, v) => {
+  r(c, 0, 0, T, T, '#c9d2dc');
+  r(c, 0, 0, T, 1, '#e3e9ef'); r(c, 0, 15, T, 1, '#a9b4c0'); r(c, 15, 0, 1, T, '#a9b4c0');
+  if (v === 1) r(c, 3, 3, 10, 1, '#b8c3cf');
 };
 
 // ---------- eau ----------
@@ -71,13 +146,13 @@ const waterFrame = (frame: number, shore: boolean): Painter => (c, v) => {
   const rand = rng(97 + v * 13);
   for (let i = 0; i < 3; i++) {
     const x = Math.floor(rand() * 12), y = 2 + Math.floor(rand() * 12);
-    const dx = frame ? 2 : 0;
-    r(c, (x + dx) % 13, y, 3, 1, AZ.waterLight);
+    r(c, (x + (frame ? 2 : 0)) % 13, y, 3, 1, AZ.waterLight);
   }
-  // un éclat de soleil qui clignote
-  if ((frame + v) % 2 === 0) r(c, 3 + v * 4, 5, 1, 1, AZ.foam);
+  // des points lumineux sous la surface : quelque chose vit là-dedans
+  if ((frame + v) % 2 === 0) r(c, 3 + v * 4, 12, 1, 1, AZ.glow);
+  if ((frame + v) % 2 === 1) r(c, 11 - v * 2, 5, 1, 1, AZ.foam);
   if (shore) {
-    r(c, 0, 0, T, 2, AZ.grassDark);
+    r(c, 0, 0, T, 2, AZ.regolithDark);
     r(c, 0, 2, T, 1, AZ.foam);
     for (let x = frame; x < T; x += 3) r(c, x, 3, 1, 1, AZ.foam);
   }
@@ -85,51 +160,63 @@ const waterFrame = (frame: number, shore: boolean): Painter => (c, v) => {
 
 // ---------- falaises et rochers ----------
 const azRockTop: Painter = (c, v) => {
-  speckle(c, 271 + v * 7, AZ.rock, [[AZ.rockDark, 10], ['#ddd5c2', 8]]);
+  speckle(c, 271 + v * 7, AZ.rock, [[AZ.rockDark, 10], ['#e0d6e6', 8]]);
   r(c, 0, 0, T, 2, AZ.moss);
   r(c, 3, 2, 3, 1, AZ.moss); r(c, 10, 2, 2, 1, AZ.moss);
+  if (v === 1) r(c, 8, 9, 1, 1, AZ.glow);
 };
 const azRockFace: Painter = (c, v) => {
   r(c, 0, 0, T, T, AZ.rockDark);
-  for (const x of [2, 6, 11]) r(c, x + (v % 2), 0, 1, T - 3, AZ.rockDeep);
+  // des strates violettes : une roche qui n'est pas d'ici
+  for (const y of [4, 8, 11]) r(c, 0, y + (v % 2), T, 1, AZ.rockDeep);
   r(c, 0, 0, T, 2, AZ.rock);
-  r(c, 4, 4, 2, 3, AZ.rock); r(c, 9, 7, 2, 2, AZ.rock);
-  r(c, 0, T - 3, T, 3, AZ.rockDeep);
+  r(c, 4, 5, 3, 2, AZ.rock); r(c, 10, 9, 2, 1, AZ.rock);
+  if (v === 2) { r(c, 7, 6, 1, 2, '#7fd8f0'); r(c, 8, 7, 1, 1, '#ffffff'); }
+  r(c, 0, T - 2, T, 2, AZ.rockDeep);
 };
 
-// ---------- végétation (peinte sur l'herbe : les ombres suivent leur forme) ----------
+// ---------- végétation d'Azura (peinte sur l'herbe : les ombres suivent leur forme) ----------
 const azTree: Painter = (c, v) => {
   azGrass(c, v);
-  r(c, 7, 11, 2, 4, AZ.trunk); r(c, 8, 11, 1, 4, AZ.trunkDark);
-  r(c, 2, 2, 12, 9, AZ.leaf); r(c, 3, 1, 10, 11, AZ.leaf); r(c, 1, 4, 14, 5, AZ.leaf);
-  r(c, 3, 2, 5, 3, AZ.leafLight); r(c, 2, 4, 3, 2, AZ.leafLight); r(c, 9, 3, 2, 1, AZ.leafLight);
-  r(c, 4, 9, 8, 2, AZ.leafDark); r(c, 11, 5, 3, 4, AZ.leafDark);
-  if (v === 2) { r(c, 5, 6, 1, 1, AZ.flowerP); r(c, 10, 4, 1, 1, AZ.flowerP); r(c, 7, 8, 1, 1, AZ.flowerP); }
+  // un tronc pâle et torsadé, une ombrelle de feuilles, des fruits lumineux qui pendent
+  r(c, 7, 9, 2, 6, AZ.trunk); r(c, 8, 9, 1, 6, AZ.trunkDark); r(c, 6, 13, 1, 2, AZ.trunk); r(c, 9, 12, 1, 1, AZ.trunkDark);
+  r(c, 1, 3, 14, 5, AZ.leaf); r(c, 3, 1, 10, 8, AZ.leaf); r(c, 0, 5, 16, 2, AZ.leaf);
+  r(c, 3, 1, 6, 2, AZ.leafLight); r(c, 1, 4, 4, 1, AZ.leafLight); r(c, 10, 2, 3, 1, AZ.leafLight);
+  r(c, 0, 7, 16, 1, AZ.leafDark); r(c, 2, 8, 12, 1, AZ.leafDark);
+  r(c, 2, 9, 1, 2, AZ.leafDark); r(c, 13, 9, 1, 2, AZ.leafDark);
+  r(c, 2, 11, 1, 1, v === 1 ? AZ.violetSoft : AZ.glow); r(c, 13, 11, 1, 1, v === 1 ? AZ.violetSoft : AZ.glow);
+  if (v === 2) { r(c, 5, 9, 1, 2, AZ.leafDark); r(c, 5, 11, 1, 1, AZ.pink); }
 };
 const azBush: Painter = (c, v) => {
   azGrass(c, v);
-  r(c, 3, 6, 10, 7, AZ.leaf); r(c, 2, 8, 12, 4, AZ.leaf);
-  r(c, 4, 6, 4, 2, AZ.leafLight); r(c, 3, 11, 10, 2, AZ.leafDark);
-  if (v === 1) { r(c, 6, 9, 1, 1, AZ.red); r(c, 9, 8, 1, 1, AZ.red); }
+  // des frondes spiralées, violettes et turquoise
+  r(c, 3, 8, 10, 6, AZ.leafDark);
+  r(c, 4, 6, 3, 6, AZ.violet); r(c, 4, 5, 2, 1, AZ.violetSoft); r(c, 3, 6, 1, 2, AZ.violetSoft);
+  r(c, 9, 5, 3, 7, AZ.leaf); r(c, 10, 4, 2, 1, AZ.leafLight); r(c, 12, 5, 1, 2, AZ.leafLight);
+  r(c, 7, 7, 2, 5, AZ.leafLight);
+  r(c, 3, 13, 10, 1, AZ.grassDeep);
+  if (v === 1) { r(c, 7, 6, 1, 1, AZ.glow); r(c, 11, 8, 1, 1, AZ.glow); }
 };
 const azForest: Painter = (c, v) => {
-  r(c, 0, 0, T, T, AZ.leafDark);
+  r(c, 0, 0, T, T, '#1d4f52');
   const rand = rng(401 + v * 31);
-  for (let i = 0; i < 6; i++) r(c, Math.floor(rand() * 13), Math.floor(rand() * 13), 4, 3, i % 2 ? AZ.leaf : '#24622f');
-  r(c, 2 + v * 3, 3, 3, 2, AZ.leafLight);
+  for (let i = 0; i < 6; i++) r(c, Math.floor(rand() * 13), Math.floor(rand() * 13), 4, 3, i % 2 ? AZ.leafDark : '#2b6d62');
+  r(c, 2 + v * 3, 3, 3, 2, AZ.leaf);
+  r(c, 11 - v * 2, 10, 1, 1, i2(v));
 };
+const i2 = (v: number) => (v === 1 ? AZ.violetSoft : AZ.glow);
 
 // ---------- ponts suspendus ----------
 const bridge = (vertical: boolean): Painter => (c) => {
   waterFrame(0, false)(c, 0);
   const R = (x: number, y: number, w: number, h: number, col: string) => (vertical ? r(c, y, x, h, w, col) : r(c, x, y, w, h, col));
-  // les planches, puis les cordes de chaque côté
-  R(0, 3, T, 10, AZ.wood);
-  for (let i = 0; i < T; i += 3) R(i, 3, 1, 10, AZ.woodDark);
-  R(0, 3, T, 1, AZ.woodLight);
-  R(0, 1, T, 1, AZ.rope); R(0, 14, T, 1, AZ.rope);
-  R(0, 2, T, 1, 'rgba(0,0,0,0.15)');
-  R(2, 0, 1, 3, AZ.woodDark); R(10, 13, 1, 3, AZ.woodDark);
+  R(0, 3, T, 10, AZ.metalDark);
+  for (let i = 0; i < T; i += 2) R(i, 3, 1, 10, AZ.metalDeep);
+  R(0, 3, T, 1, AZ.metalLight);
+  R(0, 1, T, 1, AZ.whiteShade); R(0, 14, T, 1, AZ.whiteShade);
+  R(0, 2, T, 1, 'rgba(0,0,0,0.2)');
+  R(3, 0, 1, 3, AZ.metal); R(11, 13, 1, 3, AZ.metal);
+  R(3, 0, 1, 1, AZ.glow); R(11, 15, 1, 1, AZ.glow);
 };
 
 // ---------- bâtiments d'Aurore ----------
@@ -137,201 +224,302 @@ const aurTop: Painter = (c, v) => {
   r(c, 0, 0, T, T, AZ.white);
   r(c, 0, 0, T, 1, AZ.stoneLight);
   r(c, 0, 15, T, 1, AZ.whiteShade);
-  r(c, 7, 0, 1, T, '#e4ebea');
-  if (v === 1) { r(c, 3, 4, 8, 6, AZ.tealDark); for (let x = 4; x < 11; x += 2) r(c, x, 4, 1, 6, AZ.teal); r(c, 3, 4, 8, 1, AZ.tealLight); }
+  r(c, 7, 0, 1, T, '#e1e8ee');
+
+  if (v === 1) {
+    // panneaux solaires
+    r(c, 2, 3, 12, 8, AZ.metalDeep);
+    for (let x = 3; x < 14; x += 3) r(c, x, 4, 2, 6, '#2b4f8a');
+    r(c, 3, 4, 2, 1, '#6f9fe0'); r(c, 9, 4, 2, 1, '#6f9fe0');
+  }
+  if (v === 2) { r(c, 10, 9, 3, 3, AZ.whiteShade); r(c, 10, 9, 3, 1, AZ.metal); r(c, 11, 10, 1, 1, AZ.glow); }
 };
 const aurFront: Painter = (c, v) => {
   r(c, 0, 0, T, T, AZ.white);
-  r(c, 0, 0, T, 2, AZ.teal);
-  r(c, 0, 2, T, 1, AZ.tealDark);
-  r(c, 0, 13, T, 3, AZ.whiteDeep);
+  r(c, 0, 0, T, 2, AZ.teal); r(c, 0, 2, T, 1, AZ.tealDark);
+  r(c, 0, 3, T, 1, AZ.glow);
   r(c, 0, 12, T, 1, AZ.whiteShade);
-  if (v !== 2) {
-    // un hublot rond
-    r(c, 5, 5, 6, 5, AZ.tealDark); r(c, 4, 6, 8, 3, AZ.tealDark);
-    r(c, 5, 6, 6, 3, AZ.glass); r(c, 6, 5, 4, 5, AZ.glass);
-    r(c, 6, 6, 2, 1, '#ffffff');
+  r(c, 0, 13, T, 3, AZ.metalDark);
+  r(c, 2, 13, 2, 3, AZ.metalDeep); r(c, 12, 13, 2, 3, AZ.metalDeep);
+  r(c, 0, 4, 1, 8, AZ.whiteShade);
+  if (v === 0) {
+    // un hublot, son cadre et son reflet
+    r(c, 4, 5, 8, 6, AZ.metalDark); r(c, 5, 4, 6, 8, AZ.metalDark);
+    r(c, 5, 5, 6, 6, AZ.glassDark); r(c, 6, 5, 4, 6, AZ.glass);
+    r(c, 6, 6, 2, 1, '#ffffff'); r(c, 6, 7, 1, 1, '#ffffff');
+  } else if (v === 1) {
+    // une grille d'aération et un voyant
+    r(c, 3, 6, 10, 5, AZ.whiteDeep);
+    for (let y = 7; y < 11; y += 2) r(c, 4, y, 8, 1, AZ.metalDark);
+    r(c, 13, 5, 1, 1, AZ.glow);
+  } else {
+    r(c, 3, 6, 4, 4, AZ.whiteShade); r(c, 9, 6, 4, 4, AZ.whiteShade); r(c, 4, 7, 2, 1, AZ.metal); r(c, 10, 7, 2, 1, AZ.metal);
   }
 };
 const aurDoor: Painter = (c) => {
   aurFront(c, 2);
-  r(c, 4, 3, 8, 13, AZ.tealDark);
-  r(c, 5, 4, 6, 12, AZ.teal);
-  r(c, 7, 4, 2, 12, AZ.tealLight);
-  r(c, 10, 9, 1, 2, AZ.white);
+  r(c, 3, 4, 10, 12, AZ.metalDark);
+  r(c, 4, 5, 8, 11, AZ.teal);
+  r(c, 7, 5, 2, 11, AZ.tealDark);
+  r(c, 5, 6, 2, 1, AZ.tealLight); r(c, 9, 6, 2, 1, AZ.tealLight);
+  r(c, 3, 4, 10, 1, AZ.glow);
+  r(c, 13, 8, 2, 3, AZ.metalDeep); r(c, 13, 9, 2, 1, AZ.glow);
 };
 const aurDoorClosed: Painter = (c) => {
   aurDoor(c, 0);
-  r(c, 5, 8, 6, 2, AZ.red);
+  r(c, 3, 4, 10, 1, AZ.red);
+  r(c, 13, 9, 2, 1, AZ.red);
 };
 const azWallTop: Painter = (c) => {
-  r(c, 0, 0, T, T, '#e9efee');
+  r(c, 0, 0, T, T, '#dfe6ec');
   r(c, 0, 15, T, 1, AZ.whiteShade);
+  r(c, 7, 0, 1, T, '#d2dae2');
 };
-const azWallFront: Painter = (c) => {
-  r(c, 0, 0, T, T, '#cfe3df');
-  r(c, 0, 0, T, 2, AZ.teal);
-  r(c, 0, 13, T, 3, '#a9c6c1');
+const azWallFront: Painter = (c, v) => {
+  r(c, 0, 0, T, T, '#c4d2da');
+  r(c, 0, 0, T, 2, AZ.teal); r(c, 0, 2, T, 1, AZ.glow);
+  r(c, 0, 13, T, 3, '#9fb0bc');
+  r(c, 7, 3, 1, 10, '#b3c2cc');
+  if (v === 1) { r(c, 2, 5, 4, 5, AZ.screen); r(c, 3, 6, 2, 1, AZ.screenLine); r(c, 3, 8, 1, 1, AZ.screenLine); }
 };
 
-// ---------- objets ----------
-const cuve = (mine: boolean): Painter => (c, v) => {
+// ---------- les cuves (deux cases de haut : le couvercle, puis le socle) ----------
+const cuveHead = (mine: boolean): Painter => (c, v) => {
   azGrass(c, v);
-  // l'ombre portée au sol
-  r(c, 4, 14, 9, 1, 'rgba(0,0,0,0.18)');
-  // la coque blanche, arrondie aux deux bouts
-  r(c, 5, 1, 6, 14, AZ.whiteDeep);
-  r(c, 4, 2, 8, 12, AZ.whiteDeep);
-  r(c, 5, 1, 6, 13, AZ.white);
-  r(c, 4, 2, 8, 11, AZ.white);
-  r(c, 5, 2, 1, 10, AZ.stoneLight);
-  // le creux, où l'on était allongé
-  r(c, 6, 3, 4, 9, AZ.tealDark);
-  r(c, 6, 4, 4, 7, '#2f8f8b');
-  r(c, 7, 3, 2, 2, '#3aa7a2');
-  // le couvercle de verre, rabattu sur le côté
-  r(c, 12, 3, 2, 10, AZ.glassDark);
-  r(c, 12, 4, 1, 8, AZ.glass);
-  r(c, 13, 5, 1, 2, '#ffffff');
-  // un témoin lumineux
-  r(c, 7, 13, 2, 1, mine ? AZ.sun : AZ.whiteShade);
-  if (mine) r(c, 3, 6, 1, 3, AZ.sun);
+  r(c, 2, 4, 12, 12, AZ.metalDeep);
+  // la coque, arrondie en haut
+  r(c, 3, 3, 10, 13, AZ.whiteDeep); r(c, 4, 2, 8, 1, AZ.whiteDeep);
+  r(c, 4, 3, 8, 13, AZ.white); r(c, 5, 2, 6, 1, AZ.white);
+  r(c, 4, 4, 1, 12, AZ.stoneLight);
+  // le creux, la forme d'un corps, le coussin
+  r(c, 6, 5, 4, 11, '#1f5f66'); r(c, 6, 5, 4, 3, '#2f8f8b');
+  r(c, 7, 6, 2, 2, '#4fb5ad');
+  // le couvercle de verre, relevé vers l'arrière
+  r(c, 4, 0, 8, 3, AZ.glassDark); r(c, 5, 0, 6, 2, AZ.glass); r(c, 6, 0, 2, 1, '#ffffff');
+  // des tubes sur le côté
+  r(c, 13, 6, 2, 1, AZ.metal); r(c, 13, 10, 2, 1, AZ.metal); r(c, 14, 6, 1, 5, AZ.metalDark);
+  if (mine) { r(c, 2, 7, 1, 3, AZ.amber); r(c, 7, 3, 2, 1, AZ.amber); }
 };
-const cuveLog: Painter = (c, v) => {
+const cuveFoot = (mine: boolean): Painter => (c, v) => {
   azGrass(c, v);
-  r(c, 7, 9, 2, 6, AZ.whiteDeep);
-  r(c, 3, 2, 10, 8, AZ.white);
-  r(c, 4, 3, 8, 5, '#123a40');
-  r(c, 5, 4, 5, 1, AZ.tealLight); r(c, 5, 6, 3, 1, AZ.tealLight);
+  r(c, 2, 0, 12, 13, AZ.metalDeep);
+  r(c, 3, 0, 10, 10, AZ.white); r(c, 4, 0, 1, 10, AZ.stoneLight);
+  r(c, 6, 0, 4, 4, '#1f5f66');
+  // le pupitre : voyants, numéro, ventilation
+  r(c, 3, 10, 10, 4, AZ.metal); r(c, 3, 10, 10, 1, AZ.metalLight);
+  r(c, 4, 11, 4, 2, AZ.screen); r(c, 5, 11, 2, 1, mine ? AZ.amber : AZ.screenLine);
+  r(c, 9, 11, 1, 1, mine ? AZ.amber : '#3a4b56'); r(c, 11, 11, 1, 1, mine ? AZ.amber : AZ.glow);
+  r(c, 9, 12, 3, 1, AZ.metalDark);
+  r(c, 5, 6, 6, 2, AZ.whiteShade); r(c, 6, 6, 4, 1, AZ.metal);
+  // l'ombre au sol
+  r(c, 3, 14, 10, 1, 'rgba(0,0,0,0.25)');
 };
-const tideBoard = (wet: boolean): Painter => (c, v) => {
+
+// ---------- un terminal holographique (deux cases : l'image flottante, puis le pied) ----------
+const holoTop = (frame: number): Painter => (c, v) => {
+  azGrass(c, v);
+  r(c, 3, 2, 10, 11, 'rgba(95,240,224,0.18)');
+  r(c, 3, 2, 10, 1, AZ.glow); r(c, 3, 12, 10, 1, AZ.glow);
+  r(c, 3, 2, 1, 11, 'rgba(95,240,224,0.7)'); r(c, 12, 2, 1, 11, 'rgba(95,240,224,0.7)');
+  // le texte qui défile, et une ligne de balayage
+  r(c, 5, 4, 6, 1, AZ.glow); r(c, 5, 6, 4, 1, 'rgba(95,240,224,0.8)'); r(c, 5, 8, 5, 1, 'rgba(95,240,224,0.8)'); r(c, 5, 10, 3, 1, AZ.amber);
+  r(c, 4, 4 + frame * 5, 8, 1, 'rgba(255,255,255,0.35)');
+  // le faisceau qui la projette
+  r(c, 7, 13, 2, 3, 'rgba(95,240,224,0.35)');
+};
+const holoBase: Painter = (c, v) => {
+  azGrass(c, v);
+  r(c, 7, 0, 2, 4, 'rgba(95,240,224,0.35)');
+  r(c, 5, 3, 6, 2, AZ.glow); r(c, 6, 3, 4, 1, '#ffffff');
+  r(c, 4, 5, 8, 8, AZ.metal); r(c, 4, 5, 8, 1, AZ.metalLight); r(c, 11, 5, 1, 8, AZ.metalDark);
+  r(c, 6, 8, 4, 2, AZ.metalDeep); r(c, 7, 8, 1, 1, AZ.glow);
+  r(c, 3, 13, 10, 2, AZ.metalDark);
+  r(c, 3, 15, 10, 1, 'rgba(0,0,0,0.25)');
+};
+
+// ---------- la technologie de la colonie ----------
+const pylonTop = (blink: boolean): Painter => (c, v) => {
+  azGrass(c, v);
+  r(c, 7, 2, 2, 14, AZ.metalDark); r(c, 7, 2, 1, 14, AZ.metalLight);
+  for (const y of [5, 9, 13]) { r(c, 4, y, 8, 1, AZ.metal); r(c, 5, y + 1, 6, 1, AZ.glowSoft); }
+  r(c, 6, 0, 4, 2, AZ.metal);
+  r(c, 7, 0, 2, 1, blink ? AZ.red : '#6a2a2a');
+};
+const pylonBase: Painter = (c, v) => {
+  azGrass(c, v);
+  r(c, 3, 6, 10, 8, AZ.metalDark); r(c, 3, 6, 10, 1, AZ.metalLight);
+  r(c, 7, 0, 2, 6, AZ.metalDark); r(c, 7, 0, 1, 6, AZ.metalLight);
+  r(c, 4, 8, 8, 1, AZ.metalDeep); r(c, 4, 10, 8, 1, AZ.metalDeep);
+  r(c, 5, 12, 6, 1, AZ.glow);
+  r(c, 2, 14, 12, 1, 'rgba(0,0,0,0.25)');
+};
+const solarPanel: Painter = (c, v) => {
+  azGrass(c, v);
+  r(c, 7, 11, 2, 4, AZ.metalDark);
+  r(c, 1, 2, 14, 10, AZ.metalDeep);
+  for (let x = 2; x < 14; x += 4) for (let y = 3; y < 11; y += 4) r(c, x, y, 3, 3, '#2b4f8a');
+  r(c, 2, 3, 3, 1, '#7faeea'); r(c, 6, 3, 3, 1, '#7faeea');
+};
+const dish: Painter = (c, v) => {
+  azGrass(c, v);
+  r(c, 7, 9, 2, 6, AZ.metalDark); r(c, 4, 14, 8, 1, AZ.metalDeep);
+  r(c, 2, 2, 12, 8, AZ.whiteShade); r(c, 3, 1, 10, 9, AZ.white); r(c, 5, 3, 6, 5, AZ.whiteShade);
+  r(c, 7, 5, 2, 2, AZ.metalDark); r(c, 7, 4, 1, 1, AZ.red);
+};
+const cuveLog = holoBase; // gardé pour les anciennes sauvegardes
+
+// ---------- objets de la ville ----------
+const tideBoard = (fixed: boolean): Painter => (c, v) => {
   azStone(c, v);
-  r(c, 3, 9, 1, 7, AZ.woodDark); r(c, 12, 9, 1, 7, AZ.woodDark);
-  r(c, 1, 1, 14, 10, AZ.woodDark);
-  r(c, 2, 2, 12, 8, AZ.paper);
-  // une vague, et deux horaires
-  r(c, 3, 4, 2, 1, AZ.teal); r(c, 5, 3, 2, 1, AZ.teal); r(c, 7, 4, 2, 1, AZ.teal);
-  r(c, 10, 3, 3, 1, AZ.ink); r(c, 10, 5, 3, 1, AZ.ink);
-  r(c, 3, 7, 10, 1, AZ.ink);
-  if (wet) { r(c, 10, 3, 3, 1, AZ.red); r(c, 11, 4, 1, 2, AZ.red); r(c, 12, 4, 1, 1, AZ.red); }
+  r(c, 3, 11, 1, 5, AZ.metalDark); r(c, 12, 11, 1, 5, AZ.metalDark);
+  r(c, 1, 1, 14, 11, AZ.metalDark);
+  r(c, 2, 2, 12, 9, AZ.screen);
+  // la courbe des eaux, et deux horaires
+  r(c, 3, 7, 2, 1, AZ.glow); r(c, 5, 6, 2, 1, AZ.glow); r(c, 7, 5, 1, 1, AZ.glow); r(c, 8, 6, 2, 1, AZ.glow); r(c, 10, 7, 2, 1, AZ.glow);
+  r(c, 3, 3, 3, 1, fixed ? AZ.amber : AZ.screenLine); r(c, 9, 3, 3, 1, AZ.screenLine);
+  r(c, 3, 9, 10, 1, '#1f4a55');
+  if (fixed) r(c, 2, 2, 1, 1, AZ.amber);
 };
 const siren = (on: boolean): Painter => (c, v) => {
   azStone(c, v);
-  r(c, 7, 4, 2, 12, AZ.whiteDeep); r(c, 7, 4, 1, 12, AZ.white);
-  r(c, 4, 1, 8, 4, AZ.red); r(c, 5, 1, 6, 1, '#f08a80'); r(c, 3, 2, 1, 2, '#a83b35'); r(c, 12, 2, 1, 2, '#a83b35');
-  if (on) r(c, 9, 7, 2, 2, AZ.tealLight);
-  else { r(c, 9, 8, 1, 4, AZ.ink); r(c, 10, 12, 2, 1, AZ.ink); r(c, 11, 13, 1, 1, AZ.flowerY); }
+  r(c, 7, 5, 2, 10, AZ.metalDark); r(c, 7, 5, 1, 10, AZ.metalLight);
+  r(c, 5, 14, 6, 2, AZ.metalDeep);
+  r(c, 4, 1, 8, 4, on ? AZ.red : '#7a3a3a'); r(c, 5, 0, 6, 1, on ? '#ff9a9a' : '#9a5a5a');
+  r(c, 5, 2, 2, 1, on ? '#ffd0d0' : '#a87070');
+  r(c, 3, 2, 1, 2, AZ.metal); r(c, 12, 2, 1, 2, AZ.metal);
+  if (!on) { r(c, 9, 8, 1, 4, AZ.ink); r(c, 10, 12, 2, 1, AZ.ink); r(c, 11, 13, 1, 1, AZ.amber); }
 };
 const stall: Painter = (c, v) => {
   azStone(c, v);
   r(c, 1, 1, 14, 4, AZ.white);
   for (let x = 1; x < 15; x += 4) r(c, x, 1, 2, 4, AZ.teal);
-  r(c, 1, 5, 14, 1, AZ.tealDark);
-  r(c, 2, 7, 12, 7, AZ.woodDark); r(c, 2, 7, 12, 1, AZ.woodLight);
-  const fruit: [number, number, string][] = [[3, 9, '#ff9a3c'], [6, 9, '#ff9a3c'], [9, 9, '#c45ad8'], [12, 9, '#c45ad8'], [4, 11, '#ffe066'], [8, 11, '#ffe066'], [11, 11, '#7ad85a']];
+  r(c, 1, 5, 14, 1, AZ.glow);
+  r(c, 2, 7, 12, 7, AZ.metal); r(c, 2, 7, 12, 1, AZ.metalLight); r(c, 2, 13, 12, 1, AZ.metalDark);
+  // des fruits d'ici : orange, violets, et un qui luit
+  const fruit: [number, number, string][] = [[3, 9, '#ff9a3c'], [6, 9, '#ff9a3c'], [9, 9, AZ.violet], [12, 9, AZ.violet], [4, 11, AZ.glow], [8, 11, '#ffe066'], [11, 11, AZ.pink]];
   for (const [x, y, col] of fruit) { r(c, x, y, 2, 2, col); r(c, x, y, 1, 1, '#ffffff'); }
 };
 const townSign: Painter = (c, v) => {
   azGrass(c, v);
-  r(c, 3, 9, 1, 7, AZ.woodDark); r(c, 12, 9, 1, 7, AZ.woodDark);
-  r(c, 1, 2, 14, 8, AZ.woodDark); r(c, 2, 3, 12, 6, AZ.woodLight);
-  r(c, 3, 4, 10, 1, AZ.woodDark); r(c, 4, 6, 8, 1, AZ.woodDark);
+  r(c, 5, 12, 6, 3, AZ.metalDark); r(c, 5, 12, 6, 1, AZ.metalLight); r(c, 7, 11, 2, 1, AZ.glow);
+  // le nom de la ville, en lettres de lumière qui flottent
+  r(c, 1, 2, 14, 8, 'rgba(95,240,224,0.2)');
+  r(c, 1, 2, 14, 1, AZ.glow); r(c, 1, 9, 14, 1, AZ.glow);
+  r(c, 3, 4, 10, 1, AZ.glow); r(c, 4, 6, 8, 1, 'rgba(95,240,224,0.8)');
+  r(c, 7, 10, 2, 1, 'rgba(95,240,224,0.4)');
 };
 const pathSign: Painter = (c, v) => {
   azGrass(c, v);
-  r(c, 7, 7, 2, 9, AZ.woodDark);
-  r(c, 2, 2, 11, 5, AZ.woodLight); r(c, 13, 3, 1, 3, AZ.woodLight); r(c, 14, 4, 1, 1, AZ.woodLight);
-  r(c, 3, 4, 8, 1, AZ.woodDark);
+  r(c, 7, 7, 2, 8, AZ.metalDark); r(c, 7, 7, 1, 8, AZ.metalLight);
+  r(c, 2, 2, 11, 5, AZ.metalDeep); r(c, 13, 3, 1, 3, AZ.metalDeep); r(c, 14, 4, 1, 1, AZ.metalDeep);
+  r(c, 3, 4, 8, 1, AZ.glow); r(c, 11, 4, 2, 1, AZ.glow);
 };
 const lamp: Painter = (c, v) => {
   azStone(c, v);
-  r(c, 7, 4, 2, 11, AZ.whiteDeep); r(c, 7, 4, 1, 11, AZ.white);
-  r(c, 5, 1, 6, 3, AZ.tealDark); r(c, 6, 2, 4, 1, AZ.tealLight);
-  r(c, 6, 14, 4, 2, AZ.whiteDeep);
+  r(c, 7, 5, 2, 10, AZ.metalDark); r(c, 7, 5, 1, 10, AZ.metalLight);
+  r(c, 6, 14, 4, 2, AZ.metalDeep);
+  // un globe qui flotte au-dessus du mât
+  r(c, 5, 0, 6, 4, 'rgba(95,240,224,0.35)'); r(c, 6, 1, 4, 2, AZ.glow); r(c, 7, 1, 1, 1, '#ffffff');
 };
 const bench: Painter = (c, v) => {
   azStone(c, v);
-  r(c, 1, 6, 14, 3, AZ.wood); r(c, 1, 6, 14, 1, AZ.woodLight); r(c, 1, 3, 14, 2, AZ.woodDark);
-  r(c, 2, 9, 1, 4, AZ.woodDark); r(c, 13, 9, 1, 4, AZ.woodDark);
+  r(c, 1, 5, 14, 4, AZ.white); r(c, 1, 5, 14, 1, AZ.stoneLight); r(c, 1, 8, 14, 1, AZ.whiteShade);
+  r(c, 2, 9, 2, 4, AZ.metalDark); r(c, 12, 9, 2, 4, AZ.metalDark);
+  r(c, 3, 7, 10, 1, AZ.glow);
 };
 const flowerBox: Painter = (c, v) => {
   azStone(c, v);
-  r(c, 1, 7, 14, 7, AZ.woodDark); r(c, 2, 8, 12, 5, AZ.wood);
-  for (const [x, col] of [[2, AZ.flowerP], [5, AZ.flowerY], [8, AZ.flowerW], [11, AZ.flowerB]] as [number, string][]) {
-    r(c, x + 1, 4, 1, 4, AZ.leafDark); r(c, x, 2, 3, 3, col);
+  r(c, 1, 8, 14, 6, AZ.whiteDeep); r(c, 2, 8, 12, 1, AZ.white); r(c, 2, 13, 12, 1, AZ.metalDark);
+  for (const [x, col] of [[2, AZ.glow], [5, AZ.violetSoft], [8, AZ.pink], [11, '#fff0a0']] as [number, string][]) {
+    r(c, x + 1, 4, 1, 4, AZ.leafDark); r(c, x, 3, 3, 1, col); r(c, x + 1, 2, 1, 3, col);
   }
 };
 const waterPost: Painter = (c, v) => {
   waterFrame(v % 2, false)(c, v);
-  r(c, 6, 0, 4, 14, AZ.white);
-  for (let y = 1; y < 14; y += 3) r(c, 6, y, 4, 1, AZ.red);
+  // une jauge : des segments lumineux, du bas vers le haut
+  r(c, 6, 0, 4, 14, AZ.metalDark); r(c, 6, 0, 1, 14, AZ.metalLight);
+  for (let y = 1; y < 13; y += 2) r(c, 7, y, 2, 1, y > 8 ? AZ.glow : y > 4 ? AZ.amber : AZ.red);
   r(c, 5, 13, 6, 2, 'rgba(255,255,255,0.5)');
 };
+const fountain = (frame: number): Painter => (c, v) => {
+  azStone(c, v);
+  // un bassin rond, un jet d'eau, et des lumières au fond
+  r(c, 4, 1, 8, 14, AZ.whiteDeep); r(c, 2, 3, 12, 10, AZ.whiteDeep); r(c, 1, 5, 14, 6, AZ.whiteDeep);
+  r(c, 4, 2, 8, 12, AZ.white); r(c, 3, 3, 10, 10, AZ.white); r(c, 2, 5, 12, 6, AZ.white);
+  r(c, 5, 4, 6, 8, AZ.waterDeep); r(c, 4, 5, 8, 6, AZ.waterDeep); r(c, 4, 5, 8, 2, AZ.water); r(c, 5, 4, 6, 2, AZ.water);
+  r(c, 7, 6, 2, 3, AZ.metal);
+  r(c, 7, 2 + frame, 2, 5, AZ.waterLight); r(c, 7, 1 + frame, 2, 1, '#ffffff');
+  r(c, 5 - frame, 5, 1, 1, AZ.foam); r(c, 10 + frame, 5, 1, 1, AZ.foam);
+  r(c, 5, 10, 1, 1, AZ.glow); r(c, 10, 9, 1, 1, AZ.glow); r(c, 8 - frame, 11, 1, 1, AZ.glow);
+};
+
+// ---------- intérieur ----------
 const workbench: Painter = (c) => {
   azFloor(c, 0);
-  r(c, 0, 3, T, 9, AZ.woodDark); r(c, 0, 3, T, 2, AZ.woodLight);
-  r(c, 2, 6, 4, 3, AZ.tealDark); r(c, 3, 7, 2, 1, AZ.tealLight);
-  r(c, 9, 6, 1, 4, '#9aa3b3'); r(c, 11, 7, 3, 1, '#9aa3b3'); r(c, 12, 5, 1, 2, AZ.red);
-  r(c, 1, 12, 2, 4, AZ.woodDark); r(c, 13, 12, 2, 4, AZ.woodDark);
+  r(c, 0, 3, T, 9, AZ.metalDark); r(c, 0, 3, T, 2, AZ.metalLight);
+  r(c, 2, 6, 5, 3, AZ.screen); r(c, 3, 7, 3, 1, AZ.screenLine);
+  r(c, 9, 6, 1, 4, AZ.metalLight); r(c, 11, 7, 3, 1, AZ.metalLight); r(c, 12, 5, 1, 2, AZ.red);
+  r(c, 1, 12, 2, 4, AZ.metalDeep); r(c, 13, 12, 2, 4, AZ.metalDeep);
+};
+const robotParts: Painter = (c) => {
+  azFloor(c, 0);
+  // des pièces de robot en cours d'assemblage : une tête ronde, des pattes, un œil éteint
+  r(c, 2, 4, 12, 9, AZ.metalDark); r(c, 2, 4, 12, 1, AZ.metalLight);
+  r(c, 3, 6, 5, 4, '#9aa6b6'); r(c, 4, 5, 3, 1, '#9aa6b6'); r(c, 6, 7, 1, 1, '#3a4b56');
+  r(c, 9, 6, 1, 5, '#9aa6b6'); r(c, 11, 6, 1, 5, '#9aa6b6'); r(c, 9, 10, 2, 1, '#6a7686'); r(c, 11, 10, 2, 1, '#6a7686');
+  r(c, 13, 5, 1, 1, AZ.glow);
 };
 const shelfAz: Painter = (c) => {
   azWallFront(c, 0);
-  r(c, 1, 4, 14, 1, AZ.woodDark); r(c, 1, 9, 14, 1, AZ.woodDark);
-  r(c, 2, 1, 3, 3, '#9aa3b3'); r(c, 7, 2, 2, 2, AZ.flowerY); r(c, 11, 1, 3, 3, AZ.teal);
-  r(c, 3, 6, 4, 3, AZ.woodLight); r(c, 9, 6, 2, 3, AZ.red); r(c, 12, 7, 2, 2, '#9aa3b3');
+  r(c, 1, 5, 14, 1, AZ.metalDark); r(c, 1, 10, 14, 1, AZ.metalDark);
+  r(c, 2, 2, 3, 3, AZ.metal); r(c, 7, 3, 2, 2, AZ.amber); r(c, 11, 2, 3, 3, AZ.teal);
+  r(c, 3, 7, 4, 3, '#9aa6b6'); r(c, 9, 7, 2, 3, AZ.red); r(c, 12, 8, 2, 2, AZ.glow);
 };
 const drawingPixel: Painter = (c) => {
   azWallFront(c, 0);
-  r(c, 2, 2, 12, 10, AZ.paper);
-  r(c, 2, 2, 12, 1, '#e8dcc0');
-  // un chien robot dessiné par une enfant : corps gris, œil bleu
-  r(c, 5, 6, 6, 3, '#8f99a8'); r(c, 9, 4, 3, 3, '#8f99a8'); r(c, 10, 5, 1, 1, '#3fb6ff');
-  r(c, 5, 9, 1, 2, '#8f99a8'); r(c, 9, 9, 1, 2, '#8f99a8'); r(c, 4, 5, 1, 2, '#8f99a8');
-  r(c, 3, 3, 2, 2, AZ.sun);
-  r(c, 4, 11, 7, 1, AZ.red);
+  r(c, 2, 3, 12, 10, AZ.paper);
+  r(c, 2, 3, 12, 1, '#e8dcc0');
+  r(c, 5, 7, 6, 3, '#8f99a8'); r(c, 9, 5, 3, 3, '#8f99a8'); r(c, 10, 6, 1, 1, '#3fb6ff');
+  r(c, 5, 10, 1, 2, '#8f99a8'); r(c, 9, 10, 1, 2, '#8f99a8'); r(c, 4, 6, 1, 2, '#8f99a8');
+  r(c, 3, 4, 2, 2, '#ff9a3c');
+  r(c, 4, 12, 7, 1, AZ.red);
 };
 const bedAz: Painter = (c) => {
   azFloor(c, 0);
-  r(c, 1, 1, 14, 14, AZ.woodDark);
+  r(c, 1, 1, 14, 14, AZ.metalDark);
   r(c, 2, 2, 12, 12, '#e8eef0');
   r(c, 3, 3, 10, 3, AZ.white);
   r(c, 2, 7, 12, 7, AZ.teal); r(c, 2, 7, 12, 1, AZ.tealLight);
 };
 const azFence: Painter = (c, v) => {
   azGrass(c, v);
-  r(c, 0, 6, T, 2, AZ.woodLight); r(c, 0, 10, T, 1, AZ.wood);
-  r(c, 2, 4, 2, 10, AZ.woodDark); r(c, 12, 4, 2, 10, AZ.woodDark);
-};
-
-const fountain = (frame: number): Painter => (c, v) => {
-  azStone(c, v);
-  r(c, 1, 3, 14, 12, AZ.stoneDark);
-  r(c, 2, 2, 12, 12, AZ.stoneLight);
-  r(c, 3, 4, 10, 9, AZ.waterDeep);
-  r(c, 3, 4, 10, 4, AZ.water);
-  r(c, 7, 5, 2, 6, AZ.whiteShade);
-  r(c, 7, 2 + frame, 2, 3, AZ.waterLight);
-  r(c, 6 - frame, 4, 1, 1, AZ.foam); r(c, 9 + frame, 4, 1, 1, AZ.foam);
-  r(c, 4 + frame * 5, 9, 2, 1, AZ.waterLight);
+  r(c, 0, 7, T, 2, AZ.metal); r(c, 0, 7, T, 1, AZ.metalLight); r(c, 0, 11, T, 1, AZ.metalDark);
+  r(c, 2, 4, 2, 10, AZ.metalDark); r(c, 12, 4, 2, 10, AZ.metalDark);
+  r(c, 2, 4, 2, 1, AZ.glow); r(c, 12, 4, 2, 1, AZ.glow);
 };
 
 registerTiles(
   {
-    fountain0: fountain(0), fountain1: fountain(1),
-    azGrass, azFlowers, azTall, azPath, azStone, azDeck, azFloor,
+    azGrass, azFlowers, azTall, azPath, azStone, azDeck, azFloor, regolith, crater, metalFloor,
+    bigCrater0: bigCrater(0), bigCrater1: bigCrater(1), bigCrater2: bigCrater(2), bigCrater3: bigCrater(3),
+    crystals0: crystals(0), crystals1: crystals(1), conduitH: conduit(false), conduitV: conduit(true),
     azWater0: waterFrame(0, false), azWater1: waterFrame(1, false), azShore0: waterFrame(0, true), azShore1: waterFrame(1, true),
     azRockTop, azRockFace, azTree, azBush, azForest, azBridgeH: bridge(false), azBridgeV: bridge(true),
     aurTop, aurFront, aurDoor, aurDoorClosed, azWallTop, azWallFront,
-    cuveOpen: cuve(false), cuveMine: cuve(true), cuveLog, tideBoard: tideBoard(false), tideBoardWet: tideBoard(true),
+    cuveHead: cuveHead(false), cuveFoot: cuveFoot(false), cuveHeadMine: cuveHead(true), cuveFootMine: cuveFoot(true),
+    holoTop0: holoTop(0), holoTop1: holoTop(1), holoBase, cuveLog,
+    pylonTop0: pylonTop(false), pylonTop1: pylonTop(true), pylonBase, solarPanel, dish,
+    tideBoard: tideBoard(false), tideBoardWet: tideBoard(true),
     sirenOn: siren(true), sirenOff: siren(false), stall, townSign, pathSign, lampAz: lamp, bench, flowerBox, waterPost,
-    workbench, shelfAz, drawingPixel, bedAz, azFence,
+    fountain0: fountain(0), fountain1: fountain(1),
+    workbench, robotParts, shelfAz, drawingPixel, bedAz, azFence,
   },
-  ['azGrass', 'azPath', 'azStone', 'azFloor'],
+  ['azGrass', 'azPath', 'azStone', 'azFloor', 'regolith', 'metalFloor'],
 );
 
 registerIcons({
   fruit: (c) => {
     r(c, 4, 5, 8, 8, '#ff9a3c'); r(c, 3, 7, 10, 4, '#ff9a3c'); r(c, 5, 6, 2, 2, '#ffd8a8');
-    r(c, 7, 2, 2, 3, AZ.leafDark); r(c, 9, 2, 3, 2, AZ.leaf);
+    r(c, 7, 2, 2, 3, AZ.leafDark); r(c, 9, 2, 3, 2, AZ.leaf); r(c, 9, 9, 1, 1, AZ.glow);
   },
 });

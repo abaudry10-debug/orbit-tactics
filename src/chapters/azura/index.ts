@@ -85,6 +85,20 @@ function skyOpening(done: () => void) {
     c.beginPath(); c.arc(99, 21, 13, 0, Math.PI * 2); c.fill();
     c.fillStyle = 'rgba(255,252,236,0.9)';
     c.beginPath(); c.arc(99, 21, 7, 0, Math.PI * 2); c.fill();
+    // une planète géante cerclée d'anneaux, et deux lunes : on n'est plus chez soi
+    c.fillStyle = 'rgba(220,235,255,0.55)';
+    c.beginPath(); c.arc(30, 70, 26, 0, Math.PI * 2); c.fill();
+    c.fillStyle = 'rgba(180,200,240,0.5)';
+    c.fillRect(14, 62, 10, 3); c.fillRect(30, 78, 14, 3); c.fillRect(20, 84, 8, 2);
+    c.strokeStyle = 'rgba(240,248,255,0.7)';
+    c.lineWidth = 2;
+    c.beginPath(); c.ellipse(30, 70, 44, 8, -0.35, 0, Math.PI * 2); c.stroke();
+    c.fillStyle = 'rgba(245,245,255,0.85)';
+    c.beginPath(); c.arc(84, 120, 7, 0, Math.PI * 2); c.fill();
+    c.fillStyle = 'rgba(200,205,230,0.9)';
+    c.fillRect(81, 117, 2, 2); c.fillRect(86, 122, 3, 2);
+    c.fillStyle = 'rgba(245,235,255,0.7)';
+    c.beginPath(); c.arc(64, 44, 3, 0, Math.PI * 2); c.fill();
     for (const k of clouds) {
       const x = ((k.x + t * k.s) % 160) - 20;
       c.fillStyle = 'rgba(255,255,255,0.9)';
@@ -133,14 +147,14 @@ export const azura: Chapter = {
   begin(g: Game) {
     playTheme('azura');
     const sky = skyOpening(() => {});
-    ui.say(['…', 'Du bleu.', 'Un ciel bleu, immense. Des nuages qui passent.', 'L’air est frais. Il sent l’herbe… et l’eau.'], () => {
+    ui.say(['…', 'Du bleu.', 'Un ciel bleu… et deux lunes.', 'Au-dessus de l’horizon, une planète immense, cerclée d’anneaux.', 'L’air est frais. Il sent l’herbe… et le métal chaud.'], () => {
       ui.fade(() => {
         sky.close();
         g.blackout = false;
         g.heroCrouch = 1.2;
         ui.showPlace(g.map.name);
         ui.say([
-          'Je suis… sur Azura ?',
+          'Je suis… sur Azura.',
           'Ma cuve est ouverte. Toutes les autres aussi. Elles sont vides.',
           '(Touche A pour examiner ce qui t’entoure. Ton journal garde la trace de tout ce que tu découvres.)',
         ]);
@@ -163,6 +177,18 @@ export const azura: Chapter = {
           return (above === '~' || above === 'B' ? 'azWater' : 'azShore') + wave;
         }
         case 'F': return 'fountain' + (Math.floor(g.time * 3) % 2);
+        case 'x': return 'regolith';
+        case 'o': return 'crater';
+        case '1': return 'bigCrater0';
+        case '2': return 'bigCrater1';
+        case '3': return 'bigCrater2';
+        case '4': return 'bigCrater3';
+        case 'k': return 'crystals' + (Math.floor(g.time * 1.5 + x * 0.7 + y) % 2);
+        case 'm': return 'metalFloor';
+        case 'c': {
+          const row = g.map.rows[y];
+          return row[x - 1] === 'c' || row[x + 1] === 'c' ? 'conduitH' : 'conduitV';
+        }
         case 'b': return 'azBridgeH';
         case 'B': return 'azBridgeV';
         case 'R': return below === 'R' ? 'azRockTop' : 'azRockFace';
@@ -173,6 +199,11 @@ export const azura: Chapter = {
         case '#': return 'aurFront';
         default: return undefined;
       }
+    },
+    objectSprite(g, name) {
+      if (name === 'pylonTop') return 'pylonTop' + (Math.floor(g.time * 1.2) % 2);
+      if (name === 'holoTop') return 'holoTop' + (Math.floor(g.time * 2.5) % 2);
+      return undefined;
     },
     renderAtmosphere(g, c, w, h) {
       if (!g.map.outdoor) {
@@ -194,10 +225,27 @@ export const azura: Chapter = {
         c.ellipse(cx, cy, 60, 26, 0, 0, Math.PI * 2);
         c.fill();
       }
+      // des spores lumineuses portées par le vent
       for (const p of g.particles) {
-        c.fillStyle = `rgba(255,250,215,${p.a * 0.7})`;
+        c.fillStyle = `rgba(150,255,235,${p.a * 0.75})`;
         c.fillRect(Math.round(p.x), Math.round(p.y), 1, 1);
       }
+      // un drone de la colonie qui passe, avec son ombre au sol
+      const period = 22;
+      const k = (g.time % period) / period;
+      const dx = -30 + k * (w + 60);
+      const dy = h * 0.3 + Math.sin(g.time * 0.7) * 10;
+      c.fillStyle = 'rgba(10,20,30,0.18)';
+      c.fillRect(Math.round(dx) + 6, Math.round(dy) + 18, 9, 3);
+      c.fillStyle = '#5f6b7a';
+      c.fillRect(Math.round(dx), Math.round(dy), 11, 3);
+      c.fillStyle = '#b8c4d0';
+      c.fillRect(Math.round(dx) + 1, Math.round(dy), 9, 1);
+      c.fillStyle = '#3f4856';
+      c.fillRect(Math.round(dx) - 2, Math.round(dy) - 1, 4, 1);
+      c.fillRect(Math.round(dx) + 9, Math.round(dy) - 1, 4, 1);
+      c.fillStyle = Math.floor(g.time * 3) % 2 ? '#ff5a5a' : '#5ff0e0';
+      c.fillRect(Math.round(dx) + 5, Math.round(dy) + 3, 1, 1);
       return true;
     },
     onEnterMap(g, mapId) {
