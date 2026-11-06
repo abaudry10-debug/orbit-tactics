@@ -63,7 +63,8 @@ export function setupDev(getGame: () => Game, inGame: () => boolean) {
   btn.hidden = !devEnabled();
   const panel = el('div', '', 'dev-panel');
   panel.hidden = true;
-  document.getElementById('screen')!.append(btn, panel);
+  // hors de l'écran de jeu : celui-ci bloque les touchers (manette), ce qui empêche le clic sur iPhone
+  document.getElementById('app')!.append(btn, panel);
 
   const close = () => (panel.hidden = true);
   btn.addEventListener('click', () => {
