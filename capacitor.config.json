@@ -1,0 +1,12 @@
+{
+  "appId": "fr.abaudry.vesper",
+  "appName": "Vesper",
+  "webDir": "dist",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#140c1c"
+  },
+  "android": {
+    "backgroundColor": "#140c1c"
+  }
+}

@@ -1,4 +1,8 @@
-node_modules/
-dist/
 *.log
 .DS_Store
+android/
+build/
+dist/
+fonts/
+ios/
+node_modules/

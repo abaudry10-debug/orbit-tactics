@@ -1,3 +1,10 @@
+/* La police du jeu est livrée avec lui (dossier fonts/) : le jeu marche hors ligne, dans l'appli. */
+@font-face {
+  font-family: 'VT323';
+  src: url('fonts/VT323-Regular.ttf') format('truetype');
+  font-display: swap;
+}
+
 :root {
   --bg: #0b0812;
   --panel: #f3e6c8;

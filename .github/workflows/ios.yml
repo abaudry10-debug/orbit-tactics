@@ -1,0 +1,46 @@
+name: Appli iPhone (vérification)
+
+# Compile Vesper en vraie appli iPhone sur un Mac de GitHub, sans signature :
+# ça prouve que l'emballage fonctionne. La version signée pour l'App Store viendra
+# une fois le compte développeur Apple créé (certificats à ajouter en secrets).
+on:
+  workflow_dispatch:
+
+jobs:
+  ios:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Installer TypeScript
+        run: npm install
+
+      - name: Télécharger la police (livrée avec le jeu)
+        run: mkdir -p fonts && curl -fsSL -o fonts/VT323-Regular.ttf https://raw.githubusercontent.com/google/fonts/main/ofl/vt323/VT323-Regular.ttf
+
+      - name: Compiler le jeu
+        run: npm run build
+
+      - name: Installer Capacitor (l'emballage iPhone)
+        run: npm install --no-save @capacitor/core@7 @capacitor/cli@7 @capacitor/ios@7
+
+      - name: Créer le projet iPhone
+        run: |
+          npx cap add ios
+          npx cap sync ios
+
+      - name: Compiler l'appli (simulateur, sans signature)
+        run: |
+          xcodebuild -version
+          xcodebuild -workspace ios/App/App.xcworkspace -scheme App -configuration Release \
+            -sdk iphonesimulator -derivedDataPath build CODE_SIGNING_ALLOWED=NO build | tail -n 40
+
+      - name: Garder l'appli compilée
+        uses: actions/upload-artifact@v4
+        with:
+          name: Vesper-simulateur
+          path: build/Build/Products/Release-iphonesimulator/App.app

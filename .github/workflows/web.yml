@@ -30,6 +30,9 @@ jobs:
       - name: Tests (cartes et histoire)
         run: npm test
 
+      - name: Télécharger la police (livrée avec le jeu)
+        run: mkdir -p fonts && curl -fsSL -o fonts/VT323-Regular.ttf https://raw.githubusercontent.com/google/fonts/main/ofl/vt323/VT323-Regular.ttf
+
       - name: Compiler le jeu
         run: npm run build
 
