@@ -327,6 +327,13 @@ const now = () => (ac ? ac.currentTime : 0);
 let stepFlip = false;
 
 export const sfx = {
+  /** Un sifflement de vapeur (une cuve qui s'ouvre). */
+  hiss() {
+    if (!ac) return;
+    const t = ac.currentTime;
+    noise(sfxBus, t, 1.6, 0.12, 'highpass', 5000, 1200);
+    noise(sfxBus, t + 0.05, 0.9, 0.06, 'bandpass', 900, 300);
+  },
   step() {
     if (!ac) return;
     stepFlip = !stepFlip;

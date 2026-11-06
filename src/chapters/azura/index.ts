@@ -1,7 +1,7 @@
 // Chapitre 2 : Azura. Pour l'instant, la tranche verticale, jouable en mode développeur.
 import { playTheme, sfx } from '../../engine/audio.js';
 import type { Chapter } from '../../engine/chapter.js';
-import type { Game } from '../../engine/game.js';
+import { view, type Game } from '../../engine/game.js';
 import type { PersonLook } from '../../engine/sprites.js';
 import * as ui from '../../engine/ui.js';
 import { MAPS_AZ, SOLID_AZ, START_AZ } from './maps.js';
@@ -59,6 +59,100 @@ const PEOPLE: Record<string, PersonLook> = {
     r: '#ffe066', R: '#d9b83a', j: '#e0574f', J: '#f08a80', e: '#a83b35', p: '#3b5a8a', b: '#2a2a2a', a: '#e0574f', A: '#f08a80',
   }),
 };
+
+// ---------- la sortie de la cuve : vapeur, puis on pose le pied sur la dalle ----------
+interface Steam { x: number; y: number; vx: number; vy: number; r: number; life: number; max: number }
+interface Emerge { stage: 'steam' | 'out' | 'land'; t: number; puffs: Steam[]; done: (() => void) | null }
+const emerging = new WeakMap<Game, Emerge>();
+const CUVE = { x: 4, y: 5 }; // le haut de la cuve 07
+
+function puff(e: Emerge, strong: boolean) {
+  const n = strong ? 3 : 1;
+  for (let i = 0; i < n; i++) {
+    e.puffs.push({
+      x: CUVE.x * 16 + 4 + Math.random() * 8,
+      y: CUVE.y * 16 + 4 + Math.random() * 18,
+      vx: (Math.random() - 0.5) * 14,
+      vy: -6 - Math.random() * 10,
+      r: 2 + Math.random() * 2,
+      life: 0,
+      max: 1.6 + Math.random() * 1.4,
+    });
+  }
+}
+
+function startEmerge(g: Game, done: () => void) {
+  g.locked = true;
+  g.heroAlpha = 0;
+  g.x = CUVE.x;
+  g.y = 7;
+  g.dir = 'down';
+  const e: Emerge = { stage: 'steam', t: 0, puffs: [], done };
+  emerging.set(g, e);
+  sfx.hiss();
+}
+
+function updateEmerge(g: Game, dt: number) {
+  const e = emerging.get(g);
+  if (!e) return;
+  e.t += dt;
+  for (const p of e.puffs) {
+    p.life += dt;
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.vx *= 0.98;
+    p.r += dt * 3.5;
+  }
+  e.puffs = e.puffs.filter((p) => p.life < p.max);
+  if (e.stage === 'steam') {
+    if (Math.random() < 0.7) puff(e, e.t < 1);
+    if (e.t > 1.8) {
+      // le héros sort de la vapeur et descend sur la dalle
+      e.stage = 'out';
+      e.t = 0;
+      g.heroAlpha = 1;
+      g.drag = { fx: CUVE.x, fy: CUVE.y + 0.9, t: 0, dur: 0.9 };
+    }
+  } else if (e.stage === 'out') {
+    if (Math.random() < 0.3) puff(e, false);
+    if (g.drag) {
+      g.drag.t += dt / g.drag.dur;
+      if (g.drag.t >= 1) g.drag = null;
+    }
+    if (!g.drag) {
+      e.stage = 'land';
+      e.t = 0;
+      g.heroCrouch = 0.5;
+      sfx.step();
+    }
+  } else if (e.stage === 'land' && e.t > 0.7) {
+    // il se retourne vers sa cuve
+    g.dir = 'up';
+    g.locked = false;
+    if (e.done) {
+      const done = e.done;
+      e.done = null;
+      done();
+    }
+    // la vapeur finit de se dissiper
+    if (!e.puffs.length || e.t > 4) emerging.delete(g);
+  }
+}
+
+function drawSteam(g: Game, c: CanvasRenderingContext2D) {
+  const e = emerging.get(g);
+  if (!e) return;
+  const [hx, hy] = g.heroPixel();
+  const ox = Math.round(hx + 8 - view.w / 2);
+  const oy = Math.round(hy + 8 - (view.h - view.padBottom) / 2);
+  for (const p of e.puffs) {
+    const a = 0.42 * (1 - p.life / p.max);
+    c.fillStyle = `rgba(235,250,255,${a})`;
+    c.beginPath();
+    c.arc(Math.round(p.x - ox), Math.round(p.y - oy), p.r, 0, Math.PI * 2);
+    c.fill();
+  }
+}
 
 // ---------- l'ouverture : le ciel bleu, celui de la fin du chapitre 1 ----------
 function skyOpening(done: () => void) {
@@ -151,13 +245,14 @@ export const azura: Chapter = {
       ui.fade(() => {
         sky.close();
         g.blackout = false;
-        g.heroCrouch = 1.2;
-        ui.showPlace(g.map.name);
-        ui.say([
-          'Je suis… sur Azura.',
-          'Ma cuve est ouverte. Toutes les autres aussi. Elles sont vides.',
-          '(Touche A pour examiner ce qui t’entoure. Ton journal garde la trace de tout ce que tu découvres.)',
-        ]);
+        startEmerge(g, () => {
+          ui.showPlace(g.map.name);
+          ui.say([
+            'Je suis… sur Azura.',
+            'Ma cuve est ouverte. Toutes les autres aussi. Elles sont vides.',
+            '(Touche A pour examiner ce qui t’entoure. Ton journal garde la trace de tout ce que tu découvres.)',
+          ]);
+        });
       });
     });
   },
@@ -185,6 +280,7 @@ export const azura: Chapter = {
         case '4': return 'bigCrater3';
         case 'k': return 'crystals' + (Math.floor(g.time * 1.5 + x * 0.7 + y) % 2);
         case 'm': return 'metalFloor';
+        case 'd': return 'slab';
         case 'c': {
           const row = g.map.rows[y];
           return row[x - 1] === 'c' || row[x + 1] === 'c' ? 'conduitH' : 'conduitV';
@@ -205,7 +301,14 @@ export const azura: Chapter = {
       if (name === 'holoTop') return 'holoTop' + (Math.floor(g.time * 2.5) % 2);
       return undefined;
     },
+    update(g, dt) {
+      updateEmerge(g, dt);
+    },
+    heroWalking(g) {
+      return emerging.get(g)?.stage === 'out';
+    },
     renderAtmosphere(g, c, w, h) {
+      drawSteam(g, c);
       if (!g.map.outdoor) {
         c.fillStyle = 'rgba(255,214,150,0.08)';
         c.fillRect(0, 0, w, h);

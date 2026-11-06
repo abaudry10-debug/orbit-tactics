@@ -8,7 +8,7 @@
 //   R  rocher, falaise  A  arbre d'Azura   u  fougère   |  barrière
 //   #  bâtiment d'Aurore (façade selon la zone)   Z  mur intérieur   w  plancher   F  fontaine
 //   x  sol nu d'Azura (régolithe)   o  petit cratère   1 2 / 3 4  grand cratère   k  cristaux
-//   m  plancher métallique   c  conduite au sol
+//   m  plancher métallique   c  conduite au sol   d  dalle grise devant une cuve
 import type { Dir } from '../../engine/sprites.js';
 import { Builder, exit, type GameMap, type MapObject } from '../../engine/world.js';
 
@@ -34,7 +34,12 @@ function cuves(): GameMap {
   b.points('k', [[1, 2], [18, 1], [22, 3], [12, 0], [23, 6], [0, 12]]);
   b.rect(0, 16, W, 2, 'A');
   // les quais métalliques, et les conduites qui relient les cuves
-  for (const y of [5, 9, 13]) { b.rect(3, y, 8, 2, 'm').rect(14, y, 7, 2, 'm'); b.rect(3, y + 2, 18, 1, 'c'); }
+  for (const y of [5, 9, 13]) {
+    b.rect(3, y, 8, 2, 'm').rect(14, y, 7, 2, 'm');
+    // une dalle grise devant chaque cuve, puis la conduite qui les relie
+    for (const x of [4, 6, 8, 15, 17, 19]) b.set(x, y + 2, 'd');
+    if (y < 13) b.rect(3, y + 3, 18, 1, 'c');
+  }
   b.rect(11, 4, 2, 14, '.');
   b.points(',', [[2, 8], [2, 9], [21, 11], [21, 10], [13, 15], [15, 15]]);
   b.points(';', [[2, 15], [21, 15], [10, 15]]);

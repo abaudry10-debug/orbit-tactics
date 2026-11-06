@@ -119,6 +119,18 @@ const conduit = (vertical: boolean): Painter => (c, v) => {
   R(0, 10, T, 1, AZ.metalDeep);
   R(6, 5, 3, 7, AZ.metal); R(6, 5, 3, 1, AZ.metalLight);
 };
+const slab: Painter = (c, v) => {
+  azGrass(c, v);
+  // une dalle grise, biseautée, avec deux repères lumineux pour poser les pieds
+  r(c, 1, 1, 14, 14, AZ.metalDeep);
+  r(c, 1, 1, 14, 13, '#a3adb8');
+  r(c, 1, 1, 14, 1, '#c9d1da'); r(c, 1, 1, 1, 13, '#c9d1da');
+  r(c, 14, 1, 1, 13, '#7d8794');
+  r(c, 3, 3, 10, 9, '#97a1ad');
+  r(c, 4, 6, 3, 4, '#86909c'); r(c, 9, 6, 3, 4, '#86909c');
+  r(c, 5, 5, 1, 1, AZ.glow); r(c, 10, 5, 1, 1, AZ.glow);
+  r(c, 6, 12, 4, 1, AZ.metalDark);
+};
 const azStone: Painter = (c, v) => {
   r(c, 0, 0, T, T, AZ.stone);
   r(c, 0, 0, T, 1, AZ.stoneLight); r(c, 0, 0, 1, T, AZ.stoneLight);
@@ -500,7 +512,7 @@ const azFence: Painter = (c, v) => {
 
 registerTiles(
   {
-    azGrass, azFlowers, azTall, azPath, azStone, azDeck, azFloor, regolith, crater, metalFloor,
+    slab, azGrass, azFlowers, azTall, azPath, azStone, azDeck, azFloor, regolith, crater, metalFloor,
     bigCrater0: bigCrater(0), bigCrater1: bigCrater(1), bigCrater2: bigCrater(2), bigCrater3: bigCrater(3),
     crystals0: crystals(0), crystals1: crystals(1), conduitH: conduit(false), conduitV: conduit(true),
     azWater0: waterFrame(0, false), azWater1: waterFrame(1, false), azShore0: waterFrame(0, true), azShore1: waterFrame(1, true),
