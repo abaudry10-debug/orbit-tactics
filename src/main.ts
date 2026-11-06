@@ -2,7 +2,8 @@ import { vesper } from './chapters/vesper/index.js';
 import { isMuted, playTheme, resumeAudio, setMuted, sfx, unlock } from './engine/audio.js';
 import { ch, setChapter } from './engine/chapter.js';
 import { Game, view } from './engine/game.js';
-import { setupDev } from './engine/dev.js';
+import { devEnabled, setupDev } from './engine/dev.js';
+import { azura } from './chapters/azura/index.js';
 import { chapterDone } from './engine/legacy.js';
 import { onPress, releaseAll, setupInput } from './engine/input.js';
 import { relayoutTitleScene, startTitleScene, stopTitleScene } from './engine/title.js';
@@ -69,10 +70,16 @@ const title = $('title');
 const btnContinue = $('btn-continue') as HTMLButtonElement;
 
 function showTitle() {
+  setChapter(vesper); // l'écran titre est celui du chapitre 1
   title.hidden = false;
   startTitleScene($('title-bg') as HTMLCanvasElement);
   btnContinue.hidden = !Game.hasSave();
   $('chap-1-state').textContent = chapterDone(ch().id) ? '✓ terminé' : Game.hasSave() ? 'en cours' : '';
+  // en mode développeur, le chapitre 2 se lance depuis l'écran titre
+  const dev = devEnabled();
+  $('chap-2').classList.toggle('locked', !dev);
+  $('chap-2').classList.toggle('dev', dev);
+  $('chap-2-state').textContent = dev ? 'dev ▶' : 'bientôt';
   playTheme('title');
 }
 
@@ -98,18 +105,7 @@ function startNew() {
   stopTitleScene();
   game.blackout = true;
   playTheme('none');
-  ui.say(ch().intro, () => {
-    ui.fade(() => {
-      game.blackout = false;
-      game.startMusic();
-      ui.showPlace(game.map.name);
-      ui.say([
-        'Où suis-je… ?',
-        'Je ne me souviens de rien. Pas même de mon nom.',
-        '(Touche A pour examiner ce qui t’entoure. Ton journal garde la trace de tout ce que tu découvres.)',
-      ]);
-    });
-  });
+  ch().begin(game);
 }
 
 function continueGame() {
@@ -124,6 +120,13 @@ function continueGame() {
 }
 
 $('btn-new').addEventListener('click', askNewGame);
+$('chap-2').addEventListener('click', () => {
+  if (!devEnabled()) return;
+  sfx.select();
+  setChapter(azura);
+  if (Game.hasSave()) continueGame();
+  else startNew();
+});
 btnContinue.addEventListener('click', continueGame);
 
 // ---------- pause ----------

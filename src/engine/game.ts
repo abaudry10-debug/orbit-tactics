@@ -5,7 +5,7 @@ import { ch } from './chapter.js';
 import { writeLegacy } from './legacy.js';
 import type { Api } from './content.js';
 import { SOLID, charAt, type GameMap, type MapObject } from './world.js';
-import { T, bigTree, cutout, dish, dogSprite, iconCanvas, dogAsleep, type DogLook, frozenTrain, hash, hero, radioTower, shuttleWreck, solarTower, tile, type Dir } from './sprites.js';
+import { T, person, bigTree, cutout, dish, dogSprite, iconCanvas, dogAsleep, type DogLook, frozenTrain, hash, hero, radioTower, shuttleWreck, solarTower, tile, type Dir } from './sprites.js';
 import * as ui from './ui.js';
 
 /** Taille de la vue en pixels de jeu ; recalculée selon l'écran (voir main.ts). */
@@ -15,6 +15,7 @@ const HEAT_WAVE = 24;
 const HEAT_FADE = 4;
 const MOVE_TIME = 0.19; // secondes pour traverser une case
 
+const OPPOSITE: Record<Dir, Dir> = { up: 'down', down: 'up', left: 'right', right: 'left' };
 const DELTA: Record<Dir, [number, number]> = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 
 interface Save {
@@ -118,6 +119,12 @@ export class Game {
   } | null = null;
   drag: { fx: number; fy: number; t: number; dur: number } | null = null;
   heroAlpha = 1;
+  /** Les habitants qu'on a abordés se tournent vers le héros. */
+  npcFace = new Map<string, Dir>();
+  /** Promenade des habitants : leur place d'origine, leur pas en cours, leur prochaine envie de bouger. */
+  npcHome = new Map<string, [number, number]>();
+  npcStep = new Map<string, { fx: number; fy: number; t: number }>();
+  npcWait = new Map<string, number>();
   wake: { t: number; first: boolean; stood: number } | null = null;
   saveTimer = 0;
   bumpCooldown = 0;
@@ -221,7 +228,9 @@ export class Game {
   /** Objet visible sur une case (les objets masqués par un drapeau sont ignorés). */
   objAt(x: number, y: number): MapObject | undefined {
     return this.map.objects.find(
-      (o) => o.x === x && o.y === y && !(o.hideWhen && this.flags.has(o.hideWhen)) && !(o.hiddenUntil && !this.flags.has(o.hiddenUntil)),
+      (o) =>
+        o.x === x && o.y === y && !(o.hideWhen && this.flags.has(o.hideWhen)) && !(o.hiddenUntil && !this.flags.has(o.hiddenUntil)) &&
+        !(o.showWhen && !this.flags.has(o.showWhen)),
     );
   }
 
@@ -244,9 +253,9 @@ export class Game {
 
   /** Case pleine (mur, eau…) ; l'eau toxique asséchée devient praticable. */
   solidChar(x: number, y: number): boolean {
-    const ch = charAt(this.map, x, y);
-    if (ch === '~' && this.map.dryFlag && this.flags.has(this.map.dryFlag)) return false;
-    return SOLID.has(ch);
+    const c0 = charAt(this.map, x, y);
+    if (c0 === '~' && this.map.dryFlag && this.flags.has(this.map.dryFlag)) return false;
+    return (ch().solid ?? SOLID).has(c0);
   }
 
   doorOpen(obj: MapObject): boolean {
@@ -270,6 +279,7 @@ export class Game {
       if (!this.blackout) this.save();
     }
     ch().hooks.update?.(this, dt);
+    this.updateNpcs(dt);
     this.updatePixel(dt);
     this.updateHeat(dt);
     this.updateMovement(dt);
@@ -279,6 +289,39 @@ export class Game {
    * Déplacement du héros, isolé ici pour pouvoir être remplacé par chapitre
    * (ch().features.movement). Pour l'instant, un seul système : case par case.
    */
+  /** Les habitants qui se promènent, et ceux qui cessent de regarder le héros quand il s'éloigne. */
+  updateNpcs(dt: number) {
+    for (const [id, st] of this.npcStep) {
+      st.t += dt / 0.4;
+      if (st.t >= 1) this.npcStep.delete(id);
+    }
+    for (const o of this.map.objects) {
+      if (!o.npc) continue;
+      if (this.npcFace.has(o.id) && Math.abs(o.x - this.x) + Math.abs(o.y - this.y) > 1) this.npcFace.delete(o.id);
+      const r = o.npc.wander;
+      if (!r || this.busy || this.npcFace.has(o.id) || this.npcStep.has(o.id) || !this.objAt(o.x, o.y)) continue;
+      if (!this.npcHome.has(o.id)) this.npcHome.set(o.id, [o.x, o.y]);
+      const left = (this.npcWait.get(o.id) ?? 1 + Math.random() * 3) - dt;
+      this.npcWait.set(o.id, left);
+      if (left > 0) continue;
+      this.npcWait.set(o.id, 1.5 + Math.random() * 3.5);
+      const dirs: Dir[] = ['up', 'down', 'left', 'right'];
+      const d = dirs[Math.floor(Math.random() * 4)];
+      const [dx, dy] = DELTA[d];
+      const [hx0, hy0] = this.npcHome.get(o.id)!;
+      const tx = o.x + dx, ty = o.y + dy;
+      o.npc.dir = d;
+      if (Math.abs(tx - hx0) > r || Math.abs(ty - hy0) > r) continue;
+      if (tx === this.x && ty === this.y) continue;
+      if (this.moving && this.x === tx && this.y === ty) continue;
+      if (this.pixel && this.pixel.x === tx && this.pixel.y === ty) continue;
+      if (this.objAt(tx, ty) || this.solidChar(tx, ty)) continue;
+      this.npcStep.set(o.id, { fx: o.x, fy: o.y, t: 0 });
+      o.x = tx;
+      o.y = ty;
+    }
+  }
+
   updateMovement(dt: number) {
     if (this.moving) {
       this.moving.t += dt / MOVE_TIME;
@@ -367,6 +410,7 @@ export class Game {
       this.locked = false;
       this.pixelMode = 'follow';
       this.nut = null;
+      this.npcFace.clear();
       this.idle = 0;
       this.outdoorTime = 0;
       if (this.flags.has('pixelOn')) this.placePixelBehind();
@@ -399,6 +443,7 @@ export class Game {
     const obj = this.anyObjAt(fx, fy);
     if (ch().hooks.beforeInteract?.(this, obj, fx, fy)) return;
     if (this.pixel && this.pixel.x === fx && this.pixel.y === fy && !this.pixel.walk && !obj) return this.petPixel();
+    if (obj?.npc) this.npcFace.set(obj.id, OPPOSITE[this.dir]);
     if (obj?.script) {
       ch().scripts[obj.script]?.(this.api);
       return;
@@ -1609,13 +1654,15 @@ export class Game {
     const m = this.map;
     const mark = m.marks?.find((k) => k.x === x && k.y === y);
     if (mark) return mark.sprite;
-    const ch = charAt(m, x, y);
-    const below = y + 1 >= m.height ? ch : charAt(m, x, y + 1);
-    if (ch === '#' && m.skins) {
+    const cc = charAt(m, x, y);
+    const below = y + 1 >= m.height ? cc : charAt(m, x, y + 1);
+    if (cc === '#' && m.skins) {
       const sk = m.skins.find((k) => x >= k.x && x < k.x + k.w && y >= k.y && y < k.y + k.h);
       if (sk) return `${sk.style}${below === '#' && y + 1 < sk.y + sk.h ? 'Top' : 'Front'}`;
     }
-    switch (ch) {
+    const custom = ch().hooks.tileName?.(this, cc, x, y, below);
+    if (custom) return custom;
+    switch (cc) {
       case 'H': return 'pad';
       case 'N': return m.solidBase ?? 'pad';
       case '.': return 'dust';
@@ -1691,6 +1738,7 @@ export class Game {
     const x0 = Math.floor(ox / T) - 1;
     const y0 = Math.floor(oy / T) - 1;
     const vis: [string, number, number][] = [];
+    const npcs: MapObject[] = [];
     for (let y = y0; y <= y0 + view.h / T + 2; y++) {
       for (let x = x0; x <= x0 + view.w / T + 2; x++) {
         if (x < 0 || y < 0 || x >= this.map.width || y >= this.map.height) {
@@ -1699,7 +1747,8 @@ export class Game {
           continue;
         }
         const obj = this.objAt(x, y);
-        const sprite = obj ? this.objSprite(obj) : '';
+        if (obj?.npc) npcs.push(obj);
+        const sprite = obj && !obj.npc ? this.objSprite(obj) : '';
         const name = sprite || this.tileName(x, y);
         const sh = obj ? this.shakeOf(obj) : 0;
         c.drawImage(tile(name, hash(x, y)), x * T - ox + sh, y * T - oy);
@@ -1752,10 +1801,23 @@ export class Game {
     if (ch().hooks.heroWalking?.(this)) frame = Math.floor(this.time * 7) % 2 ? 1 : 2;
     else if (!this.moving && this.idle > 1.5 && Math.floor(this.time / 0.9) % 2) frame = 4;
     const suit = this.items.has('combinaison');
+    // les habitants : derrière le héros s'ils sont plus haut sur l'écran, devant sinon
+    const drawNpc = (o: MapObject) => {
+      const look = ch().people?.[o.npc!.look];
+      if (!look) return;
+      const dir = this.npcFace.get(o.id) ?? o.npc!.dir;
+      const step = this.npcStep.get(o.id);
+      const k = step ? Math.min(1, step.t) : 1;
+      const px = step ? (step.fx + (o.x - step.fx) * k) * T : o.x * T;
+      const py = step ? (step.fy + (o.y - step.fy) * k) * T : o.y * T;
+      const f = step ? (k < 0.5 ? 1 : 2) : Math.floor(this.time / 1.1 + (o.x * 3 + o.y) * 0.37) % 2 ? 4 : 0;
+      c.drawImage(person(look, dir, f), Math.round(px - ox), Math.round(py - oy) - 3);
+    };
+    for (const o of npcs) if (o.y * T <= hy + 1) drawNpc(o);
     const drawHero = () => {
       if (this.heroAlpha <= 0) return;
       c.globalAlpha = this.heroAlpha;
-      c.drawImage(hero(this.dir, frame, suit), Math.round(hx - ox), Math.round(hy - oy) - (frame === 5 ? 0 : 3));
+      c.drawImage(hero(this.dir, frame, suit, ch().heroLook), Math.round(hx - ox), Math.round(hy - oy) - (frame === 5 ? 0 : 3));
       c.globalAlpha = 1;
     };
     if (this.pixel) {
@@ -1824,6 +1886,7 @@ export class Game {
         drawDog();
       }
     } else drawHero();
+    for (const o of npcs) if (o.y * T > hy + 1) drawNpc(o);
     this.renderFx(ox, oy);
     this.renderZap(ox, oy);
     this.renderPop(hx - ox, hy - oy);
@@ -1894,7 +1957,9 @@ export class Game {
 
   renderAtmosphere() {
     const c = this.ctx;
-    if (this.map.outdoor) {
+    if (ch().hooks.renderAtmosphere?.(this, c, view.w, view.h)) {
+      // le chapitre a dessiné sa propre lumière
+    } else if (this.map.outdoor) {
       const g = c.createLinearGradient(0, 0, 0, view.h);
       g.addColorStop(0, 'rgba(255,110,40,0.22)');
       g.addColorStop(1, 'rgba(120,30,60,0.12)');

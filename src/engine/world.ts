@@ -34,6 +34,10 @@ export interface MapObject {
   passWhen?: string; // devient franchissable quand le drapeau est levé (porte, grille)
   hideWhen?: string; // disparaît quand le drapeau est levé
   hiddenUntil?: string; // invisible et franchissable tant que le drapeau n'est pas levé (on peut quand même l'examiner)
+  /** Un habitant : son apparence (voir Chapter.people) et son regard au repos. */
+  npc?: { look: string; dir: Dir; /** Se promène autour de sa place (nombre de cases). */ wander?: number };
+  /** Visible seulement quand ce drapeau est levé. */
+  showWhen?: string;
 }
 
 export interface EnergySource {
@@ -48,7 +52,8 @@ export interface Skin {
   y: number;
   w: number;
   h: number;
-  style: 'lab' | 'res' | 'metro' | 'spatio' | 'helios' | 'house' | 'obs';
+  /** Nom de la façade : les tuiles `${style}Top` et `${style}Front` doivent exister. */
+  style: string;
 }
 
 /** Grand décor dessiné par-dessus les cases (navette, antenne…), aligné sur le bas de son emprise. */

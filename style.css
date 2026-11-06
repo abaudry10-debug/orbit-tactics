@@ -449,6 +449,13 @@ body {
   white-space: nowrap;
   color: var(--teal);
 }
+.chap.dev {
+  cursor: pointer;
+  color: #ff9cec;
+}
+.chap.dev b {
+  color: #ff9cec;
+}
 .chap.locked {
   color: var(--muted);
 }
@@ -1315,8 +1322,7 @@ details.thread > summary.has-new .count { color: var(--accent-dark); }
 .dev-btn {
   position: absolute;
   top: calc(var(--safe-top) + 4px);
-  left: 50%;
-  transform: translateX(-50%);
+  right: 8px;
   z-index: 60;
   font: 16px var(--font);
   padding: 2px 8px;

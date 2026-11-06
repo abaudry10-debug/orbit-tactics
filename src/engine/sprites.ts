@@ -4,7 +4,7 @@
 export const T = 16;
 
 type Ctx = CanvasRenderingContext2D;
-type Painter = (c: Ctx, v: number) => void;
+export type Painter = (c: Ctx, v: number) => void;
 
 function canvas(w = T, h = T): [HTMLCanvasElement, Ctx] {
   const cv = document.createElement('canvas');
@@ -1184,7 +1184,7 @@ export function tile(name: string, v = 0): HTMLCanvasElement {
 // ---------- découpes : le sprite sans son sol, et son ombre ----------
 // Les objets sont peints sur leur case avec le sol dessous. Pour leur donner une ombre à leur
 // forme, on retrouve le sol utilisé (en comparant avec les sols connus) et on garde le reste.
-const GROUNDS = ['dust', 'sand', 'asphalt', 'road', 'grass', 'labFloor', 'woodFloor', 'platform', 'pad', 'grating'];
+const GROUNDS: string[] = ['dust', 'sand', 'asphalt', 'road', 'grass', 'labFloor', 'woodFloor', 'platform', 'pad', 'grating'];
 const cutCache = new Map<string, { img: HTMLCanvasElement; shadow: HTMLCanvasElement } | null>();
 
 export function cutout(name: string, v = 0): { img: HTMLCanvasElement; shadow: HTMLCanvasElement } | null {
@@ -1307,8 +1307,8 @@ const SUIT_PAL: Record<string, string> = {
   h: '#b8bec8', H: '#e6e9ee', d: '#7e8590', j: '#c9ced6', J: '#eef1f5', e: '#8e959f', p: '#9aa1ab', b: '#6a707a',
 };
 
-export function hero(dir: Dir, frame: number, suit = false): HTMLCanvasElement {
-  const id = `${dir}:${frame}:${suit ? 1 : 0}`;
+export function hero(dir: Dir, frame: number, suit = false, pal?: PersonLook): HTMLCanvasElement {
+  const id = `${dir}:${frame}:${suit ? 1 : 0}:${pal?.id ?? ''}`;
   let cv = heroCache.get(id);
   if (cv) return cv;
   if (frame === 5) {
@@ -1319,7 +1319,7 @@ export function hero(dir: Dir, frame: number, suit = false): HTMLCanvasElement {
     lctx.save();
     lctx.translate(8, 10);
     lctx.rotate(-Math.PI / 2);
-    lctx.drawImage(hero('down', 0, suit), -8, -8);
+    lctx.drawImage(hero('down', 0, suit, pal), -8, -8);
     lctx.restore();
     lctx.clearRect(0, 14, T, 2);
     lctx.fillStyle = 'rgba(0,0,0,0.25)';
@@ -1344,7 +1344,7 @@ export function hero(dir: Dir, frame: number, suit = false): HTMLCanvasElement {
   const top = crouch ? 2 : 0;
   rows.forEach((row, y) => {
     [...row].forEach((ch, x) => {
-      const col = (suit && SUIT_PAL[ch]) || HERO_PAL[ch];
+      const col = (suit && SUIT_PAL[ch]) || pal?.colors[ch] || HERO_PAL[ch];
       if (!col) return;
       const px = dir === 'left' ? 15 - x : x;
       // respiration : la tête et les épaules descendent d'un pixel
@@ -1355,4 +1355,34 @@ export function hero(dir: Dir, frame: number, suit = false): HTMLCanvasElement {
   });
   heroCache.set(id, c);
   return c;
+}
+
+// ---------- pour les chapitres ----------
+// Un chapitre peut ajouter ses propres tuiles (et ses propres sols, pour les ombres découpées).
+export function registerTiles(painters: Record<string, Painter>, grounds: string[] = []) {
+  for (const [name, p] of Object.entries(painters)) REGISTRY[name] = [p];
+  for (const g of grounds) if (!GROUNDS.includes(g)) GROUNDS.push(g);
+}
+
+/** Les outils de dessin, pour les tuiles des chapitres. */
+export const paint = { r, rng, speckle, canvas };
+
+/**
+ * Apparence d'un personnage : même silhouette que le héros, autres couleurs.
+ * Codes : h/H/d cheveux (ou capuche), s/S peau, g yeux/lunettes, w reflet, r/R écharpe ou col,
+ * j/J/e haut, p pantalon, b chaussures, a/A sac (vu de dos).
+ */
+export interface PersonLook {
+  id: string;
+  colors: Record<string, string>;
+}
+
+/** Un habitant : la silhouette du héros, sans lunettes, avec ses propres couleurs. */
+export function person(look: PersonLook, dir: Dir, frame: number): HTMLCanvasElement {
+  return hero(dir, frame, false, look);
+}
+
+/** Les icônes du sac propres à un chapitre. */
+export function registerIcons(painters: Record<string, Painter>) {
+  Object.assign(ICONS, painters);
 }

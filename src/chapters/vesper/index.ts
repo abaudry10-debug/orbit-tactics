@@ -1,5 +1,6 @@
 // Chapitre 1 : Vesper. La cartouche complète, branchée sur le moteur par main.ts.
 import type { Chapter } from '../../engine/chapter.js';
+import * as ui from '../../engine/ui.js';
 import { finale, hooks } from './logic.js';
 import { MAPS, START } from './maps.js';
 import { MEMORIES } from './memories.js';
@@ -29,6 +30,21 @@ export const vesper: Chapter = {
   dialogStyle: 'vesper',
   cutTargets: { pixelFlap: 'leaHouse', pixelVent: 'vent', pixelPower: 'heliosDoor', pixelCar: 'shinyCar' },
   hooks,
+  // texte d'ouverture sur fond noir, puis le réveil dans le laboratoire
+  begin(g) {
+    ui.say(INTRO, () => {
+      ui.fade(() => {
+        g.blackout = false;
+        g.startMusic();
+        ui.showPlace(g.map.name);
+        ui.say([
+          'Où suis-je… ?',
+          'Je ne me souviens de rien. Pas même de mon nom.',
+          '(Touche A pour examiner ce qui t’entoure. Ton journal garde la trace de tout ce que tu découvres.)',
+        ]);
+      });
+    });
+  },
   dev: {
     presets: [
       { label: 'Pixel réveillé', flags: ['firstOutside', 'wave1Done', 'sondeHint', 'knowsBattery', 'batteryFound', 'pixelOn'], items: ['sonde', 'pelle'] },

@@ -5,10 +5,10 @@
 
 import type { Achievement, ArchiveFolder, Clue, ItemDef, Memory, Question, Script, Thread } from './content.js';
 import type { Game } from './game.js';
-import type { Dir } from './sprites.js';
+import type { Dir, PersonLook } from './sprites.js';
 import type { GameMap, MapObject } from './world.js';
 
-export type Theme = 'title' | 'outdoor' | 'lab' | 'home' | 'none';
+export type Theme = 'title' | 'outdoor' | 'lab' | 'home' | 'azura' | 'none';
 export type CutKind = 'pixelFlap' | 'pixelVent' | 'pixelPower' | 'pixelCar';
 
 export interface ChapterFeatures {
@@ -42,6 +42,10 @@ export interface ChapterHooks {
   heatTrigger?(g: Game, dt: number): { kind: string; strength: number } | null;
   /** Une vague vient de se terminer. */
   onHeatEnd?(g: Game, kind: string): void;
+  /** Le dessin d'une case du chapitre (sinon, le dessin par défaut du moteur). */
+  tileName?(g: Game, ch: string, x: number, y: number, below: string): string | undefined;
+  /** La lumière du chapitre (teinte, particules) ; true si elle a été dessinée. */
+  renderAtmosphere?(g: Game, c: CanvasRenderingContext2D, w: number, h: number): boolean;
   /** Pixel est-il « chez lui » ici (il remue la queue, jappe de joie) ? */
   isPixelHome?(g: Game): boolean;
 }
@@ -75,6 +79,14 @@ export interface Chapter {
   /** Objet visé par chaque scène de Pixel (chatière, conduit…). */
   cutTargets: Partial<Record<CutKind, string>>;
   hooks: ChapterHooks;
+  /** Ce qui se passe quand on lance une nouvelle partie (texte d'ouverture, réveil). */
+  begin(g: Game): void;
+  /** Les cases infranchissables (sinon celles du moteur). */
+  solid?: Set<string>;
+  /** L'apparence des habitants, par nom. */
+  people?: Record<string, PersonLook>;
+  /** L'apparence du héros dans ce chapitre (sinon celle du chapitre 1). */
+  heroLook?: PersonLook;
   /** Raccourcis du mode développeur (?dev). */
   dev?: {
     /** Étapes de l'histoire : on pose ces drapeaux et objets, puis on se téléporte. */

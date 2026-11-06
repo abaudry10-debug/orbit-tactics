@@ -51,6 +51,7 @@ Le code est découpé en un **moteur** commun et des **chapitres** branchés des
 | `src/engine/legacy.ts` | L'héritage d'un chapitre terminé, transmis au suivant |
 | `src/engine/dev.ts` | Mode développeur caché (`?dev`, ou 5 touchers sur le titre) |
 | `src/chapters/vesper/` | Chapitre 1 : cartes, histoire, souvenirs de Pixel, code propre (capsule 07, fin, Sonde) |
+| `src/chapters/azura/` | Chapitre 2 (en cours) : tranche verticale, jouable en mode développeur depuis l'écran titre |
 | `src/main.ts` | Écran titre et chargement du chapitre |
 | `tests/` | Vérifie que chaque objet est accessible et chaque indice obtenable |
 
