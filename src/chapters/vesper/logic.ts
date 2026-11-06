@@ -125,6 +125,7 @@ function askPrime(g: Game) {
     'Pixel te regarde, assis au pied de la capsule.',
     () => finale(g),
     () => {
+      g.count('lastWalk');
       g.pixelMode = 'follow';
       sfx.pixelHappy();
       const hx = g.pixel!.x * T + 8, hy = g.pixel!.y * T + 2;
@@ -135,7 +136,7 @@ function askPrime(g: Game) {
   );
 }
 
-function finale(g: Game) {
+export function finale(g: Game) {
   g.locked = true;
   releaseAll();
   g.heroCrouch = 999;
@@ -215,6 +216,7 @@ function updateEnding(g: Game, dt: number) {
     ui.say(['Tu t’allonges dans la capsule 07. Pixel est couché à son pied.', ...FINALE], async () => {
       await ui.playFinale(dogAsleep(), () => { g.blackout = true; });
       g.locked = false;
+      g.recordLegacy();
       g.onFinished();
     });
   }

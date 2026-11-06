@@ -2,6 +2,7 @@
 import { heartbeat, playTheme, setHeatSound, sfx } from './audio.js';
 import { heldDir, releaseAll } from './input.js';
 import { ch } from './chapter.js';
+import { writeLegacy } from './legacy.js';
 import type { Api } from './content.js';
 import { SOLID, charAt, type GameMap, type MapObject } from './world.js';
 import { T, bigTree, cutout, dish, dogSprite, iconCanvas, dogAsleep, type DogLook, frozenTrain, hash, hero, radioTower, shuttleWreck, solarTower, tile, type Dir } from './sprites.js';
@@ -196,6 +197,16 @@ export class Game {
     } catch {
       /* stockage indisponible (navigation privée) : on continue sans sauvegarde */
     }
+  }
+
+  /** Ajoute 1 à un compteur de la partie (succès, héritage). */
+  count(name: string) {
+    this.counters[name] = (this.counters[name] ?? 0) + 1;
+  }
+
+  /** Fin du chapitre : on garde son héritage pour le suivant. */
+  recordLegacy() {
+    writeLegacy(ch().id, { at: new Date().toISOString(), counters: { ...this.counters }, data: ch().legacy?.(this) ?? {} });
   }
 
   static clearSave() {
@@ -555,6 +566,7 @@ export class Game {
   }
 
   petPixel() {
+    this.count('pet');
     if (!this.pixel || this.pixelMode === 'fetch') return;
     this.pixelMode = 'pet';
     this.pixelTimer = 1.8;
@@ -1235,6 +1247,7 @@ export class Game {
         if (path && (!best || path.length < best.path.length)) best = { path, door: o };
       }
     }
+    this.count('rescue');
     this.rescue = { stage: 'fall', t: 0, path: best?.path ?? [], i: 0, max: quick ? 5 : 8, door: best?.door ?? null, quick };
     sfx.bump();
     heartbeat(1);

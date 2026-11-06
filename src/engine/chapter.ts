@@ -75,6 +75,15 @@ export interface Chapter {
   /** Objet visé par chaque scène de Pixel (chatière, conduit…). */
   cutTargets: Partial<Record<CutKind, string>>;
   hooks: ChapterHooks;
+  /** Raccourcis du mode développeur (?dev). */
+  dev?: {
+    /** Étapes de l'histoire : on pose ces drapeaux et objets, puis on se téléporte. */
+    presets: { label: string; flags: string[]; items: string[]; at?: { map: string; x: number; y: number; dir: Dir } }[];
+    /** Actions propres au chapitre (lancer la fin…). */
+    actions: { label: string; run(g: Game): void }[];
+  };
+  /** Ce que ce chapitre transmet au suivant quand on le termine. */
+  legacy?(g: Game): Record<string, unknown>;
 }
 
 let current: Chapter | null = null;

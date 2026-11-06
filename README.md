@@ -42,15 +42,16 @@ Au clavier : flèches ou ZQSD, Espace pour A, I pour le sac, J pour le journal, 
 
 TypeScript + Canvas 2D, **aucune dépendance** à l'exécution. Tout le pixel art est dessiné en code.
 
-| Fichier | Rôle |
+Le code est découpé en un **moteur** commun et des **chapitres** branchés dessus.
+
+| Dossier / fichier | Rôle |
 | --- | --- |
-| `src/sprites.ts` | Pixel art : héros animé (4 directions), tuiles, objets |
-| `src/maps.ts` | Cartes (laboratoire, ville) et objets placés dessus |
-| `src/story.ts` | Histoire : indices du journal, objets, scripts d'interaction, énigme |
-| `src/game.ts` | Déplacements, caméra, interactions, Pixel, Sonde, fouille, rendu, sauvegarde |
-| `src/audio.ts` | Musique et bruitages synthétisés (Web Audio) |
-| `src/ui.ts` | Dialogues, journal, clavier à code, notifications |
-| `src/input.ts` | Clavier et croix tactile |
+| `src/engine/` | Moteur commun : déplacements, Pixel, chaleur, rendu, dialogues, son, sauvegarde |
+| `src/engine/chapter.ts` | Ce qu'un chapitre fournit au moteur : contenu, réglages (vagues de chaleur, musique, style de dialogue), crochets |
+| `src/engine/legacy.ts` | L'héritage d'un chapitre terminé, transmis au suivant |
+| `src/engine/dev.ts` | Mode développeur caché (`?dev`, ou 5 touchers sur le titre) |
+| `src/chapters/vesper/` | Chapitre 1 : cartes, histoire, souvenirs de Pixel, code propre (capsule 07, fin, Sonde) |
+| `src/main.ts` | Écran titre et chargement du chapitre |
 | `tests/` | Vérifie que chaque objet est accessible et chaque indice obtenable |
 
 ```bash
@@ -64,8 +65,8 @@ Chaque push sur `main` lance les tests, compile et publie sur GitHub Pages.
 
 ### Ajouter du contenu
 
-1. Un indice : une entrée dans `CLUES` (`src/story.ts`).
-2. Un objet sur la carte : une ligne dans `objects` (`src/maps.ts`) avec un `script`.
+1. Un indice : une entrée dans `CLUES` (`src/chapters/vesper/story.ts`).
+2. Un objet sur la carte : une ligne dans `objects` (`src/chapters/vesper/maps.ts`) avec un `script`.
 3. Le script, dans `SCRIPTS` : il fait parler le jeu (`api.say`) et donne l'indice (`api.clue`).
 
 ### Vers l'App Store

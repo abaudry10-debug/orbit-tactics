@@ -2,6 +2,8 @@ import { vesper } from './chapters/vesper/index.js';
 import { isMuted, playTheme, resumeAudio, setMuted, sfx, unlock } from './engine/audio.js';
 import { ch, setChapter } from './engine/chapter.js';
 import { Game, view } from './engine/game.js';
+import { setupDev } from './engine/dev.js';
+import { chapterDone } from './engine/legacy.js';
 import { onPress, releaseAll, setupInput } from './engine/input.js';
 import { relayoutTitleScene, startTitleScene, stopTitleScene } from './engine/title.js';
 import * as ui from './engine/ui.js';
@@ -70,6 +72,7 @@ function showTitle() {
   title.hidden = false;
   startTitleScene($('title-bg') as HTMLCanvasElement);
   btnContinue.hidden = !Game.hasSave();
+  $('chap-1-state').textContent = chapterDone(ch().id) ? '✓ terminé' : Game.hasSave() ? 'en cours' : '';
   playTheme('title');
 }
 
@@ -235,3 +238,4 @@ requestAnimationFrame(loop);
 
 // Hook de test : permet aux captures automatiques de piloter le jeu.
 (window as unknown as { __game: () => Game }).__game = () => game;
+setupDev(() => game, () => title.hidden === true);
