@@ -4,7 +4,7 @@ Jeu d'exploration en pixel art, façon Pokémon à l'ancienne, dans un monde fut
 Tu te réveilles dans une capsule, sans mémoire, au milieu d'une ville morte.
 Chaque indice trouvé remplit ton **journal**, jusqu'à comprendre ce qui s'est passé… et trouver une issue.
 
-**Jouer :** https://abaudry10-debug.github.io/orbit-tactics/
+**Jouer :** https://abaudry10-debug.github.io/vesper/
 
 Sur iPhone : ouvre le lien dans Safari, puis **Partager → Sur l'écran d'accueil** pour jouer en plein écran.
 
