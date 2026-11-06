@@ -2,21 +2,11 @@
 // Chaque souvenir est une suite de tableaux animés (dessinés à chaque image, t en secondes),
 // avec une phrase en sous-titre. Le rendu « projection abîmée » (cyan, parasites) est fait par ui.ts.
 
-import { dogSprite, type DogLook } from './sprites.js';
+import { dogSprite, type DogLook } from '../../engine/sprites.js';
+import { MH, MW, type Memory } from '../../engine/content.js';
 
 type Ctx = CanvasRenderingContext2D;
-export const MW = 160;
-export const MH = 112;
 
-export interface Tableau {
-  caption: string;
-  dur: number;
-  draw: (c: Ctx, t: number) => void;
-}
-export interface Memory {
-  title: string;
-  tableaux: Tableau[];
-}
 
 const INK = '#1c1020';
 const SKIN = '#f0c39a';

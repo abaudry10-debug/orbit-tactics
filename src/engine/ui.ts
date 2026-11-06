@@ -1,9 +1,10 @@
 // Interface HTML par-dessus le canvas : dialogues, journal, clavier à code, notifications.
 import { playEnding, setStatic, sfx, startStatic, stopStatic } from './audio.js';
 import { iconUrl } from './sprites.js';
-import { CLUES, ITEMS, QUESTIONS, THREADS, type ArchiveFolder } from './story.js';
+import { ch } from './chapter.js';
+import type { ArchiveFolder, Question } from './content.js';
 import { iconCanvas } from './sprites.js';
-import { MEMORIES, MH, MW } from './memories.js';
+import { MH, MW } from './content.js';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -94,9 +95,9 @@ export function renderJournal(
 ) {
   const body = $('journal-body');
   body.innerHTML = '';
-  const found = CLUES.filter((c) => clues.has(c.id)).length;
+  const found = ch().clues.filter((c) => clues.has(c.id)).length;
   const news = [...fresh].filter((id) => clues.has(id) || openQ.has(id)).length;
-  const pending = QUESTIONS.filter((q) => openQ.has(q.id) && !solvedQ.has(q.id)).length;
+  const pending = ch().questions.filter((q) => openQ.has(q.id) && !solvedQ.has(q.id)).length;
   $('journal-progress').textContent =
     found === 0
       ? 'Rien encore. Examine ce qui t’entoure.'
@@ -118,7 +119,7 @@ export function renderJournal(
     el.querySelector('p')!.textContent = text;
     return el;
   };
-  const qCard = (q: (typeof QUESTIONS)[number]) => {
+  const qCard = (q: Question) => {
     const solved = solvedQ.has(q.id);
     return card(solved ? q.ask : `? ${q.ask}`, solved ? q.answer : 'Pas encore de réponse.', solved ? 'answer' : 'question', fresh.has(q.id));
   };
@@ -126,9 +127,9 @@ export function renderJournal(
   const newFirst = <T extends { id: string }>(list: T[]) => [...list.filter((x) => fresh.has(x.id)), ...list.filter((x) => !fresh.has(x.id))];
 
   // 1. Pour avancer : ce qui reste à faire, bien en vue
-  const lead = THREADS.find((t) => t.id === 'leads')!;
-  const leads = CLUES.filter((c) => c.thread === 'leads' && clues.has(c.id));
-  const leadQs = QUESTIONS.filter((q) => q.thread === 'leads' && openQ.has(q.id) && !solvedQ.has(q.id));
+  const lead = ch().threads.find((t) => t.id === 'leads')!;
+  const leads = ch().clues.filter((c) => c.thread === 'leads' && clues.has(c.id));
+  const leadQs = ch().questions.filter((q) => q.thread === 'leads' && openQ.has(q.id) && !solvedQ.has(q.id));
   const todo = leads.filter((c) => !(c.doneWhen && isDone(c.doneWhen)));
   const done = leads.filter((c) => c.doneWhen && isDone(c.doneWhen));
   if (todo.length || leadQs.length || done.length) {
@@ -149,7 +150,7 @@ export function renderJournal(
   }
 
   // 2. Les fils de l'histoire, repliables ; ceux qui ont du nouveau s'ouvrent d'eux-mêmes
-  for (const th of THREADS) {
+  for (const th of ch().threads) {
     if (th.id === 'leads') continue;
     if (th.id === 'pixel') {
       // les souvenirs de Pixel : cinq cases, à revoir à volonté
@@ -165,7 +166,7 @@ export function renderJournal(
       sum.querySelector('.count')!.textContent = `${seen.length}/5`;
       d.appendChild(sum);
       for (let n = 1; n <= 5; n++) {
-        const c = CLUES.find((x) => x.id === `memo${n}`)!;
+        const c = ch().clues.find((x) => x.id === `memo${n}`)!;
         if (!clues.has(c.id)) {
           d.appendChild(card(`Souvenir ${n}`, 'Fragment manquant.', 'unknown', false));
           continue;
@@ -183,8 +184,8 @@ export function renderJournal(
       body.appendChild(d);
       continue;
     }
-    const got = CLUES.filter((c) => c.thread === th.id && clues.has(c.id));
-    const qs = QUESTIONS.filter((q) => q.thread === th.id && openQ.has(q.id));
+    const got = ch().clues.filter((c) => c.thread === th.id && clues.has(c.id));
+    const qs = ch().questions.filter((q) => q.thread === th.id && openQ.has(q.id));
     if (got.length === 0 && qs.length === 0) continue; // un fil n'apparaît qu'une fois entamé
     const newCount = got.filter((c) => fresh.has(c.id)).length + qs.filter((q) => fresh.has(q.id)).length;
     const d = document.createElement('details');
@@ -241,7 +242,7 @@ export function renderBag(items: string[], onUse: (id: string) => void, sondeOn:
     grid.querySelectorAll('.slot').forEach((s) => s.classList.remove('selected'));
     cell.classList.add('selected');
     sfx.key();
-    const it = ITEMS[id];
+    const it = ch().items[id];
     detail.innerHTML = '<strong></strong><p></p>';
     detail.querySelector('strong')!.textContent = it?.name ?? id;
     detail.querySelector('p')!.textContent = it?.text ?? '';
@@ -258,7 +259,7 @@ export function renderBag(items: string[], onUse: (id: string) => void, sondeOn:
     cell.className = 'slot';
     const img = document.createElement('img');
     img.src = iconUrl(id);
-    img.alt = ITEMS[id]?.name ?? id;
+    img.alt = ch().items[id]?.name ?? id;
     cell.appendChild(img);
     cell.addEventListener('click', () => select(id, cell));
     grid.appendChild(cell);
@@ -1288,7 +1289,7 @@ let memoryState: { n: number; i: number; t0: number; raf: number; done: () => vo
 export const memoryOpen = () => !$('memory').hidden;
 
 export function openMemory(n: number, done: () => void) {
-  const mem = MEMORIES[n - 1];
+  const mem = ch().memories[n - 1];
   const el = $('memory');
   const cv = $('memory-canvas') as HTMLCanvasElement;
   cv.width = MW;

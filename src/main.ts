@@ -1,9 +1,12 @@
-import { isMuted, playTheme, resumeAudio, setMuted, sfx, unlock } from './audio.js';
-import { Game, view } from './game.js';
-import { onPress, releaseAll, setupInput } from './input.js';
-import { INTRO } from './story.js';
-import { relayoutTitleScene, startTitleScene, stopTitleScene } from './title.js';
-import * as ui from './ui.js';
+import { vesper } from './chapters/vesper/index.js';
+import { isMuted, playTheme, resumeAudio, setMuted, sfx, unlock } from './engine/audio.js';
+import { ch, setChapter } from './engine/chapter.js';
+import { Game, view } from './engine/game.js';
+import { onPress, releaseAll, setupInput } from './engine/input.js';
+import { relayoutTitleScene, startTitleScene, stopTitleScene } from './engine/title.js';
+import * as ui from './engine/ui.js';
+
+setChapter(vesper);
 
 const $ = (id: string) => document.getElementById(id)!;
 
@@ -92,7 +95,7 @@ function startNew() {
   stopTitleScene();
   game.blackout = true;
   playTheme('none');
-  ui.say(INTRO, () => {
+  ui.say(ch().intro, () => {
     ui.fade(() => {
       game.blackout = false;
       game.startMusic();

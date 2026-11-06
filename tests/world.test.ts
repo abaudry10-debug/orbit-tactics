@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { MAPS, SOLID, START, charAt, objectAt, type GameMap } from '../src/maps.js';
-import { CLUES, ITEMS, MISSION_CODE, QUESTIONS, SCRIPTS, THREADS } from '../src/story.js';
+import { MAPS, START } from '../src/chapters/vesper/maps.js';
+import { SOLID, charAt, objectAt, type GameMap } from '../src/engine/world.js';
+import { CLUES, ITEMS, MISSION_CODE, QUESTIONS, SCRIPTS, THREADS } from '../src/chapters/vesper/story.js';
 
 const DIRS = [[0, 1], [0, -1], [1, 0], [-1, 0]];
 

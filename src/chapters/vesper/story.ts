@@ -1,7 +1,9 @@
 // Histoire — étape 1 : indices du journal, questions, objets et scripts d'interaction.
 // Pour ajouter du contenu : une entrée dans CLUES, puis un script qui appelle api.clue().
 
-export type ThreadId = 'self' | 'capsules' | 'heat' | 'missions' | 'leads' | 'lea' | 'pixel';
+import type { Achievement, Api, ArchiveFolder, Clue, ItemDef, Question, Script, ThreadId } from '../../engine/content.js';
+export type { Api, ArchiveFolder } from '../../engine/content.js';
+
 
 export const THREADS: { id: ThreadId; title: string; icon: string }[] = [
   { id: 'self', title: 'Qui suis-je ?', icon: '◉' },
@@ -13,14 +15,6 @@ export const THREADS: { id: ThreadId; title: string; icon: string }[] = [
   { id: 'leads', title: 'Pour avancer', icon: '★' },
 ];
 
-export interface Clue {
-  id: string;
-  thread: ThreadId;
-  title: string;
-  text: string;
-  /** Pistes : drapeau ou objet qui montre que la piste est terminée. */
-  doneWhen?: string;
-}
 
 export const CLUES: Clue[] = [
   // Qui suis-je ?
@@ -82,14 +76,6 @@ export const CLUES: Clue[] = [
 ];
 
 /** Questions du journal : elles s'ouvrent avec un indice et se résolvent plus tard. */
-export interface Question {
-  id: string;
-  thread: ThreadId;
-  ask: string;
-  answer: string;
-  opensWith: string[]; // un de ces indices suffit à poser la question
-  answeredBy: string; // drapeau (ou indice) qui y répond
-}
 
 export const QUESTIONS: Question[] = [
   {
@@ -139,7 +125,7 @@ export const QUESTIONS: Question[] = [
   },
 ];
 
-export const ITEMS: Record<string, { name: string; text: string; usable?: boolean }> = {
+export const ITEMS: Record<string, ItemDef> = {
   badge: { name: 'Badge Lazare', text: 'Badge d’accès du laboratoire. La photo est effacée.' },
   sonde: { name: 'Sonde Lumen', text: 'Détecte les sources d’énergie proches. Utilise-la pour l’allumer ou l’éteindre.', usable: true },
   pelle: { name: 'Pelle', text: 'Une pelle de jardin, solide. Utilise-la pour creuser là où tu te tiens.', usable: true },
@@ -175,15 +161,6 @@ export const RADIO_FREQ = 47.2;
 /** Mot de passe des archives du spatioport : le code de la mission qui n'a trouvé que de la glace (Ondine). */
 export const ARCHIVE_CODE = '1530';
 
-export interface ArchiveFolder {
-  id: string;
-  name: string;
-  locked?: boolean;
-  /** Code d'accès propre au dossier (trouvé ailleurs dans le jeu). */
-  code?: string;
-  codeHint?: string;
-  lines: string[];
-}
 
 /** Dossiers de l'ordinateur du spatioport. Le dossier d'Azura reste verrouillé. */
 export const ARCHIVES: ArchiveFolder[] = [
@@ -247,7 +224,7 @@ export const ARCHIVES: ArchiveFolder[] = [
 ];
 
 /** Succès facultatifs, affichés dans le journal. */
-export const ACHIEVEMENTS: { id: string; title: string; text: string; counter: string; goal: number }[] = [
+export const ACHIEVEMENTS: Achievement[] = [
   { id: 'nut10', title: 'Bon chien !', text: 'Lancer 10 fois l’écrou à Pixel.', counter: 'nut', goal: 10 },
 ];
 
@@ -263,19 +240,8 @@ export const INTRO = [
 
 // ---------- scripts ----------
 
-export interface Api {
-  has(flag: string): boolean;
-  set(flag: string): void;
-  clue(id: string): void;
-  item(id: string): void;
-  hasItem(id: string): boolean;
-  say(lines: string[], then?: () => void): void;
-  keypad(title: string, onCode: (code: string) => void): void;
-  sfx(name: 'success' | 'wrong' | 'door' | 'item' | 'musicBox'): void;
-  ui(kind: 'switches' | 'orbit' | 'codebook' | 'archives' | 'pixelFlap' | 'pixelVent' | 'pixelPower' | 'pixelCar', then?: () => void): void;
-}
 
-export const SCRIPTS: Record<string, (api: Api) => void> = {
+export const SCRIPTS: Record<string, Script> = {
   // ----- laboratoire -----
   capsule07: (api) =>
     api.say(['Ma capsule. Le verre est encore tiède.', 'Une plaque : « SUJET 07 ». Pas de nom, juste ce numéro.'], () =>
