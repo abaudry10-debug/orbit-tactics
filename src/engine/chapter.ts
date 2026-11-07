@@ -48,6 +48,8 @@ export interface ChapterHooks {
   objectSprite?(g: Game, name: string): string | undefined;
   /** Le paysage au-delà des bords de la carte (inaccessible) ; true s'il a été dessiné. */
   renderVoid?(g: Game, c: CanvasRenderingContext2D, x: number, y: number, sx: number, sy: number): boolean;
+  /** Par-dessus le sol, avant les personnages (ce qui déborde d'une case sur l'autre). */
+  renderOverlay?(g: Game, c: CanvasRenderingContext2D, ox: number, oy: number, x0: number, y0: number): void;
   /** La lumière du chapitre (teinte, particules) ; true si elle a été dessinée. */
   renderAtmosphere?(g: Game, c: CanvasRenderingContext2D, w: number, h: number): boolean;
   /** Pixel est-il « chez lui » ici (il remue la queue, jappe de joie) ? */

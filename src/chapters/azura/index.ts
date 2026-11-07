@@ -111,33 +111,52 @@ function wildTile(g: Game, x: number, y: number, seed: number): string {
   return 'regolith';
 }
 
-// La forêt est dessinée d'un seul tenant : des cimes rondes qui débordent d'une case sur l'autre.
+// La forêt est dessinée d'un seul tenant : des cimes rondes qui débordent d'une case sur l'autre,
+// et même sur le sol nu voisin ou sur le bord de la carte, pour qu'aucune limite ne soit droite.
 const CANOPY_PAL: [string, string, string][] = [
   ['#2f9e8a', '#1f6f66', '#62d0b4'],
   ['#2f8fae', '#1e5f7a', '#6cc6e8'],
   ['#3a9a52', '#25693a', '#78cf7a'],
   ['#6a5aa8', '#463a7a', '#a796e0'],
 ];
-const forestCache = new Map<string, HTMLCanvasElement>();
-function forestCanvas(x: number, y: number, seed: number): HTMLCanvasElement {
-  const key = `${seed}:${x},${y}`;
-  let cv = forestCache.get(key);
-  if (cv) return cv;
-  cv = document.createElement('canvas');
-  cv.width = 16;
-  cv.height = 16;
-  const c = cv.getContext('2d')!;
-  c.fillStyle = '#103236';
-  c.fillRect(0, 0, 16, 16);
-  // les arbres des cases voisines, pour que leurs cimes débordent jusqu'ici
+
+type Cell = { forest: boolean; name: string; d: number };
+/** Ce qu'il y a dans une case hors de la carte. */
+function voidCell(g: Game, x: number, y: number): Cell {
+  const W = g.map.width, H = g.map.height;
+  const cx = Math.max(0, Math.min(W - 1, x)), cy = Math.max(0, Math.min(H - 1, y));
+  const d = Math.max(cx - x, x - cx, cy - y, y - cy);
+  if (d === 0) return { forest: false, name: '', d };
+  const edge = g.map.rows[cy][cx];
+  const seed = g.map.id.length * 13 + g.map.width;
+  const wave = Math.floor(g.time * 1.4 + (x + y) * 0.35) % 2;
+  const n = smooth(x * 0.18, y * 0.18, seed);
+  if (WATERISH.has(edge) && d <= 4 + Math.round(n * 3)) return { forest: false, name: d > 3 ? 'farWater' : 'azWater' + wave, d };
+  if (WATERISH.has(edge) && d <= 5 + Math.round(n * 3)) return { forest: false, name: 'azRockFace', d };
+  const forest = BARE.has(edge) ? n > 0.66 : n >= 0.22;
+  if (forest) return { forest, name: 'regolith', d };
+  let name = wildTile(g, x, y, seed);
+  // juste au-delà du bord, une ceinture de rochers : on voit qu'on ne peut pas aller plus loin
+  if (d === 1 && name === 'regolith') name = 'boulders';
+  else if (d === 2 && name === 'regolith' && h01(x, y, seed + 2) < 0.45) name = 'boulders';
+  return { forest, name, d };
+}
+
+/** Les cimes qui tombent dans cette case, venues des cases de forêt voisines (fond transparent). */
+const treeCache = new Map<string, HTMLCanvasElement | null>();
+function treesCanvas(g: Game, x: number, y: number): HTMLCanvasElement | null {
+  const seed = g.map.id.length * 13 + g.map.width;
+  const key = `${g.map.id}:${x},${y}`;
+  if (treeCache.has(key)) return treeCache.get(key)!;
   const trees: { cx: number; cy: number; rad: number; pal: [string, string, string]; fruit: number }[] = [];
   for (let j = y - 1; j <= y + 1; j++) {
     for (let i = x - 1; i <= x + 1; i++) {
-      for (let k = 0; k < 2; k++) {
+      if (!voidCell(g, i, j).forest) continue;
+      for (let k = 0; k < 3; k++) {
         const kind = smooth(i * 0.22, j * 0.22, seed + 1);
         trees.push({
-          cx: (i - x) * 16 + 2 + h01(i, j, seed + k * 3) * 12,
-          cy: (j - y) * 16 + 2 + h01(i, j, seed + k * 3 + 1) * 12,
+          cx: (i - x) * 16 + 1 + h01(i, j, seed + k * 3) * 14,
+          cy: (j - y) * 16 + 1 + h01(i, j, seed + k * 3 + 1) * 14,
           rad: 5 + h01(i, j, seed + k * 3 + 2) * 4,
           pal: CANOPY_PAL[kind < 0.3 ? 3 : kind < 0.5 ? 1 : kind < 0.75 ? 0 : 2],
           fruit: h01(i, j, seed + k + 40),
@@ -145,6 +164,14 @@ function forestCanvas(x: number, y: number, seed: number): HTMLCanvasElement {
       }
     }
   }
+  if (!trees.length) {
+    treeCache.set(key, null);
+    return null;
+  }
+  const cv = document.createElement('canvas');
+  cv.width = 16;
+  cv.height = 16;
+  const c = cv.getContext('2d')!;
   trees.sort((a, b) => a.cy - b.cy);
   const disc = (cx: number, cy: number, rad: number, col: string) => {
     c.fillStyle = col;
@@ -167,29 +194,26 @@ function forestCanvas(x: number, y: number, seed: number): HTMLCanvasElement {
       }
     }
   }
-  if (forestCache.size > 4000) forestCache.clear();
-  forestCache.set(key, cv);
+  if (treeCache.size > 4000) treeCache.clear();
+  treeCache.set(key, cv);
   return cv;
 }
 
 function renderVoid(g: Game, c: CanvasRenderingContext2D, x: number, y: number, sx: number, sy: number) {
-  const W = g.map.width, H = g.map.height;
   if (!g.map.outdoor) return false;
-  const cx = Math.max(0, Math.min(W - 1, x)), cy = Math.max(0, Math.min(H - 1, y));
-  const d = Math.max(cx - x, x - cx, cy - y, y - cy);
-  const edge = g.map.rows[cy][cx];
+  const W = g.map.width, H = g.map.height;
+  const cell = voidCell(g, x, y);
+  const d = cell.d;
   const seed = g.map.id.length * 13 + g.map.width;
-  const wave = Math.floor(g.time * 1.4 + (x + y) * 0.35) % 2;
-  const n = smooth(x * 0.18, y * 0.18, seed);
-  let name = '';
-  let forest = false;
-  if (WATERISH.has(edge) && d <= 4 + Math.round(n * 3)) name = d > 3 ? 'farWater' : 'azWater' + wave;
-  else if (WATERISH.has(edge) && d <= 5 + Math.round(n * 3)) name = 'azRockFace';
-  else if (BARE.has(edge)) (n > 0.66 ? (forest = true) : (name = wildTile(g, x, y, seed)));
-  else n < 0.22 ? (name = wildTile(g, x, y, seed)) : (forest = true);
-  if (forest) {
-    // de loin en loin, une clairière de champignons géants
-    c.drawImage(forestCanvas(x, y, seed), sx, sy);
+  c.drawImage(tile(cell.name, (x * 7 + y * 13) & 0xff), sx, sy);
+  if (cell.forest) {
+    // sous les arbres, le sol est dans l'ombre
+    c.fillStyle = 'rgba(8,28,32,0.6)';
+    c.fillRect(sx, sy, 16, 16);
+  }
+  const trees = treesCanvas(g, x, y);
+  if (trees) c.drawImage(trees, sx, sy);
+  if (cell.forest) {
     // çà et là, un champignon géant, seul, décalé dans sa case
     const m = h01(x, y, seed + 21);
     if (m < 0.07) {
@@ -197,24 +221,35 @@ function renderVoid(g: Game, c: CanvasRenderingContext2D, x: number, y: number, 
       const off = Math.round((h01(x, y, seed + 22) - 0.5) * 6);
       c.drawImage(tile('mushroom' + size, (x * 3 + y) & 0xff), sx + off, sy - Math.abs(off) / 2);
     }
-  } else {
-    // juste au-delà du bord, une ceinture de rochers : on voit qu'on ne peut pas aller plus loin
-    if (d === 1 && name === 'regolith') name = 'boulders';
-    else if (d === 2 && name === 'regolith' && h01(x, y, seed + 2) < 0.45) name = 'boulders';
-    c.drawImage(tile(name, (x * 7 + y * 13) & 0xff), sx, sy);
   }
   // plus c'est loin, plus c'est sombre : un fondu continu, sans marches
+  const cx = Math.max(0, Math.min(W - 1, x)), cy = Math.max(0, Math.min(H - 1, y));
   const shade = (k: number) => Math.min(0.55, 0.03 + k * 0.065);
   const gx = x < 0 ? 1 : x >= W ? -1 : 0, gy = y < 0 ? 1 : y >= H ? -1 : 0;
-  const dx = Math.abs(x - cx), dy = Math.abs(y - cy);
-  const horiz = dx >= dy;
+  const horiz = Math.abs(x - cx) >= Math.abs(y - cy);
   const far = shade(d), near = shade(d - 1);
-  const grad = horiz ? c.createLinearGradient(sx + (gx > 0 ? 0 : 16), 0, sx + (gx > 0 ? 16 : 0), 0) : c.createLinearGradient(0, sy + (gy > 0 ? 0 : 16), 0, sy + (gy > 0 ? 16 : 0));
+  const grad = horiz
+    ? c.createLinearGradient(sx + (gx > 0 ? 0 : 16), 0, sx + (gx > 0 ? 16 : 0), 0)
+    : c.createLinearGradient(0, sy + (gy > 0 ? 0 : 16), 0, sy + (gy > 0 ? 16 : 0));
   grad.addColorStop(0, `rgba(6,12,24,${far})`);
   grad.addColorStop(1, `rgba(6,12,24,${near})`);
   c.fillStyle = grad;
   c.fillRect(sx, sy, 16, 16);
   return true;
+}
+
+/** Les cimes de la forêt du décor débordent sur le bord de la carte : pas de ligne droite. */
+function renderOverlay(g: Game, c: CanvasRenderingContext2D, ox: number, oy: number, x0: number, y0: number) {
+  if (!g.map.outdoor) return;
+  const W = g.map.width, H = g.map.height;
+  const x1 = x0 + Math.ceil(view.w / 16) + 2, y1 = y0 + Math.ceil(view.h / 16) + 2;
+  for (let y = Math.max(0, y0); y <= Math.min(H - 1, y1); y++) {
+    for (let x = Math.max(0, x0); x <= Math.min(W - 1, x1); x++) {
+      if (x > 0 && y > 0 && x < W - 1 && y < H - 1) continue;
+      const trees = treesCanvas(g, x, y);
+      if (trees) c.drawImage(trees, x * 16 - ox, y * 16 - oy);
+    }
+  }
 }
 
 // ---------- les montagnes : une chaîne de pics qui débordent d'une case à l'autre ----------
@@ -232,11 +267,18 @@ function mountainTile(g: Game, x: number, y: number, mask: number): string {
       if (!isM(i, j)) continue;
       // un pic par case ; plus haut s'il a de la montagne derrière lui
       const tall = isM(i, j - 1);
+      // un pic ne déborde pas sur une case qui n'est pas de la montagne : pas de bord coupé net
+      const left = isM(i - 1, j), right = isM(i + 1, j);
+      let half = 9 + h01(i, j, seed + 2) * 5;
+      let cx = (i - x) * 16 + 8 + (h01(i, j, seed) - 0.5) * 6;
+      if (!left && !right) { cx = (i - x) * 16 + 7.5; half = Math.min(half, 7); }
+      else if (!left) cx = Math.max(cx, (i - x) * 16 + half);
+      else if (!right) cx = Math.min(cx, (i - x) * 16 + 15 - half);
       peaks.push({
-        cx: (i - x) * 16 + 8 + (h01(i, j, seed) - 0.5) * 6,
+        cx,
         base: (j - y) * 16 + 15,
         h: tall ? 18 + h01(i, j, seed + 1) * 10 : 11 + h01(i, j, seed + 1) * 3,
-        half: 9 + h01(i, j, seed + 2) * 5,
+        half,
         snow: h01(i, j, seed + 3) > 0.3,
       });
     }
@@ -535,6 +577,7 @@ export const azura: Chapter = {
       updateEmerge(g, dt);
     },
     renderVoid,
+    renderOverlay,
     heroWalking(g) {
       return emerging.get(g)?.stage === 'out';
     },

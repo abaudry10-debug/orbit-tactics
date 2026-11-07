@@ -1757,6 +1757,7 @@ export class Game {
         vis.push([name, x, y]);
       }
     }
+    ch().hooks.renderOverlay?.(this, c, ox, oy, x0, y0);
     this.renderShadows(vis, ox, oy);
     this.renderPrints(ox, oy);
     this.renderAmbient(vis, ox, oy);
