@@ -762,3 +762,4 @@ const WILD: Record<string, Painter> = {
   fossil, probe0: probe(0), probe1: probe(1), farWater,
 };
 registerTiles(WILD);
+Object.assign(PAINTERS, WILD); // pour pouvoir leur ajouter des lisières

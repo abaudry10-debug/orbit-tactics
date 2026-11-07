@@ -77,14 +77,20 @@ function enclose(b: Builder, seeds: [number, number][], exits: [number, number][
     }
   }
   for (const [x, y] of edge) b.set(x, y, kind(x, y));
-  // les montagnes ont de l'épaisseur : une seconde rangée, côté extérieur
-  for (const [x, y] of edge) {
-    if (b.rows[y][x] !== 'M') continue;
-    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-      const nx = x + dx, ny = y + dy;
-      if (nx < 0 || ny < 0 || nx >= b.width || ny >= b.height || inside.has(key(nx, ny)) || SOLID_AZ.has(b.rows[ny][nx])) continue;
-      b.set(nx, ny, 'M');
+  // les montagnes ont de l'épaisseur : jusqu'à deux rangées de plus, côté extérieur
+  let ring = edge.filter(([x, y]) => b.rows[y][x] === 'M');
+  for (let pass = 0; pass < 2; pass++) {
+    const next: [number, number][] = [];
+    for (const [x, y] of ring) {
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = x + dx, ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= b.width || ny >= b.height || inside.has(key(nx, ny)) || b.rows[ny][nx] === 'M') continue;
+        if (SOLID_AZ.has(b.rows[ny][nx]) && b.rows[ny][nx] !== 'A') continue;
+        b.set(nx, ny, 'M');
+        next.push([nx, ny]);
+      }
     }
+    ring = next;
   }
 }
 
@@ -135,7 +141,8 @@ function cuves(): GameMap {
   objects.push(obj('solaire1', 14, 16, 'solarPanel', 'solaire'), obj('solaire2', 16, 16, 'solarPanel', 'solaire'), obj('antenne', 19, 16, 'dish', 'antenne'));
   objects.push(exit('versChemin', 11, 17, { to: 'chemin', x: 15, y: 1, dir: 'down' }));
   objects.push(exit('versChemin2', 12, 17, { to: 'chemin', x: 15, y: 1, dir: 'down' }));
-  // au nord, des montagnes ; ailleurs, la barrière de la colonie
+  // au nord, une vraie chaîne de montagnes ; ailleurs, la barrière de la colonie
+  b.rect(0, 0, W, 4, 'M');
   enclose(b, [[4, 7]], [[11, 17], [12, 17]], (_x, y) => (y <= 5 ? 'M' : 'Y'));
   return { id: 'cuves', name: 'Le champ des cuves', outdoor: true, width: W, height: H, rows: b.rows, objects, voidTile: 'azForest' };
 }
@@ -169,7 +176,7 @@ function chemin(): GameMap {
   b.points('A', [[4, 3], [7, 2], [19, 3], [5, 18], [9, 19], [19, 17], [3, 20], [18, 20], [11, 20]]);
   b.points('u', [[9, 5], [18, 6], [20, 10], [8, 10], [11, 17], [13, 20], [6, 4]]);
   const pylons: MapObject[] = [];
-  for (const [id, y] of [['pylA', 2], ['pylB', 5], ['pylC', 16], ['pylD', 19]] as [string, number][]) {
+  for (const [id, y] of [['pylA', 2], ['pylB', 6], ['pylC', 15]] as [string, number][]) {
     const x = Math.min(edge(y), edge(y + 1));
     b.set(x, y, '"').set(x, y + 1, '"');
     pylons.push(...pylon(id, x, y));
@@ -186,6 +193,8 @@ function chemin(): GameMap {
     npc('joss', joss[0], joss[1], 'joss', 'down', 'joss'),
   ];
   b.set(16, 17, '"');
+  // au sud, un massif que le sentier traverse par une gorge
+  for (let y = 18; y < H; y++) for (let x = 0; x < 22; x++) if (x < 14 || x > 16) b.set(x, y, 'M');
   // à l'est, la barrière du terraformage ; à l'ouest, des montagnes
   enclose(b, [[15, 1]], [[15, 0], [15, 21]], (x) => (x >= 18 ? 'Y' : 'M'));
   return { id: 'chemin', name: 'Le chemin des crêtes', outdoor: true, width: W, height: H, rows: b.rows, objects, voidTile: 'azForest' };
@@ -260,7 +269,7 @@ function ville(): GameMap {
     npc('passant4', 26, 7, 'pass4', 'left', 'passant4', { npc: { look: 'pass4', dir: 'left', wander: 3 } }),
   ];
   // la ville est ceinte : des montagnes au nord, la barrière de la colonie sur les côtés
-  for (let x = 1; x < W - 1; x++) if (x !== 17 && WALK.has(b.rows[1][x])) b.set(x, 1, 'M');
+  for (let x = 0; x < W; x++) if (x !== 17) b.set(x, 0, 'M').set(x, 1, 'M');
   for (let y = 2; y < 22; y++) for (const x of [1, W - 2]) if (WALK.has(b.rows[y][x])) b.set(x, y, 'Y');
   enclose(b, [[17, 1]], [[17, 0]], (_x, y) => (y <= 2 ? 'M' : 'Y'));
   return {

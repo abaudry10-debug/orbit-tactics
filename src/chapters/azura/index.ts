@@ -252,69 +252,96 @@ function renderOverlay(g: Game, c: CanvasRenderingContext2D, ox: number, oy: num
   }
 }
 
-// ---------- les montagnes : une chaîne de pics qui débordent d'une case à l'autre ----------
+// ---------- les montagnes : quelques grands massifs, pas des pics partout ----------
+interface Massif { x0: number; x1: number; y0: number; y1: number; summits: { x: number; top: number }[]; seed: number }
+const massifCache = new Map<string, Massif[]>();
+
+/** On regroupe les cases de montagne en massifs de 1 à 3 cases de large et 1 à 2 de haut. */
+function massifs(g: Game): Massif[] {
+  const cached = massifCache.get(g.map.id);
+  if (cached) return cached;
+  const W = g.map.width, H = g.map.height, rows = g.map.rows;
+  const isM = (i: number, j: number) => i >= 0 && j >= 0 && i < W && j < H && rows[j][i] === 'M';
+  const taken = new Set<number>();
+  const list: Massif[] = [];
+  for (let j = 0; j < H; j++) {
+    for (let i = 0; i < W; i++) {
+      if (!isM(i, j) || taken.has(j * W + i)) continue;
+      const want = 2 + Math.floor(h01(i, j, 5) * 3); // de 2 à 4 cases de large
+      let w = 0;
+      while (w < want && isM(i + w, j) && !taken.has(j * W + i + w)) w++;
+      let hRows = 1;
+      const fits = (jj: number) => { for (let k = 0; k < w; k++) if (!isM(i + k, jj) || taken.has(jj * W + i + k)) return false; return true; };
+      while (hRows < 4 && fits(j + hRows)) hRows++;
+      for (let jj = j; jj < j + hRows; jj++) for (let k = 0; k < w; k++) taken.add(jj * W + i + k);
+      // trop étroit pour une belle montagne : juste des éboulis
+      if (w < 2) continue;
+      const x0 = i * 16, x1 = (i + w) * 16, y0 = j * 16, y1 = (j + hRows) * 16;
+      const height = Math.min((y1 - y0) - 2, Math.round((x1 - x0) * 0.85));
+      const summits = [{ x: x0 + (x1 - x0) * (0.38 + h01(i, j, 7) * 0.24), top: y1 - height }];
+      if (w >= 3 || hRows >= 3) summits.push({ x: x0 + (x1 - x0) * (h01(i, j, 8) > 0.5 ? 0.22 : 0.8), top: y1 - Math.round(height * 0.62) });
+      list.push({ x0, x1, y0, y1, summits, seed: i * 31 + j * 17 });
+    }
+  }
+  massifCache.set(g.map.id, list);
+  return list;
+}
+
+/** La ligne de crête d'un massif : la plus haute de ses pentes, avec de petites dents. */
+function ridgeAt(m: Massif, X: number): { top: number; summit: { x: number; top: number } } {
+  let best = { top: Infinity, summit: m.summits[0] };
+  for (const s of m.summits) {
+    const half = s.x < (m.x0 + m.x1) / 2 ? Math.max(s.x - m.x0, 6) : Math.max(m.x1 - s.x, 6);
+    const spread = Math.max(s.x - m.x0, m.x1 - s.x, half);
+    const t = s.top + (Math.abs(X - s.x) / spread) * (m.y1 - s.top) * 1.05;
+    if (t < best.top) best = { top: t, summit: s };
+  }
+  const teeth = Math.sin(X * 0.9 + m.seed) * 1.1 + Math.sin(X * 2.3 + m.seed * 0.3) * 0.7;
+  return { top: Math.round(best.top + teeth), summit: best.summit };
+}
+
 const madeMountains = new Set<string>();
 function mountainTile(g: Game, x: number, y: number, mask: number): string {
   const name = `mtn:${g.map.id}:${x},${y}:${mask}`;
   if (madeMountains.has(name)) return name;
   madeMountains.add(name);
-  const rows = g.map.rows;
-  const isM = (i: number, j: number) => i >= 0 && j >= 0 && i < g.map.width && j < g.map.height && rows[j][i] === 'M';
-  const seed = g.map.id.length * 7;
-  const peaks: { cx: number; base: number; h: number; half: number; snow: boolean }[] = [];
-  for (let j = y - 1; j <= y + 2; j++) {
-    for (let i = x - 1; i <= x + 1; i++) {
-      if (!isM(i, j)) continue;
-      // un pic par case ; plus haut s'il a de la montagne derrière lui
-      const tall = isM(i, j - 1);
-      // un pic ne déborde pas sur une case qui n'est pas de la montagne : pas de bord coupé net
-      const left = isM(i - 1, j), right = isM(i + 1, j);
-      let half = 9 + h01(i, j, seed + 2) * 5;
-      let cx = (i - x) * 16 + 8 + (h01(i, j, seed) - 0.5) * 6;
-      if (!left && !right) { cx = (i - x) * 16 + 7.5; half = Math.min(half, 7); }
-      else if (!left) cx = Math.max(cx, (i - x) * 16 + half);
-      else if (!right) cx = Math.min(cx, (i - x) * 16 + 15 - half);
-      peaks.push({
-        cx,
-        base: (j - y) * 16 + 15,
-        h: tall ? 18 + h01(i, j, seed + 1) * 10 : 11 + h01(i, j, seed + 1) * 3,
-        half,
-        snow: h01(i, j, seed + 3) > 0.3,
-      });
-    }
-  }
-  peaks.sort((a, b) => a.base - b.base);
-  const ground = withFringe('regolith', mask);
+  const near = massifs(g).filter((m) => m.x0 < (x + 1) * 16 && m.x1 > x * 16 && m.y0 < (y + 1) * 16 && m.y1 > y * 16);
+  // le pied de la montagne : un éboulis, qu'on ne prend pas pour un chemin
+  const ground = withFringe('boulders', mask);
   registerTiles({
     [name]: (c, v) => {
       c.drawImage(tile(ground, v), 0, 0);
-      for (const p of peaks) {
-        const top = p.base - p.h;
-        // l'ombre du pic au pied
-        c.fillStyle = 'rgba(30,20,50,0.35)';
-        c.fillRect(Math.round(p.cx - p.half + 2), p.base, Math.round(p.half * 2), 2);
-        for (let yy = Math.max(top, -2); yy <= p.base; yy++) {
-          if (yy < 0 || yy > 15) continue;
-          const k = (yy - top) / p.h;
-          const w = Math.max(1, Math.round(k * p.half));
-          const snowy = p.snow && k < 0.3;
-          c.fillStyle = snowy ? '#f0f4fb' : '#b0a3cc';
-          c.fillRect(Math.round(p.cx - w), yy, w, 1);
-          c.fillStyle = snowy ? '#c9cfe2' : '#6a5d8a';
-          c.fillRect(Math.round(p.cx), yy, w, 1);
-          c.fillStyle = '#3f3560';
-          c.fillRect(Math.round(p.cx - w) - 1, yy, 1, 1);
-          c.fillRect(Math.round(p.cx + w), yy, 1, 1);
-          // une arête plus claire, et quelques strates
-          if (!snowy && (yy - top) % 5 === 2) {
-            c.fillStyle = '#8c7fae';
-            c.fillRect(Math.round(p.cx - w * 0.6), yy, Math.max(1, Math.round(w * 0.4)), 1);
+      for (const m of near) {
+        for (let px = 0; px < 16; px++) {
+          const X = x * 16 + px;
+          if (X < m.x0 || X >= m.x1) continue;
+          const { top, summit } = ridgeAt(m, X);
+          const left = X < summit.x;
+          const snowLine = top + 3 + Math.round((Math.sin(X * 1.7 + m.seed) + 1) * 1.6) + Math.round((m.y1 - summit.top) * 0.18);
+          for (let py = 0; py < 16; py++) {
+            const Y = y * 16 + py;
+            if (Y < top - 1 || Y >= m.y1) continue;
+            let col: string;
+            if (Y === top - 1) col = '#3a2f57'; // le contour de la crête
+            else if (Y < snowLine && m.y1 - summit.top > 18) col = left ? '#f4f7fd' : '#c9cfe4';
+            else {
+              // deux faces, des strates qui ondulent, une ombre au pied
+              const strata = (Y + Math.round(Math.sin(X * 0.5 + m.seed) * 1.5)) % 6 === 0;
+              const ridgeLine = Math.abs(X - summit.x) < 1 && Y < m.y1 - 4;
+              if (ridgeLine) col = '#463a66';
+              else if (left) col = strata ? '#9b8fbe' : X < summit.x - (summit.x - m.x0) * 0.55 ? '#a99dcb' : '#bcb0dc';
+              else col = strata ? '#54486f' : '#6a5d8a';
+              if (Y >= m.y1 - 2) col = left ? '#7d7098' : '#4a3f66';
+            }
+            c.fillStyle = col;
+            c.fillRect(px, py, 1, 1);
           }
-        }
-        const gy = Math.round(p.base - p.h * 0.35);
-        if (gy >= 0 && gy < 16 && h01(p.cx, p.base, seed + 9) > 0.6) {
-          c.fillStyle = '#5ff0e0';
-          c.fillRect(Math.round(p.cx + 2), gy, 1, 1);
+          // un filon de cristal, parfois
+          const vy = m.y1 - Math.round((m.y1 - top) * 0.4);
+          if (h01(X, m.seed, 3) > 0.93 && vy >= y * 16 && vy < (y + 1) * 16 && vy > top + 2) {
+            c.fillStyle = '#5ff0e0';
+            c.fillRect(px, vy - y * 16, 1, 1);
+          }
         }
       }
     },
