@@ -62,13 +62,15 @@ export const CLUES: Clue[] = [
   { id: 'cap12', thread: 'capsules', title: 'Les caisses d’Aurore', text: '« AURORE — matériel de culture — 4 212 unités. » Les caisses sont parties avec la mission. Il ne reste ici que les cuves d’essai.' },
   { id: 'cap13', thread: 'capsules', title: 'La lettre de Nina', text: '« Maman, on part demain avec le programme. Tu crois que j’aurai encore mes taches de rousseur, là-bas ? »' },
   { id: 'mis10', thread: 'missions', title: 'Les archives du spatioport', text: 'Les dossiers des missions : Héliade a trouvé un monde de roche fondue, Kairos s’est perdue dans une tempête, Ondine n’a trouvé que de la glace.' },
-  { id: 'mis11', thread: 'missions', title: 'Le dossier Azura', text: 'Le dossier de la mission Aurore est vide : toutes ses archives ont été supprimées le jour du grand départ.' },
+  { id: 'mis11', thread: 'missions', title: 'Le dossier Azura', text: 'Le dossier de la mission Aurore est vide. Dernière opération, bien après le grand départ : un transfert intégral vers un appareil inconnu, branché sur le port de maintenance.' },
   { id: 'lead7', thread: 'leads', doneWhen: 'archUnlock_plans', title: 'Le post-it du télescope', text: '« Dossier LAZARE, ordinateur du spatioport. Code d’accès : la période de l’étoile errante, en années. »' },
+  { id: 'leadBoite', thread: 'leads', doneWhen: 'memo2Found', title: 'Le dessin du coffre à jouets', text: 'Un dessin de Betti, au fond de son coffre à jouets : Pixel qui creuse à côté de la boîte aux lettres, avec un trésor qui brille. Il faudrait creuser au pied de la boîte aux lettres de la maison Moreau.' },
   { id: 'memo1', thread: 'pixel', title: 'Souvenir 1 — Le premier allumage', text: 'L’atelier. La maman de Betti penchée sur Pixel. Son œil s’allume pour la première fois. « Bonjour, toi. Je vais t’appeler… Pixel ! »' },
   { id: 'memo2', thread: 'pixel', title: 'Souvenir 2 — La première sortie', text: 'Un ciel encore bleu. Betti lance un écrou, Pixel le rapporte. « C’est ton jouet, maintenant. Rien qu’à toi. »' },
   { id: 'memo3', thread: 'pixel', title: 'Souvenir 3 — Le laboratoire', text: 'La maman de Betti travaille sur les batteries. « Ta batterie est unique, Pixel. La seule BS-1 qui marche vraiment. »' },
   { id: 'memo4', thread: 'pixel', title: 'Souvenir 4 — La première vague', text: 'La sirène. Betti et Pixel cachés sous la table, la lumière rouge à la fenêtre. « On partira ensemble. Promis. »' },
   { id: 'memo5', thread: 'pixel', title: 'Souvenir 5 — Le jour du départ', text: '« Les adultes disent que tu ne peux pas venir avec nous… Attends-moi ici, d’accord ? »' },
+  { id: 'memo6', thread: 'pixel', title: 'Souvenir 6 — La dernière charge', text: 'Bien après le départ. Son panneau solaire fendu, sa batterie presque vide, Pixel s’est branché sur l’ordinateur du spatioport pour se recharger… et a aspiré, d’un coup, tout le dossier de la mission Aurore. Le dossier Azura est vide parce que tout est en lui.' },
   { id: 'mis9', thread: 'missions', title: 'La grille de décodage', text: 'La grille de la mission Aurore associe chaque groupe de trois bips à un chiffre : ··· 0 · ··– 1 · ·–· 2 · ·–– 3 · –·· 4 · –·– 5 · ––· 6 · ––– 7.' },
   { id: 'cap9', thread: 'capsules', title: 'Le journal du Dr Varn', text: '« Les navettes ne suffiront jamais. Ce ne sont pas nos corps qui partiront. Sur Azura, la mission Aurore prépare de quoi nous accueillir. 4 212 habitants, 4 212 capsules. Tout le monde part. »' },
   { id: 'lead5', thread: 'leads', doneWhen: 'heliosOn', title: 'Le carnet du technicien', text: '« Arrêt d’urgence à la troisième cloche : j’ai coupé la pompe, puis l’onduleur, puis la ventilation, puis la turbine, et enfin le régulateur. » — R. Ilunga' },
@@ -136,6 +138,7 @@ export const ITEMS: Record<string, ItemDef> = {
   memo3: { name: 'Carte mémoire n°3', text: 'Une carte mémoire abîmée, trouvée sur un quai du métro.', usable: true },
   memo4: { name: 'Carte mémoire n°4', text: 'Une carte mémoire abîmée, rapportée par Pixel de sous une voiture.', usable: true },
   memo5: { name: 'Carte mémoire n°5', text: 'Une carte mémoire abîmée, cachée dans la boîte à musique de Betti.', usable: true },
+  memo6: { name: 'Carte mémoire n°6', text: 'Une carte mémoire abîmée, encore tiède, trouvée au pied de l’ordinateur des archives du spatioport.', usable: true },
   ecrou: { name: 'Écrou mâchouillé', text: 'Le jouet préféré de Pixel. Lance-le devant toi : il ira le chercher.', usable: true },
   matrice: { name: 'Matrice vierge', text: 'Une puce de rechange, vide. Elle sert à copier un esprit pour l’envoyer.' },
   lampe: { name: 'Lampe torche', text: 'La lampe du père de Betti. Elle s’allume d’elle-même dans le noir.' },
@@ -217,7 +220,8 @@ export const ARCHIVES: ArchiveFolder[] = [
     id: 'azura', name: 'MISSION_AURORE', locked: true,
     lines: [
       'DOSSIER VIDE.',
-      'Toutes les archives de cette mission ont été supprimées le jour du grand départ.',
+      'Dernière opération : TRANSFERT INTÉGRAL vers un appareil inconnu (port de maintenance).',
+      'Date : bien après le grand départ. Alimentation tirée pendant le transfert : 100 %.',
       'Il ne reste rien à lire ici.',
     ],
   },
@@ -376,7 +380,10 @@ export const SCRIPTS: Record<string, Script> = {
     );
   },
 
-  leaMailbox: (api) => api.say(['Une boîte aux lettres : « Famille Moreau — Betti, Sam et Pixel ». Pixel a son nom sur la boîte.']),
+  leaMailbox: (api) =>
+    api.has('memoHint') && !api.has('memo2Found')
+      ? api.say(['Une boîte aux lettres : « Famille Moreau — Betti, Sam et Pixel ».', 'À son pied, la terre a été retournée, il y a longtemps… Comme sur le dessin de Betti.'], () => api.clue('leadBoite'))
+      : api.say(['Une boîte aux lettres : « Famille Moreau — Betti, Sam et Pixel ». Pixel a son nom sur la boîte.']),
 
   motherJournal: (api) =>
     api.say(
@@ -582,11 +589,19 @@ export const SCRIPTS: Record<string, Script> = {
     );
   },
   leaToys: (api) =>
-    api.say(['Un coffre à jouets. Des robots en plastique, une fusée, une boîte de piles vides.', 'Au fond, un dessin d’enfant : Pixel qui creuse à côté de la boîte aux lettres, avec un trésor qui brille.'], () => api.set('memoHint')),
+    api.say(['Un coffre à jouets. Des robots en plastique, une fusée, une boîte de piles vides.', 'Au fond, un dessin d’enfant : Pixel qui creuse à côté de la boîte aux lettres, avec un trésor qui brille.'], () => {
+      api.set('memoHint');
+      api.clue('leadBoite');
+    }),
   memoCard1: (api) =>
     api.say(['Par terre, juste à côté du chien robot, une petite carte mémoire.', 'Elle a dû tomber de son flanc. Le connecteur est abîmé.'], () => {
       api.set('memo1Found');
       api.item('memo1');
+    }),
+  memoCard6: (api) =>
+    api.say(['Coincée sous l’ordinateur des archives, une carte mémoire, le connecteur noirci.', 'Juste au-dessus, le port de maintenance porte des traces de griffes… et de petites pattes dans la poussière.'], () => {
+      api.set('memo6Found');
+      api.item('memo6');
     }),
   memoCard3: (api) =>
     api.say(['Sur le quai, une carte mémoire, couverte de poussière.', 'Pixel la renifle longuement.'], () => {

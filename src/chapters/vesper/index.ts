@@ -78,7 +78,7 @@ export const vesper: Chapter = {
   },
   // ce que Vesper laisse à Azura : les souvenirs de Pixel revus, les succès, la cabane…
   legacy: (g) => ({
-    memos: [1, 2, 3, 4, 5].filter((n) => g.flags.has(`memo${n}Seen`)),
+    memos: [1, 2, 3, 4, 5, 6].filter((n) => g.flags.has(`memo${n}Seen`)),
     achievements: ACHIEVEMENTS.filter((a) => g.flags.has(`ach_${a.id}`)).map((a) => a.id),
     clues: g.clues.size,
     cabin: g.flags.has('knowsCabin'),

@@ -1,4 +1,4 @@
-// Les souvenirs de Pixel : cinq petites scènes en pixel art, projetées par son œil.
+// Les souvenirs de Pixel : six petites scènes en pixel art, projetées par son œil.
 // Chaque souvenir est une suite de tableaux animés (dessinés à chaque image, t en secondes),
 // avec une phrase en sous-titre. Le rendu « projection abîmée » (cyan, parasites) est fait par ui.ts.
 
@@ -214,7 +214,80 @@ function crowd(c: Ctx, t: number) {
   }
 }
 
-// ---------- les cinq souvenirs ----------
+/** Après le départ : la ville vide sous un ciel orange, le soleil qui écrase tout. */
+function emptyCity(c: Ctx, t: number) {
+  for (let y = 0; y < 70; y++) r(c, 0, y, MW, 1, `rgb(${230 - y * 0.6},${130 - y * 0.8},${60 - y * 0.3})`);
+  disc(c, 128, 16, 10, '#fff2c0');
+  c.fillStyle = 'rgba(255,240,190,0.18)';
+  c.fillRect(0, 0, MW, 70);
+  // immeubles éteints, fenêtres noires
+  const blocks: [number, number, number][] = [[0, 28, 30], [32, 22, 38], [58, 30, 24], [92, 26, 44], [122, 38, 30]];
+  for (const [x, w, h] of blocks) {
+    r(c, x, 70 - h, w, h, '#5a3a34');
+    for (let wy = 70 - h + 4; wy < 66; wy += 7) for (let wx = x + 3; wx < x + w - 3; wx += 6) r(c, wx, wy, 3, 4, '#2a1a18');
+  }
+  // le spatioport au loin, sa tour
+  r(c, 104, 30, 6, 40, '#4a3a3a'); r(c, 98, 26, 18, 5, '#5a4a48');
+  if (Math.floor(t * 2) % 2) r(c, 106, 24, 2, 2, '#ff5a3a');
+  // sable, chaussée fissurée
+  r(c, 0, 70, MW, MH - 70, '#c89a62');
+  for (let x = 0; x < MW; x += 18) r(c, x + ((x * 7) % 9), 84 + ((x * 3) % 14), 8, 1, '#a87a48');
+  // l'air qui ondule
+  for (let y = 70; y < MH; y += 6) r(c, (Math.sin(y + t * 3) * 40 + 80) | 0, y, 14, 1, 'rgba(255,230,180,0.35)');
+}
+
+/** La salle de contrôle du spatioport, et le grand ordinateur des archives. */
+function archiveRoom(c: Ctx, t: number, progress: number, empty: boolean) {
+  r(c, 0, 0, MW, MH, '#20283a');
+  for (let x = 0; x < MW; x += 16) r(c, x, 0, 1, 76, '#1a2030');
+  r(c, 0, 76, MW, MH - 76, '#2c3448');
+  for (let x = 0; x < MW; x += 12) r(c, x, 76, 1, MH - 76, '#242c3e');
+  // l'ordinateur
+  r(c, 50, 12, 64, 50, INK);
+  r(c, 53, 15, 58, 34, '#08201a');
+  // une rangée de dossiers, et celui d'Aurore qui se vide
+  for (let i = 0; i < 4; i++) {
+    const az = i === 3;
+    const y = 18 + i * 7;
+    r(c, 56, y, 4, 4, az ? '#5ef0ff' : '#2a8a50');
+    r(c, 62, y + 1, az ? 22 : 16 + i * 3, 2, az ? '#9dffcf' : '#2a8a50');
+  }
+  // la barre de transfert
+  r(c, 88, 39, 20, 4, '#0c3a2a');
+  r(c, 89, 40, Math.round(18 * progress), 2, empty ? '#ff7a5a' : '#9dffcf');
+  if (empty && Math.floor(t * 2) % 2) r(c, 62, 40, 20, 2, '#ff7a5a'); // « VIDE » qui clignote
+  // le pupitre, et le port de maintenance en bas
+  r(c, 44, 62, 76, 6, '#5a6478');
+  r(c, 44, 62, 76, 2, '#7d8799');
+  r(c, 46, 68, 4, 26, '#3a4254'); r(c, 114, 68, 4, 26, '#3a4254');
+  r(c, 74, 70, 8, 6, INK);
+  r(c, 76, 72, 4, 2, progress > 0 && !empty ? '#5ef0ff' : '#3a4254');
+  // lumière de l'écran
+  c.fillStyle = 'rgba(94,240,160,0.06)';
+  c.fillRect(30, 10, 104, 90);
+}
+
+/** L'indicateur de batterie au-dessus de Pixel. */
+function batteryIcon(c: Ctx, x: number, y: number, level: number, t: number) {
+  r(c, x, y, 12, 6, INK);
+  r(c, x + 12, y + 2, 1, 2, INK);
+  r(c, x + 1, y + 1, 10, 4, '#3a3a48');
+  const low = level < 0.2;
+  if (!low || Math.floor(t * 3) % 2) r(c, x + 1, y + 1, Math.max(1, Math.round(10 * level)), 4, low ? '#ff5a3a' : '#5ef08a');
+}
+
+/** Un câble de la prise jusqu'au flanc de Pixel, parcouru de données. */
+function cable(c: Ctx, x0: number, y0: number, x1: number, y1: number, t: number, flow: boolean) {
+  const n = 18;
+  for (let i = 0; i <= n; i++) {
+    const k = i / n;
+    const x = x0 + (x1 - x0) * k, y = y0 + (y1 - y0) * k + Math.sin(k * Math.PI) * 8;
+    r(c, x, y, 2, 2, INK);
+    if (flow && Math.floor(k * n - t * 14) % 4 === 0) r(c, x, y, 2, 2, '#5ef0ff');
+  }
+}
+
+// ---------- les six souvenirs ----------
 export const MEMORIES: Memory[] = [
   {
     title: 'Le premier allumage',
@@ -393,6 +466,59 @@ export const MEMORIES: Memory[] = [
           maman(c, x + 12, 100, { dir: 'right', back: true, walk: t * 8 });
           betti(c, x, 100, { dir: t > 2.6 && t < 3.8 ? 'left' : 'right', back: !(t > 2.6 && t < 3.8), walk: t * 8 });
           pixel(c, 44, 100, 'right', { pose: 'sit', eye: 'on', tail: 2, earsDown: true });
+        },
+      },
+    ],
+  },
+  {
+    title: 'La dernière charge',
+    tableaux: [
+      {
+        caption: 'Batterie : 4 %. Le panneau solaire est fendu…',
+        dur: 4.6,
+        draw: (c, t) => {
+          emptyCity(c, t);
+          const x = 20 + t * 9;
+          pixel(c, x, 100, 'right', { pose: 'stand', frame: Math.floor(t * 5) % 4, tail: 3, earsDown: true, eye: t % 1.4 < 0.2 ? 'closed' : 'on' });
+          batteryIcon(c, x - 6, 76, 0.08, t);
+          // la fêlure du panneau, sur son dos
+          r(c, x - 2, 88, 1, 1, '#ffffff'); r(c, x - 1, 89, 1, 1, '#ffffff'); r(c, x, 88, 1, 1, '#ffffff');
+        },
+      },
+      {
+        caption: 'Une prise. De l’énergie, enfin…',
+        dur: 4.4,
+        draw: (c, t) => {
+          archiveRoom(c, t, 0, false);
+          const x = 60 - Math.max(0, 1.6 - t) * 20;
+          pixel(c, x, 100, 'right', { pose: t > 1.6 ? 'sit' : 'stand', frame: Math.floor(t * 5) % 4, tail: 2, earsDown: true });
+          batteryIcon(c, x - 6, 76, 0.04, t);
+          if (t > 2.2) cable(c, 78, 76, x + 4, 92, t, false);
+        },
+      },
+      {
+        caption: 'TRANSFERT : MISSION_AURORE → appareil inconnu…',
+        dur: 5.2,
+        draw: (c, t) => {
+          const p = Math.min(1, t / 4.2);
+          archiveRoom(c, t, p, false);
+          cable(c, 78, 76, 64, 92, t, true);
+          pixel(c, 60, 100, 'right', { pose: 'sit', eye: 'wide', tail: 2 });
+          batteryIcon(c, 54, 76, 0.04 + p * 0.5, t);
+          // les données qui se déversent dans son œil
+          for (let i = 0; i < 6; i++) {
+            const k = (t * 1.3 + i / 6) % 1;
+            r(c, 78 + (60 - 78) * k + Math.sin(i + t * 4) * 3, 46 + (86 - 46) * k, 1, 1, '#9dffcf');
+          }
+        },
+      },
+      {
+        caption: 'Dossier MISSION_AURORE : VIDE. Tout est en lui.',
+        dur: 5,
+        draw: (c, t) => {
+          archiveRoom(c, t, 1, true);
+          pixel(c, 60, 100, 'right', { pose: t > 2.4 ? 'lie' : 'sit', eye: t > 3.4 ? 'closed' : Math.floor(t * 4) % 3 ? 'on' : 'closed', tail: 2, earsDown: true });
+          batteryIcon(c, 54, 76, 0.5, t);
         },
       },
     ],

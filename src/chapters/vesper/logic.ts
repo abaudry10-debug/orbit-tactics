@@ -350,9 +350,10 @@ export const hooks: ChapterHooks = {
           sfx.success();
           g.refreshQuestions(false);
           g.save();
-          // s'il porte déjà la carte tombée de son flanc, Pixel la réclame tout de suite
-          if (g.items.has('memo1')) {
-            ui.say(['Pixel renifle ton sac. Une petite trappe clignote sur son flanc…'], () => g.plugMemory(1));
+          // s'il y a déjà ses cartes mémoire dans le sac, Pixel les réclame tout de suite, l'une après l'autre
+          const held = [1, 2, 3, 4, 5, 6].filter((n) => g.items.has(`memo${n}`)).length;
+          if (held) {
+            ui.say([held > 1 ? 'Pixel renifle ton sac. Ses cartes mémoire ! Une petite trappe clignote sur son flanc…' : 'Pixel renifle ton sac. Une petite trappe clignote sur son flanc…'], () => g.plugAllMemories());
           }
         },
       );

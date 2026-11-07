@@ -153,8 +153,10 @@ export function renderJournal(
   for (const th of ch().threads) {
     if (th.id === 'leads') continue;
     if (th.id === 'pixel') {
-      // les souvenirs de Pixel : cinq cases, à revoir à volonté
-      const seen = [1, 2, 3, 4, 5].filter((n) => clues.has(`memo${n}`));
+      // les souvenirs de Pixel : une case par souvenir, à revoir à volonté
+      const total = ch().memories.length;
+      const nums = Array.from({ length: total }, (_, i) => i + 1);
+      const seen = nums.filter((n) => clues.has(`memo${n}`));
       if (!seen.length) continue;
       const newCount = seen.filter((n) => fresh.has(`memo${n}`)).length;
       const d = document.createElement('details');
@@ -163,9 +165,9 @@ export function renderJournal(
       const sum = document.createElement('summary');
       sum.innerHTML = `<span class="icon">${th.icon}</span><span class="t"></span><span class="count"></span>`;
       sum.querySelector('.t')!.textContent = th.title;
-      sum.querySelector('.count')!.textContent = `${seen.length}/5`;
+      sum.querySelector('.count')!.textContent = `${seen.length}/${total}`;
       d.appendChild(sum);
-      for (let n = 1; n <= 5; n++) {
+      for (const n of nums) {
         const c = ch().clues.find((x) => x.id === `memo${n}`)!;
         if (!clues.has(c.id)) {
           d.appendChild(card(`Souvenir ${n}`, 'Fragment manquant.', 'unknown', false));

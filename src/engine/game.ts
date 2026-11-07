@@ -13,6 +13,8 @@ export const view = { w: 12 * T, h: 16 * T, padBottom: 0 }; // padBottom : zone 
 const HEAT_WARN = 17;
 const HEAT_WAVE = 24;
 const HEAT_FADE = 4;
+let heatBuf: HTMLCanvasElement | null = null;
+let heatGlow: HTMLCanvasElement | null = null, heatGlowW = 0, heatGlowH = 0;
 const MOVE_TIME = 0.19; // secondes pour traverser une case
 
 const OPPOSITE: Record<Dir, Dir> = { up: 'down', down: 'up', left: 'right', right: 'left' };
@@ -558,10 +560,10 @@ export class Game {
   /** Temps restant de la projection en jeu (le cône de lumière depuis l'œil de Pixel). */
   projecting = 0;
 
-  plugMemory(n: number) {
+  plugMemory(n: number, onDone?: () => void) {
     const p = this.pixel;
     if (!p) return ui.say(['Une carte mémoire abîmée. Le connecteur a une forme étrange…', 'On dirait une prise faite pour un robot.']);
-    if (this.map.dark) return ui.say(['Pas ici. Pixel tremble trop.']);
+    if (this.map.dark) return ui.say(['Pixel recule, les oreilles plaquées, et gémit.', 'Il a peur du noir : il refuse d’ouvrir sa trappe ici. Il faudra lire la carte à la lumière.']);
     if (this.map.outdoor && (this.heatPhase === 'warn' || this.heatPhase === 'wave')) return ui.say(['Pas maintenant : la chaleur affole Pixel.']);
     this.locked = true;
     releaseAll();
@@ -588,8 +590,20 @@ export class Game {
         this.pixelMode = 'pet';
         this.pixelTimer = 1.2;
         this.save();
+        onDone?.();
       });
     }, 1900);
+  }
+
+  /** Lit, l'une après l'autre, toutes les cartes mémoire du sac (dans l'ordre). */
+  plugAllMemories(onDone?: () => void) {
+    const held = () => ch().memories.map((_, i) => i + 1).filter((n) => this.items.has(`memo${n}`));
+    const next = held()[0];
+    if (next === undefined || !this.pixel) return onDone?.();
+    this.plugMemory(next, () => {
+      if (!held().length) return onDone?.();
+      window.setTimeout(() => ui.say(['Pixel cligne des yeux… sa trappe se rouvre. Une autre carte.'], () => this.plugAllMemories(onDone)), 1300);
+    });
   }
 
   /** Revoir un souvenir depuis le journal (Pixel n'a pas besoin d'être là). */
@@ -815,21 +829,45 @@ export class Game {
     const outside = this.map.outdoor && !this.map.dark;
     const k = this.heatK();
     if (k > 0 && outside) {
+      // l'air qui ondule : une seule copie de l'image, puis de larges bandes décalées d'un pixel au plus,
+      // lentement — l'ancienne version copiait l'écran sur lui-même 90 fois par image (lent sur iPhone, et ça sautillait)
+      const amp = k * 1.25;
+      if (amp >= 0.5) {
+        const cv = c.canvas;
+        if (!heatBuf || heatBuf.width !== cv.width || heatBuf.height !== cv.height) {
+          heatBuf = document.createElement('canvas');
+          heatBuf.width = cv.width;
+          heatBuf.height = cv.height;
+        }
+        const b = heatBuf.getContext('2d')!;
+        b.drawImage(cv, 0, 0);
+        const sy = cv.height / view.h;
+        const band = 4;
+        for (let y = 0; y < view.h; y += band) {
+          const off = Math.round(Math.sin(y * 0.045 + this.time * 2.4) * amp);
+          if (off) c.drawImage(heatBuf, 0, y * sy, cv.width, band * sy, off, y, view.w, band);
+        }
+      }
       c.fillStyle = `rgba(255,70,20,${0.22 * k})`;
       c.fillRect(0, 0, view.w, view.h);
-      const g = c.createRadialGradient(view.w * 0.85, 0, 0, view.w * 0.85, 0, view.h * 0.9);
-      g.addColorStop(0, `rgba(255,245,210,${0.5 * k})`);
-      g.addColorStop(1, 'rgba(255,245,210,0)');
-      c.fillStyle = g;
-      c.fillRect(0, 0, view.w, view.h);
-      // l'air qui ondule : des bandes de l'image décalées
-      const amp = k * 1.7;
-      for (let y = 0; y < view.h; y += 2) {
-        const off = Math.round(Math.sin(y * 0.11 + this.time * 7) * amp);
-        if (off) c.drawImage(c.canvas, 0, y, view.w, 2, off, y, view.w, 2);
+      if (!heatGlow || heatGlowW !== view.w || heatGlowH !== view.h) {
+        heatGlowW = view.w;
+        heatGlowH = view.h;
+        heatGlow = document.createElement('canvas');
+        heatGlow.width = view.w;
+        heatGlow.height = view.h;
+        const gc = heatGlow.getContext('2d')!;
+        const g = gc.createRadialGradient(view.w * 0.85, 0, 0, view.w * 0.85, 0, view.h * 0.9);
+        g.addColorStop(0, 'rgba(255,245,210,0.5)');
+        g.addColorStop(1, 'rgba(255,245,210,0)');
+        gc.fillStyle = g;
+        gc.fillRect(0, 0, view.w, view.h);
       }
+      c.globalAlpha = k;
+      c.drawImage(heatGlow, 0, 0);
+      c.globalAlpha = 1;
       if (this.heatPhase === 'wave') {
-        const pulse = 0.06 + 0.05 * Math.sin(this.time * 5);
+        const pulse = 0.06 + 0.04 * Math.sin(this.time * 2.5);
         c.fillStyle = `rgba(255,220,160,${pulse})`;
         c.fillRect(0, 0, view.w, view.h);
       }
@@ -1108,7 +1146,7 @@ export class Game {
         c.fillStyle = '#f2f4f8';
         c.fillRect(x - (size >> 1), y - (size >> 1), size, size);
       } else if (f.kind === 'ember') {
-        c.fillStyle = Math.random() < 0.3 ? '#fff0a0' : '#ff8a3d';
+        c.fillStyle = (f.max * 1000) % 3 < 0.9 ? '#fff0a0' : '#ff8a3d';
         c.fillRect(x, y, 1, 1);
       } else if (f.kind === 'zap') {
         c.fillStyle = Math.random() < 0.5 ? '#ffffff' : '#5ef0ff';
@@ -1239,8 +1277,8 @@ export class Game {
           }
         }
       }
-      if (this.heatPhase === 'wave' && Math.random() < 0.6) {
-        this.fx.push({ kind: 'ember', x: this.x * T + (Math.random() - 0.5) * view.w, y: this.y * T + (Math.random() - 0.3) * view.h, vx: 8 + Math.random() * 12, vy: -6 - Math.random() * 10, life: 1.4, max: 1.4 });
+      if (this.heatPhase === 'wave' && Math.random() < 0.4) {
+        this.fx.push({ kind: 'ember', x: this.x * T + (Math.random() - 0.5) * view.w, y: this.y * T + (Math.random() - 0.3) * view.h, vx: 8 + Math.random() * 12, vy: -6 - Math.random() * 10, life: 1.4, max: 1.4 + Math.random() * 0.003 });
       }
       // Pixel surchauffe : de la vapeur sort de son panneau
       if (this.pixel && this.heatPhase === 'wave' && Math.random() < 0.5) {
@@ -1509,7 +1547,7 @@ export class Game {
     if (ch().hooks.useItem?.(this, id)) return;
     if (id === 'pelle') return this.dig();
     if (id === 'ecrou') return this.throwNut();
-    if (/^memo[1-5]$/.test(id)) return this.plugMemory(Number(id.slice(4)));
+    if (/^memo[1-6]$/.test(id)) return this.plugMemory(Number(id.slice(4)));
     const it = ch().items[id];
     ui.say([it ? it.text : '…']);
   }
