@@ -144,22 +144,15 @@ function cuves(): GameMap {
 function chemin(): GameMap {
   const W = 30, H = 22;
   const b = new Builder(W, H, '"');
-  // à l'est, la terre n'a pas été semée : la lisière ondule
-  const edge = (y: number) => 21 + Math.round(wobble(y, 0.5));
+  // à l'est, la terre n'a pas été semée : une limite nette, que la barrière suit tout droit
+  const edge = (_y: number) => 21;
   for (let y = 0; y < H; y++) for (let x = edge(y) + 1; x < W; x++) b.set(x, y, 'x');
-  blob(b, 26.5, 12.5, 2, 1.6, '"', 3, 'x');
   // la forêt d'Azura, en lisière découpée au nord et à l'ouest
   for (let x = 0; x < 22; x++) for (let y = 0; y < 1 + Math.max(0, Math.round(wobble(x, 2) * 0.6)); y++) if (x !== 15) b.set(x, y, 'A');
   for (let y = 0; y < H; y++) for (let x = 0; x < 1 + Math.max(0, Math.round(wobble(y, 4) * 0.7)); x++) b.set(x, y, 'A');
   bigCrater(b, 25, 3);
   b.points('o', [[24, 1], [28, 8], [25, 17], [28, 20], [24, 10]]);
   b.points('k', [[27, 1], [29, 5], [23, 6], [28, 16], [26, 19], [24, 20]]);
-  // la falaise, plus ou moins épaisse, coupée par le sentier
-  for (let x = 1; x < W; x++) {
-    if (x >= 14 && x <= 16) continue;
-    const top = 8 + Math.round(wobble(x, 1.3) * 0.5);
-    b.set(x, top, 'R').set(x, top + 1, 'R');
-  }
   // la rivière qui serpente
   const river = (x: number) => 13 + Math.round(Math.sin(x * 0.35 + 0.4));
   for (let x = 0; x < W; x++) for (let k = -1; k <= 1; k++) b.set(x, river(x) + k, '~');
@@ -168,7 +161,6 @@ function chemin(): GameMap {
   for (let k = -1; k <= 1; k++) b.set(15, rb + k, 'B');
   // le sentier
   b.rect(15, 0, 1, 5, '.').rect(12, 4, 4, 1, '.').rect(12, 4, 1, 4, '.').rect(12, 7, 4, 1, '.').rect(15, 7, 1, rb - 1 - 7, '.');
-  b.rect(14, 8, 3, 2, '.');
   b.rect(15, rb + 2, 1, H - rb - 2, '.');
   blob(b, 6, 5.5, 1.6, 1.2, ',', 5, '"');
   blob(b, 8, 17.5, 2, 1.2, ',', 6, '"');
