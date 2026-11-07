@@ -644,14 +644,15 @@ const heatAlert: Painter = (c, v) => {
   r(c, 6, 6, 4, 2, '#e8622c'); r(c, 7, 9, 2, 1, '#e8622c');
   r(c, 7, 5, 2, 2, '#ffcf4a');
 };
-// une carte mémoire abîmée, posée au sol
-const memoCard: Painter = (c, v) => {
-  dust(c, v);
-  c.fillStyle = 'rgba(0,0,0,0.25)'; c.fillRect(4, 11, 9, 2);
+// une carte mémoire abîmée, posée au sol (à moitié dans la poussière dehors, posée à plat dedans)
+const memoCardOn = (ground: Painter, buried: boolean): Painter => (c, v) => {
+  ground(c, v);
+  if (buried) { c.fillStyle = 'rgba(0,0,0,0.25)'; c.fillRect(4, 11, 9, 2); }
   r(c, 4, 6, 8, 6, P.ink); r(c, 5, 7, 6, 4, '#2f6f5a'); r(c, 5, 7, 6, 1, '#4fa07e');
   r(c, 6, 11, 1, 1, '#ffcf4a'); r(c, 8, 11, 1, 1, '#ffcf4a'); r(c, 10, 11, 1, 1, '#ffcf4a'); // contacts dorés
   r(c, 9, 8, 1, 2, '#1c3a30'); r(c, 6, 9, 2, 1, '#9dffcf'); // une diode encore vivante
 };
+const memoCard = memoCardOn(dust, true);
 const musicBox: Painter = (c, v) => {
   woodFloor(c, v);
   c.fillStyle = 'rgba(0,0,0,0.25)'; c.fillRect(3, 13, 11, 2);
@@ -1147,7 +1148,7 @@ const REGISTRY: Record<string, Painter[]> = {
   obsTop: [obsTop], obsFront: [obsFront], obsDoor: [obsDoor], console: [console_], antennaBase: [antennaBase], trapdoor: [trapdoor],
   turbine: [turbine], switchPanel: [switchPanel(false)], switchPanelOn: [switchPanel(true)], plaque: [plaque],
   telescope: [telescope], orbitChart: [orbitChart], missionBoard: [missionBoard], varnDesk: [varnDesk],
-  podPlans: [podPlans], dogSleep: [dogSleep], dogBasket: [dogBasket], memoCard: [memoCard], musicBox: [musicBox], mud: [mud], shackDoor: [shackDoor], heatAlert: [heatAlert],
+  podPlans: [podPlans], dogSleep: [dogSleep], dogBasket: [dogBasket], memoCard: [memoCard], memoCardLab: [memoCardOn(labFloor, false)], musicBox: [musicBox], mud: [mud], shackDoor: [shackDoor], heatAlert: [heatAlert],
   signLeft: [signArrow('left', dust)], signRight: [signArrow('right', dust)], signDown: [signArrow('down', dust)], signUpSand: [signArrow('up', sand)],
   cultureTank: [cultureTank('full')], cultureTankEmpty: [cultureTank('empty')], cultureTankBroken: [cultureTank('broken')],
   whiteboard: [whiteboard], archiveTerm: [archiveTerm],

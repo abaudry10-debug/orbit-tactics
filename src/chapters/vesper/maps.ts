@@ -399,7 +399,7 @@ function buildSpatioportInt(): GameMap {
       { id: 'codebook', x: 18, y: 8, sprite: 'book', script: 'codebook' },
       { id: 'hangarNote', x: 8, y: 5, sprite: 'note', script: 'hangarNote' },
       { id: 'archiveTerm', x: 15, y: 8, sprite: 'archiveTerm', script: 'archiveTerm' },
-      { id: 'memoCard6', x: 14, y: 9, sprite: 'memoCard', script: 'memoCard6', hideWhen: 'memo6Found' },
+      { id: 'memoCard6', x: 14, y: 9, sprite: 'memoCardLab', script: 'memoCard6', hideWhen: 'memo6Found' },
       { id: 'cultureDoor', x: 8, y: 1, sprite: 'labDoorOpen', door: { to: 'culture', x: 6, y: 7, dir: 'up' } },
       { id: 'spatioExit', x: 11, y: 11, sprite: 'labDoorOpen', door: { to: 'vesper', x: 34, y: 24, dir: 'down' } },
     ],
