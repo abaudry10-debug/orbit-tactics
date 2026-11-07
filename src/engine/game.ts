@@ -1881,7 +1881,7 @@ export class Game {
         c.drawImage(dogSprite(pdir, look), dx, dy);
         c.globalAlpha = 1;
         // une carte pas encore lue dans le sac : la trappe de son flanc clignote
-        if (!this.projecting && [1, 2, 3, 4, 5].some((n) => this.items.has(`memo${n}`)) && Math.floor(this.time * 2.5) % 2) {
+        if (!this.projecting && ch().memories.some((_, i) => this.items.has(`memo${i + 1}`)) && Math.floor(this.time * 2.5) % 2) {
           c.fillStyle = '#ffcf4a';
           c.fillRect(dx + (pdir === 'left' ? 9 : 6), dy + 9, 1, 1);
         }

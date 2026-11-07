@@ -1104,7 +1104,7 @@ const ICONS: Record<string, Painter> = {
     for (const i of [4, 7, 10]) { r(c, i, 1, 1, 2, P.metalLight); r(c, i, 13, 1, 2, P.metalLight); r(c, 1, i, 2, 1, P.metalLight); r(c, 13, i, 2, 1, P.metalLight); }
   },
 };
-for (let n = 1; n <= 5; n++) ICONS[`memo${n}`] = ICONS.memo;
+for (let n = 1; n <= 9; n++) ICONS[`memo${n}`] = ICONS.memo;
 
 const iconCache = new Map<string, string>();
 /** Icône d'objet en image (data URL), affichée en grand avec des pixels nets. */
