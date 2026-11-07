@@ -575,22 +575,73 @@ function fringe(c: CanvasRenderingContext2D, mask: number, seed: number) {
   }
 }
 
-/** Le nom d'une tuile avec ses lisières d'herbe ; la tuile est dessinée la première fois qu'on la demande. */
-export function withFringe(base: string, mask: number): string {
-  if (!mask) return base;
-  const name = `${base}~${mask}`;
+/**
+ * Le nom d'une tuile avec ses lisières d'herbe, et éventuellement un élément posé par-dessus
+ * (une barrière, une montagne) ; la tuile est dessinée la première fois qu'on la demande.
+ */
+export function withFringe(base: string, mask: number, top = ''): string {
+  if (!mask && !top) return base;
+  const name = `${base}~${mask}${top ? '+' + top : ''}`;
   if (!made.has(name)) {
     made.add(name);
     const painter = PAINTERS[base];
+    const over = top ? OVERLAYS[top] : null;
     registerTiles({
       [name]: (c, v) => {
         painter(c, v);
-        fringe(c, mask, v * 4 + (mask % 7));
+        if (mask) fringe(c, mask, v * 4 + (mask % 7));
+        over?.(c, v);
       },
     });
   }
   return name;
 }
+
+// ---------- ce qui ferme la zone jouable : barrières et montagnes ----------
+/** Une barrière d'énergie : des bornes blanches et des faisceaux turquoise entre elles. */
+const fencePost = (c: CanvasRenderingContext2D, x: number) => {
+  r(c, x, 3, 3, 12, AZ.metalDark); r(c, x, 3, 1, 12, AZ.metalLight);
+  r(c, x - 1, 13, 5, 3, AZ.metalDeep);
+  r(c, x, 1, 3, 2, AZ.white); r(c, x + 1, 2, 1, 1, AZ.glow);
+};
+const fenceH: Painter = (c) => {
+  r(c, 0, 13, T, 2, 'rgba(0,0,0,0.18)');
+  for (const y of [5, 9]) { r(c, 0, y, T, 1, AZ.glow); r(c, 0, y - 1, T, 1, 'rgba(95,240,224,0.35)'); r(c, 0, y + 1, T, 1, 'rgba(95,240,224,0.35)'); }
+  fencePost(c, 6);
+};
+const fenceV: Painter = (c) => {
+  r(c, 9, 0, 3, T, 'rgba(0,0,0,0.15)');
+  r(c, 7, 0, 1, T, AZ.glow); r(c, 6, 0, 1, T, 'rgba(95,240,224,0.35)'); r(c, 8, 0, 1, T, 'rgba(95,240,224,0.35)');
+  fencePost(c, 6);
+};
+const fenceP: Painter = (c) => {
+  r(c, 3, 13, 10, 2, 'rgba(0,0,0,0.18)');
+  fencePost(c, 6);
+  r(c, 5, 0, 5, 2, 'rgba(95,240,224,0.4)');
+};
+/** Une montagne : des pics violets, éclairés par la gauche, quelques reflets de cristal. */
+const mountainPeak: Painter = (c, v) => {
+  const peak = (cx: number, top: number, half: number) => {
+    for (let y = top; y < T; y++) {
+      const w = Math.round(((y - top) / (T - top)) * half);
+      r(c, cx - w, y, w, 1, '#a99cc4');
+      r(c, cx, y, w + 1, 1, '#6c5f8a');
+      if (y < top + 3) { r(c, cx - w, y, w * 2 + 1, 1, '#e8eef8'); }
+    }
+  };
+  if (v === 0) { peak(5, 2, 6); peak(11, 5, 6); }
+  else if (v === 1) { peak(8, 0, 8); }
+  else { peak(4, 6, 5); peak(10, 1, 7); }
+  r(c, 7 + v, 11, 1, 1, AZ.glow);
+};
+const mountainBody: Painter = (c, v) => {
+  r(c, 0, 0, T, T, '#7d7098');
+  for (let i = 0; i < 4; i++) r(c, (i * 5 + v * 3) % 14, 2 + i * 3, 4, 1, '#9b8eb8');
+  for (let i = 0; i < 3; i++) r(c, (i * 6 + v * 5 + 3) % 14, 4 + i * 4, 3, 1, '#5d5178');
+  if (v === 2) r(c, 9, 7, 1, 2, AZ.glow);
+};
+const OVERLAYS: Record<string, Painter> = { fenceH, fenceV, fenceP, mountainPeak, mountainBody };
+export const _keep = OVERLAYS;
 export const MASK = { N, E, S, W, NE, SE, SW, NW };
 
 registerIcons({
@@ -629,16 +680,19 @@ const canopy = (pal: number, glow: number): Painter => (c, v) => {
     for (let i = 0; i < 4; i++) r(c, Math.floor(g2() * 15), Math.floor(g2() * 15), 1, 1, glow === 1 ? AZ.glow : AZ.pink);
   }
 };
-const mushroom: Painter = (c, v) => {
-  // dessiné par-dessus la forêt : seulement le chapeau et son ombre
-  // un champignon géant : chapeau rose, taches claires, bord lumineux
+/** Des champignons géants, chacun seul : petit, moyen, grand ; chapeau rose ou violet. */
+const mushroom = (size: number): Painter => (c, v) => {
   const hue = v === 1 ? ['#b45ad0', '#7a3a9a', '#e0a0f0'] : ['#d0607a', '#8a3a50', '#f6a8b8'];
-  disc(c, 8.5, 9, 7, 'rgba(0,0,0,0.35)');
-  disc(c, 8, 7.5, 7, hue[1]);
-  disc(c, 8, 7, 6.5, hue[0]);
-  disc(c, 6, 5, 2.5, hue[2]);
-  for (const [x, y] of [[10, 4], [11, 9], [5, 9], [8, 11]]) r(c, x, y, 2, 2, '#fff0f6');
-  r(c, 7, 6, 2, 2, AZ.glow);
+  const rad = [2.6, 3.8, 5.2][size];
+  const cx = 8, cy = 8;
+  disc(c, cx + 1.5, cy + 2, rad, 'rgba(0,0,0,0.35)');
+  r(c, cx - 1, Math.round(cy + rad * 0.4), 2, Math.round(rad * 0.8), '#e8dcc8');
+  disc(c, cx, cy, rad, hue[1]);
+  disc(c, cx - 0.3, cy - 0.5, rad * 0.9, hue[0]);
+  disc(c, cx - rad * 0.35, cy - rad * 0.4, rad * 0.35, hue[2]);
+  r(c, Math.round(cx + rad * 0.3), Math.round(cy - rad * 0.2), 1, 1, '#fff0f6');
+  if (size > 0) r(c, Math.round(cx - rad * 0.2), Math.round(cy + rad * 0.3), 1, 1, '#fff0f6');
+  if (size === 2) r(c, cx + 1, cy + 2, 1, 1, AZ.glow);
 };
 const boulders: Painter = (c, v) => {
   regolith(c, v);
@@ -704,7 +758,7 @@ const farWater: Painter = (c, v) => {
 const WILD: Record<string, Painter> = {
   canopy0: canopy(0, 0), canopy1: canopy(1, 0), canopy2: canopy(2, 0), canopy3: canopy(3, 0),
   canopyGlow0: canopy(0, 1), canopyGlow1: canopy(1, 2),
-  mushroom, boulders, spire0: spire(0), spire1: spire(1), geyser0: geyser(0), geyser1: geyser(1), geyser2: geyser(2),
+  mushroom0: mushroom(0), mushroom1: mushroom(1), mushroom2: mushroom(2), boulders, spire0: spire(0), spire1: spire(1), geyser0: geyser(0), geyser1: geyser(1), geyser2: geyser(2),
   fossil, probe0: probe(0), probe1: probe(1), farWater,
 };
 registerTiles(WILD);

@@ -2,7 +2,7 @@
 import { playTheme, sfx } from '../../engine/audio.js';
 import type { Chapter } from '../../engine/chapter.js';
 import { view, type Game } from '../../engine/game.js';
-import { tile } from '../../engine/sprites.js';
+import { registerTiles, tile } from '../../engine/sprites.js';
 import type { PersonLook } from '../../engine/sprites.js';
 import * as ui from '../../engine/ui.js';
 import { MAPS_AZ, SOLID_AZ, START_AZ } from './maps.js';
@@ -190,7 +190,13 @@ function renderVoid(g: Game, c: CanvasRenderingContext2D, x: number, y: number, 
   if (forest) {
     // de loin en loin, une clairière de champignons géants
     c.drawImage(forestCanvas(x, y, seed), sx, sy);
-    if (smooth(x * 0.35, y * 0.35, seed + 3) > 0.76) c.drawImage(tile('mushroom', (x * 7 + y * 13) & 0xff), sx, sy);
+    // çà et là, un champignon géant, seul, décalé dans sa case
+    const m = h01(x, y, seed + 21);
+    if (m < 0.07) {
+      const size = m < 0.015 ? 2 : m < 0.04 ? 1 : 0;
+      const off = Math.round((h01(x, y, seed + 22) - 0.5) * 6);
+      c.drawImage(tile('mushroom' + size, (x * 3 + y) & 0xff), sx + off, sy - Math.abs(off) / 2);
+    }
   } else {
     // juste au-delà du bord, une ceinture de rochers : on voit qu'on ne peut pas aller plus loin
     if (d === 1 && name === 'regolith') name = 'boulders';
@@ -209,6 +215,69 @@ function renderVoid(g: Game, c: CanvasRenderingContext2D, x: number, y: number, 
   c.fillStyle = grad;
   c.fillRect(sx, sy, 16, 16);
   return true;
+}
+
+// ---------- les montagnes : une chaîne de pics qui débordent d'une case à l'autre ----------
+const madeMountains = new Set<string>();
+function mountainTile(g: Game, x: number, y: number, mask: number): string {
+  const name = `mtn:${g.map.id}:${x},${y}:${mask}`;
+  if (madeMountains.has(name)) return name;
+  madeMountains.add(name);
+  const rows = g.map.rows;
+  const isM = (i: number, j: number) => i >= 0 && j >= 0 && i < g.map.width && j < g.map.height && rows[j][i] === 'M';
+  const seed = g.map.id.length * 7;
+  const peaks: { cx: number; base: number; h: number; half: number; snow: boolean }[] = [];
+  for (let j = y - 1; j <= y + 2; j++) {
+    for (let i = x - 1; i <= x + 1; i++) {
+      if (!isM(i, j)) continue;
+      // un pic par case ; plus haut s'il a de la montagne derrière lui
+      const tall = isM(i, j - 1);
+      peaks.push({
+        cx: (i - x) * 16 + 8 + (h01(i, j, seed) - 0.5) * 6,
+        base: (j - y) * 16 + 15,
+        h: tall ? 18 + h01(i, j, seed + 1) * 10 : 11 + h01(i, j, seed + 1) * 3,
+        half: 9 + h01(i, j, seed + 2) * 5,
+        snow: h01(i, j, seed + 3) > 0.3,
+      });
+    }
+  }
+  peaks.sort((a, b) => a.base - b.base);
+  const ground = withFringe('regolith', mask);
+  registerTiles({
+    [name]: (c, v) => {
+      c.drawImage(tile(ground, v), 0, 0);
+      for (const p of peaks) {
+        const top = p.base - p.h;
+        // l'ombre du pic au pied
+        c.fillStyle = 'rgba(30,20,50,0.35)';
+        c.fillRect(Math.round(p.cx - p.half + 2), p.base, Math.round(p.half * 2), 2);
+        for (let yy = Math.max(top, -2); yy <= p.base; yy++) {
+          if (yy < 0 || yy > 15) continue;
+          const k = (yy - top) / p.h;
+          const w = Math.max(1, Math.round(k * p.half));
+          const snowy = p.snow && k < 0.3;
+          c.fillStyle = snowy ? '#f0f4fb' : '#b0a3cc';
+          c.fillRect(Math.round(p.cx - w), yy, w, 1);
+          c.fillStyle = snowy ? '#c9cfe2' : '#6a5d8a';
+          c.fillRect(Math.round(p.cx), yy, w, 1);
+          c.fillStyle = '#3f3560';
+          c.fillRect(Math.round(p.cx - w) - 1, yy, 1, 1);
+          c.fillRect(Math.round(p.cx + w), yy, 1, 1);
+          // une arête plus claire, et quelques strates
+          if (!snowy && (yy - top) % 5 === 2) {
+            c.fillStyle = '#8c7fae';
+            c.fillRect(Math.round(p.cx - w * 0.6), yy, Math.max(1, Math.round(w * 0.4)), 1);
+          }
+        }
+        const gy = Math.round(p.base - p.h * 0.35);
+        if (gy >= 0 && gy < 16 && h01(p.cx, p.base, seed + 9) > 0.6) {
+          c.fillStyle = '#5ff0e0';
+          c.fillRect(Math.round(p.cx + 2), gy, 1, 1);
+        }
+      }
+    },
+  });
+  return name;
 }
 
 // ---------- la sortie de la cuve : vapeur, puis on pose le pied sur la dalle ----------
@@ -425,7 +494,14 @@ export const azura: Chapter = {
           return (above === '~' || above === 'B' || above === 'b' ? 'azWater' : 'azShore') + wave;
         }
         case 'F': return 'fountain' + (Math.floor(g.time * 3) % 2);
-        case 'x': return withFringe('regolith', grassMask(g, x, y));
+        case 'x':
+        case 'X': return withFringe('regolith', grassMask(g, x, y));
+        case 'Y': {
+          const row = g.map.rows, at = (xx: number, yy: number) => (yy >= 0 && yy < g.map.height ? row[yy][xx] : '');
+          const h = at(x - 1, y) === 'Y' || at(x + 1, y) === 'Y', v = at(x, y - 1) === 'Y' || at(x, y + 1) === 'Y';
+          return withFringe('regolith', grassMask(g, x, y), h && !v ? 'fenceH' : v && !h ? 'fenceV' : 'fenceP');
+        }
+        case 'M': return mountainTile(g, x, y, grassMask(g, x, y));
         case 'o': return withFringe('crater', grassMask(g, x, y));
         case '1': return withFringe('bigCrater0', grassMask(g, x, y));
         case '2': return withFringe('bigCrater1', grassMask(g, x, y));

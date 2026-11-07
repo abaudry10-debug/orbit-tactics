@@ -9,10 +9,11 @@
 //   #  bâtiment d'Aurore (façade selon la zone)   Z  mur intérieur   w  plancher   F  fontaine
 //   x  sol nu d'Azura (régolithe)   o  petit cratère   1 2 / 3 4  grand cratère   k  cristaux
 //   m  plancher métallique   c  conduite au sol   d  dalle grise devant une cuve
+//   X  sol nu, à l'intérieur de la zone jouable   Y  barrière d'énergie   M  montagne
 import type { Dir } from '../../engine/sprites.js';
 import { Builder, exit, type GameMap, type MapObject } from '../../engine/world.js';
 
-export const SOLID_AZ = new Set(['~', 'R', 'A', 'u', '|', '#', 'Z', 'F', '1', '2', '3', '4', 'k']);
+export const SOLID_AZ = new Set(['~', 'R', 'A', 'u', '|', '#', 'Z', 'F', '1', '2', '3', '4', 'k', 'Y', 'M']);
 
 const obj = (id: string, x: number, y: number, sprite: string, script?: string, extra: Partial<MapObject> = {}): MapObject => ({ id, x, y, sprite, script, ...extra });
 const npc = (id: string, x: number, y: number, look: string, dir: Dir, script: string, extra: Partial<MapObject> = {}): MapObject => ({
@@ -42,6 +43,51 @@ function blob(b: Builder, cx: number, cy: number, rx: number, ry: number, ch: st
   }
 }
 
+/** Les cases où l'on peut marcher (le reste est décor ou obstacle). */
+const WALK = new Set(['"', ',', ';', '.', ':', '=', 'd', 'c', 'B', 'b', 'w', 'm', 'X']);
+
+/**
+ * Ferme la zone jouable : on part des entrées, on suit les cases praticables, et tout autour
+ * on pose une barrière ou une montagne (sauf là où un obstacle naturel ferme déjà le passage).
+ * Au-delà, le paysage reste visible, mais on ne peut plus y aller.
+ */
+function enclose(b: Builder, seeds: [number, number][], exits: [number, number][], kind: (x: number, y: number) => 'Y' | 'M') {
+  const key = (x: number, y: number) => y * b.width + x;
+  const inside = new Set<number>();
+  const stack = [...seeds];
+  while (stack.length) {
+    const [x, y] = stack.pop()!;
+    if (x < 0 || y < 0 || x >= b.width || y >= b.height || inside.has(key(x, y)) || !WALK.has(b.rows[y][x])) continue;
+    inside.add(key(x, y));
+    stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
+  }
+  const isExit = (x: number, y: number) => exits.some(([ex, ey]) => ex === x && ey === y);
+  // les cases jouables collées au bord de la carte deviennent elles aussi la limite
+  for (const k of [...inside]) {
+    const x = k % b.width, y = Math.floor(k / b.width);
+    if ((x === 0 || y === 0 || x === b.width - 1 || y === b.height - 1) && !isExit(x, y)) inside.delete(k);
+  }
+  const edge: [number, number][] = [];
+  for (let y = 0; y < b.height; y++) {
+    for (let x = 0; x < b.width; x++) {
+      if (inside.has(key(x, y)) || SOLID_AZ.has(b.rows[y][x])) continue;
+      let near = false;
+      for (let dy = -1; dy <= 1 && !near; dy++) for (let dx = -1; dx <= 1; dx++) if (inside.has(key(x + dx, y + dy))) { near = true; break; }
+      if (near) edge.push([x, y]);
+    }
+  }
+  for (const [x, y] of edge) b.set(x, y, kind(x, y));
+  // les montagnes ont de l'épaisseur : une seconde rangée, côté extérieur
+  for (const [x, y] of edge) {
+    if (b.rows[y][x] !== 'M') continue;
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = x + dx, ny = y + dy;
+      if (nx < 0 || ny < 0 || nx >= b.width || ny >= b.height || inside.has(key(nx, ny)) || SOLID_AZ.has(b.rows[ny][nx])) continue;
+      b.set(nx, ny, 'M');
+    }
+  }
+}
+
 // ---------- le champ des cuves ----------
 function cuves(): GameMap {
   const W = 24, H = 18;
@@ -50,9 +96,7 @@ function cuves(): GameMap {
   blob(b, 11.5, 9.5, 11, 8.6, '"', 1);
   blob(b, 4, 15.5, 4, 2.4, '"', 4);
   blob(b, 19.5, 2.5, 3, 2, '"', 6);
-  blob(b, 13.5, 15.2, 1.6, 1.1, 'x', 2, '"');
-  blob(b, 1.5, 9, 1.4, 2.2, 'x', 3, '"');
-  blob(b, 22.5, 11, 1.2, 2.4, 'x', 5, '"');
+  blob(b, 13.5, 15.2, 1.6, 1.1, 'X', 2, '"');
   // fleurs et roseaux, en touffes
   blob(b, 2.6, 6.5, 1.3, 1.8, ',', 7, '"');
   blob(b, 20.6, 7.8, 1.2, 1.6, ',', 8, '"');
@@ -91,6 +135,8 @@ function cuves(): GameMap {
   objects.push(obj('solaire1', 14, 16, 'solarPanel', 'solaire'), obj('solaire2', 16, 16, 'solarPanel', 'solaire'), obj('antenne', 19, 16, 'dish', 'antenne'));
   objects.push(exit('versChemin', 11, 17, { to: 'chemin', x: 15, y: 1, dir: 'down' }));
   objects.push(exit('versChemin2', 12, 17, { to: 'chemin', x: 15, y: 1, dir: 'down' }));
+  // au nord, des montagnes ; ailleurs, la barrière de la colonie
+  enclose(b, [[4, 7]], [[11, 17], [12, 17]], (_x, y) => (y <= 5 ? 'M' : 'Y'));
   return { id: 'cuves', name: 'Le champ des cuves', outdoor: true, width: W, height: H, rows: b.rows, objects, voidTile: 'azForest' };
 }
 
@@ -148,6 +194,8 @@ function chemin(): GameMap {
     npc('joss', joss[0], joss[1], 'joss', 'down', 'joss'),
   ];
   b.set(16, 17, '"');
+  // à l'est, la barrière du terraformage ; à l'ouest, des montagnes
+  enclose(b, [[15, 1]], [[15, 0], [15, 21]], (x) => (x >= 18 ? 'Y' : 'M'));
   return { id: 'chemin', name: 'Le chemin des crêtes', outdoor: true, width: W, height: H, rows: b.rows, objects, voidTile: 'azForest' };
 }
 
@@ -219,6 +267,10 @@ function ville(): GameMap {
     npc('passant3', 20, 23, 'pass3', 'down', 'passant3'),
     npc('passant4', 26, 7, 'pass4', 'left', 'passant4', { npc: { look: 'pass4', dir: 'left', wander: 3 } }),
   ];
+  // la ville est ceinte : des montagnes au nord, la barrière de la colonie sur les côtés
+  for (let x = 1; x < W - 1; x++) if (x !== 17 && WALK.has(b.rows[1][x])) b.set(x, 1, 'M');
+  for (let y = 2; y < 22; y++) for (const x of [1, W - 2]) if (WALK.has(b.rows[y][x])) b.set(x, y, 'Y');
+  enclose(b, [[17, 1]], [[17, 0]], (_x, y) => (y <= 2 ? 'M' : 'Y'));
   return {
     id: 'ville', name: 'Nouvelle-Vesper', outdoor: true, width: W, height: H, rows: b.rows, objects, voidTile: 'azForest',
     skins: [
