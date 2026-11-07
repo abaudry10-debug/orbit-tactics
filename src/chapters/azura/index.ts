@@ -6,7 +6,7 @@ import type { PersonLook } from '../../engine/sprites.js';
 import * as ui from '../../engine/ui.js';
 import { MAPS_AZ, SOLID_AZ, START_AZ } from './maps.js';
 import { CLUES_AZ, ITEMS_AZ, QUESTIONS_AZ, SCRIPTS_AZ, THREADS_AZ } from './story.js';
-import './tiles.js';
+import { MASK, withFringe } from './tiles.js';
 
 const look = (id: string, colors: Record<string, string>): PersonLook => ({ id, colors: { g: colors.s ?? '#f0c39a', w: '#14101c', ...colors } });
 
@@ -59,6 +59,27 @@ const PEOPLE: Record<string, PersonLook> = {
     r: '#ffe066', R: '#d9b83a', j: '#e0574f', J: '#f08a80', e: '#a83b35', p: '#3b5a8a', b: '#2a2a2a', a: '#e0574f', A: '#f08a80',
   }),
 };
+
+// ---------- les lisières : quelles cases d'herbe touchent celle-ci ? ----------
+const GRASSY = new Set(['"', ',', ';', 'A', 'u', 'd', 'c']);
+function grassMask(g: Game, x: number, y: number): number {
+  const rows = g.map.rows;
+  const is = (dx: number, dy: number) => {
+    const xx = x + dx, yy = y + dy;
+    if (xx < 0 || yy < 0 || yy >= g.map.height || xx >= g.map.width) return false;
+    return GRASSY.has(rows[yy][xx]);
+  };
+  let m = 0;
+  if (is(0, -1)) m |= MASK.N;
+  if (is(1, 0)) m |= MASK.E;
+  if (is(0, 1)) m |= MASK.S;
+  if (is(-1, 0)) m |= MASK.W;
+  if (is(1, -1)) m |= MASK.NE;
+  if (is(1, 1)) m |= MASK.SE;
+  if (is(-1, 1)) m |= MASK.SW;
+  if (is(-1, -1)) m |= MASK.NW;
+  return m;
+}
 
 // ---------- la sortie de la cuve : vapeur, puis on pose le pied sur la dalle ----------
 interface Steam { x: number; y: number; vx: number; vy: number; r: number; life: number; max: number }
@@ -263,31 +284,34 @@ export const azura: Chapter = {
         case '"': return 'azGrass';
         case ',': return 'azFlowers';
         case ';': return 'azTall';
-        case '.': return 'azPath';
+        case '.': return withFringe('azPath', grassMask(g, x, y));
         case ':': return 'azStone';
         case '=': return 'azDeck';
         case 'w': return 'azFloor';
         case '~': {
           const above = y > 0 ? g.map.rows[y - 1][x] : '~';
-          return (above === '~' || above === 'B' ? 'azWater' : 'azShore') + wave;
+          const m = grassMask(g, x, y);
+          if (m) return withFringe('azWater' + wave, m);
+          return (above === '~' || above === 'B' || above === 'b' ? 'azWater' : 'azShore') + wave;
         }
         case 'F': return 'fountain' + (Math.floor(g.time * 3) % 2);
-        case 'x': return 'regolith';
-        case 'o': return 'crater';
-        case '1': return 'bigCrater0';
-        case '2': return 'bigCrater1';
-        case '3': return 'bigCrater2';
-        case '4': return 'bigCrater3';
-        case 'k': return 'crystals' + (Math.floor(g.time * 1.5 + x * 0.7 + y) % 2);
+        case 'x': return withFringe('regolith', grassMask(g, x, y));
+        case 'o': return withFringe('crater', grassMask(g, x, y));
+        case '1': return withFringe('bigCrater0', grassMask(g, x, y));
+        case '2': return withFringe('bigCrater1', grassMask(g, x, y));
+        case '3': return withFringe('bigCrater2', grassMask(g, x, y));
+        case '4': return withFringe('bigCrater3', grassMask(g, x, y));
+        case 'k': return withFringe('crystals' + (Math.floor(g.time * 1.5 + x * 0.7 + y) % 2), grassMask(g, x, y));
         case 'm': return 'metalFloor';
         case 'd': return 'slab';
         case 'c': {
-          const row = g.map.rows[y];
-          return row[x - 1] === 'c' || row[x + 1] === 'c' ? 'conduitH' : 'conduitV';
+          // horizontale, sauf si la conduite file vers le haut ou le bas
+          const up = y > 0 ? g.map.rows[y - 1][x] : '', down = y + 1 < g.map.height ? g.map.rows[y + 1][x] : '';
+          return up === 'c' || down === 'c' ? 'conduitV' : 'conduitH';
         }
         case 'b': return 'azBridgeH';
         case 'B': return 'azBridgeV';
-        case 'R': return below === 'R' ? 'azRockTop' : 'azRockFace';
+        case 'R': return withFringe(below === 'R' ? 'azRockTop' : 'azRockFace', grassMask(g, x, y) & ~MASK.S & ~MASK.SE & ~MASK.SW);
         case 'A': return 'azTree';
         case 'u': return 'azBush';
         case '|': return 'azFence';

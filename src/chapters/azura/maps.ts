@@ -23,34 +23,69 @@ const tall = (id: string, x: number, y: number, top: string, base: string, scrip
 const pylon = (id: string, x: number, y: number) => tall(id, x, y, 'pylonTop', 'pylonBase', 'pylone');
 const bigCrater = (b: Builder, x: number, y: number) => b.set(x, y, '1').set(x + 1, y, '2').set(x, y + 1, '3').set(x + 1, y + 1, '4');
 
+// ---------- formes naturelles ----------
+/** Une ondulation douce et déterministe (pour des bords qui ne soient pas droits). */
+const wobble = (i: number, seed: number) => Math.sin(i * 0.7 + seed) * 1.2 + Math.sin(i * 1.9 + seed * 2.3) * 0.8;
+
+/** Une tache aux contours irréguliers, autour de (cx, cy). `only` : ne remplace que certaines cases. */
+function blob(b: Builder, cx: number, cy: number, rx: number, ry: number, ch: string, seed: number, only?: string) {
+  for (let y = Math.floor(cy - ry * 1.4); y <= Math.ceil(cy + ry * 1.4); y++) {
+    for (let x = Math.floor(cx - rx * 1.4); x <= Math.ceil(cx + rx * 1.4); x++) {
+      if (x < 0 || y < 0 || x >= b.width || y >= b.height) continue;
+      const dx = (x - cx) / rx, dy = (y - cy) / ry;
+      const a = Math.atan2(dy, dx);
+      const edge = 1 + 0.2 * Math.sin(3 * a + seed) + 0.12 * Math.sin(5 * a + seed * 2.1) + 0.07 * Math.sin(9 * a + seed * 0.7);
+      if (Math.hypot(dx, dy) > edge) continue;
+      if (only && !only.includes(b.rows[y][x])) continue;
+      b.set(x, y, ch);
+    }
+  }
+}
+
 // ---------- le champ des cuves ----------
 function cuves(): GameMap {
   const W = 24, H = 18;
-  const b = new Builder(W, H, '"');
-  // au-delà des pylônes, la planète telle qu'elle était : nue, violette, criblée de cratères
-  b.rect(0, 0, W, 4, 'x').rect(0, 4, 2, 12, 'x').rect(22, 4, 2, 12, 'x');
+  // la planète telle qu'elle était, et la grande tache d'herbe semée autour des cuves
+  const b = new Builder(W, H, 'x');
+  blob(b, 11.5, 9.5, 11, 8.6, '"', 1);
+  blob(b, 4, 15.5, 4, 2.4, '"', 4);
+  blob(b, 19.5, 2.5, 3, 2, '"', 6);
+  blob(b, 13.5, 15.2, 1.6, 1.1, 'x', 2, '"');
+  blob(b, 1.5, 9, 1.4, 2.2, 'x', 3, '"');
+  blob(b, 22.5, 11, 1.2, 2.4, 'x', 5, '"');
+  // fleurs et roseaux, en touffes
+  blob(b, 2.6, 6.5, 1.3, 1.8, ',', 7, '"');
+  blob(b, 20.6, 7.8, 1.2, 1.6, ',', 8, '"');
+  blob(b, 9.6, 15.4, 1.6, 1, ';', 9, '"');
+  blob(b, 21.2, 15, 1.4, 1.2, ';', 10, '"');
+  blob(b, 15.8, 3.4, 1.5, 0.8, ',', 11, '"');
+  // les cratères et les cristaux, sur le sol nu
   bigCrater(b, 7, 0);
-  b.points('o', [[3, 1], [15, 2], [20, 0], [0, 9], [23, 12], [1, 14]]);
-  b.points('k', [[1, 2], [18, 1], [22, 3], [12, 0], [23, 6], [0, 12]]);
-  b.rect(0, 16, W, 2, 'A');
-  // les quais métalliques, et les conduites qui relient les cuves
-  for (const y of [5, 9, 13]) {
-    b.rect(3, y, 8, 2, 'm').rect(14, y, 7, 2, 'm');
-    // une dalle grise devant chaque cuve, puis la conduite qui les relie
-    for (const x of [4, 6, 8, 15, 17, 19]) b.set(x, y + 2, 'd');
-    if (y < 13) b.rect(3, y + 3, 18, 1, 'c');
+  b.points('o', [[3, 1], [15, 1], [20, 0], [0, 7], [23, 13], [0, 14]]);
+  b.points('k', [[1, 2], [18, 0], [23, 3], [12, 0], [23, 7], [1, 12]]);
+  // des arbres d'Azura, en bosquets irréguliers
+  b.points('A', [[1, 16], [2, 17], [6, 17], [7, 16], [17, 17], [18, 16], [22, 16], [23, 17], [0, 4], [23, 9]]);
+  b.points('u', [[3, 16], [8, 17], [16, 17], [21, 17], [1, 5]]);
+  // le sentier, qui serpente jusqu'au bas
+  for (let y = 4; y < H; y++) {
+    const px = y >= 15 ? 11 : 11 + Math.round(Math.sin(y * 0.6) * 0.9);
+    b.set(px, y, '.').set(px + 1, y, '.');
   }
-  b.rect(11, 4, 2, 14, '.');
-  b.points(',', [[2, 8], [2, 9], [21, 11], [21, 10], [13, 15], [15, 15]]);
-  b.points(';', [[2, 15], [21, 15], [10, 15]]);
   const objects: MapObject[] = [];
   const xs = [4, 6, 8, 15, 17, 19];
   let n = 0;
-  for (const y of [5, 9, 13]) for (const x of xs) {
-    n++;
-    if (x === 4 && y === 5) objects.push(...tall('cuve07', x, y, 'cuveHeadMine', 'cuveFootMine', 'cuve07'));
-    else objects.push(...tall(`cuve${n}`, x, y, 'cuveHead', 'cuveFoot', 'cuve'));
+  for (const y of [5, 9, 13]) {
+    for (const x of xs) {
+      n++;
+      // l'herbe sous la cuve, sa dalle, et la conduite qui la relie à sa voisine
+      b.set(x, y, '"').set(x, y + 1, '"').set(x, y + 2, 'd');
+      if (x === 4 && y === 5) objects.push(...tall('cuve07', x, y, 'cuveHeadMine', 'cuveFootMine', 'cuve07'));
+      else objects.push(...tall(`cuve${n}`, x, y, 'cuveHead', 'cuveFoot', 'cuve'));
+    }
+    for (const x of [5, 7, 16, 18]) b.set(x, y + 1, 'c');
   }
+  const ground = (pts: [number, number][]) => pts.forEach(([x, y]) => b.set(x, y, '"'));
+  ground([[10, 5], [10, 6], [2, 4], [2, 5], [21, 4], [21, 5], [2, 12], [2, 13], [21, 12], [21, 13], [14, 16], [16, 16], [19, 16]]);
   objects.push(...tall('registre', 10, 5, 'holoTop', 'holoBase', 'cuveLog'));
   objects.push(...pylon('pyl1', 2, 4), ...pylon('pyl2', 21, 4), ...pylon('pyl3', 2, 12), ...pylon('pyl4', 21, 12));
   objects.push(obj('solaire1', 14, 16, 'solarPanel', 'solaire'), obj('solaire2', 16, 16, 'solarPanel', 'solaire'), obj('antenne', 19, 16, 'dish', 'antenne'));
@@ -63,31 +98,56 @@ function cuves(): GameMap {
 function chemin(): GameMap {
   const W = 30, H = 22;
   const b = new Builder(W, H, '"');
-  // à l'est des pylônes, la terre n'a pas encore été semée
-  b.rect(22, 0, 8, H, 'x');
-  b.rect(0, 0, 22, 1, 'A').rect(0, 0, 2, H, 'A');
+  // à l'est, la terre n'a pas été semée : la lisière ondule
+  const edge = (y: number) => 21 + Math.round(wobble(y, 0.5));
+  for (let y = 0; y < H; y++) for (let x = edge(y) + 1; x < W; x++) b.set(x, y, 'x');
+  blob(b, 26.5, 12.5, 2, 1.6, '"', 3, 'x');
+  // la forêt d'Azura, en lisière découpée au nord et à l'ouest
+  for (let x = 0; x < 22; x++) for (let y = 0; y < 1 + Math.max(0, Math.round(wobble(x, 2) * 0.6)); y++) if (x !== 15) b.set(x, y, 'A');
+  for (let y = 0; y < H; y++) for (let x = 0; x < 1 + Math.max(0, Math.round(wobble(y, 4) * 0.7)); x++) b.set(x, y, 'A');
   bigCrater(b, 25, 3);
-  b.points('o', [[23, 1], [28, 8], [24, 17], [27, 20], [23, 10]]);
-  b.points('k', [[27, 1], [29, 5], [22, 6], [28, 16], [25, 19], [23, 20]]);
-  b.rect(15, 0, 1, 1, '.');
-  b.rect(15, 1, 1, 4, '.').rect(12, 4, 4, 1, '.').rect(12, 4, 1, 4, '.').rect(12, 7, 4, 1, '.').rect(15, 7, 1, 4, '.');
-  b.rect(2, 8, 12, 2, 'R').rect(17, 8, 13, 2, 'R');
+  b.points('o', [[24, 1], [28, 8], [25, 17], [28, 20], [24, 10]]);
+  b.points('k', [[27, 1], [29, 5], [23, 6], [28, 16], [26, 19], [24, 20]]);
+  // la falaise, plus ou moins épaisse, coupée par le sentier
+  for (let x = 1; x < W; x++) {
+    if (x >= 14 && x <= 16) continue;
+    const top = 8 + Math.round(wobble(x, 1.3) * 0.5);
+    b.set(x, top, 'R').set(x, top + 1, 'R');
+  }
+  // la rivière qui serpente
+  const river = (x: number) => 13 + Math.round(Math.sin(x * 0.35 + 0.4));
+  for (let x = 0; x < W; x++) for (let k = -1; k <= 1; k++) b.set(x, river(x) + k, '~');
+  b.set(8, river(8) - 2, '~').set(9, river(9) - 2, '~').set(24, river(24) + 2, '~');
+  const rb = river(15);
+  for (let k = -1; k <= 1; k++) b.set(15, rb + k, 'B');
+  // le sentier
+  b.rect(15, 0, 1, 5, '.').rect(12, 4, 4, 1, '.').rect(12, 4, 1, 4, '.').rect(12, 7, 4, 1, '.').rect(15, 7, 1, rb - 1 - 7, '.');
   b.rect(14, 8, 3, 2, '.');
-  b.rect(0, 12, W, 3, '~');
-  b.rect(15, 12, 1, 3, 'B');
-  b.rect(15, 10, 1, 2, '.').rect(15, 15, 1, 7, '.');
-  b.points('A', [[4, 3], [7, 2], [19, 3], [5, 17], [9, 19], [19, 17], [3, 20], [18, 20]]);
-  b.points('u', [[9, 5], [18, 6], [20, 10], [8, 10], [11, 17], [13, 20]]);
-  b.points(',', [[5, 6], [6, 6], [6, 5], [7, 16], [8, 16], [17, 17], [13, 18], [20, 19]]);
-  b.points(';', [[3, 10], [4, 11], [3, 15], [12, 20], [20, 15]]);
+  b.rect(15, rb + 2, 1, H - rb - 2, '.');
+  blob(b, 6, 5.5, 1.6, 1.2, ',', 5, '"');
+  blob(b, 8, 17.5, 2, 1.2, ',', 6, '"');
+  blob(b, 4, 11, 1.4, 1, ';', 7, '"');
+  blob(b, 19.5, 18.5, 1.4, 1.2, ';', 8, '"');
+  b.points('A', [[4, 3], [7, 2], [19, 3], [5, 18], [9, 19], [19, 17], [3, 20], [18, 20], [11, 20]]);
+  b.points('u', [[9, 5], [18, 6], [20, 10], [8, 10], [11, 17], [13, 20], [6, 4]]);
+  const pylons: MapObject[] = [];
+  for (const [id, y] of [['pylA', 2], ['pylB', 5], ['pylC', 16], ['pylD', 19]] as [string, number][]) {
+    const x = Math.min(edge(y), edge(y + 1));
+    b.set(x, y, '"').set(x, y + 1, '"');
+    pylons.push(...pylon(id, x, y));
+  }
+  const post = 18;
+  const joss: [number, number] = [13, river(13) - 2];
+  b.set(joss[0], joss[1], '"');
   const objects: MapObject[] = [
     exit('versCuves', 15, 0, { to: 'cuves', x: 11, y: 16, dir: 'up' }),
     exit('versVille', 15, 21, { to: 'ville', x: 17, y: 1, dir: 'down' }),
     obj('panneauVille', 16, 17, 'pathSign', 'panneauVille'),
-    obj('repere', 18, 12, 'waterPost', 'repere'),
-    ...pylon('pylA', 21, 2), ...pylon('pylB', 21, 5), ...pylon('pylC', 21, 16), ...pylon('pylD', 21, 19),
-    npc('joss', 13, 11, 'joss', 'down', 'joss'),
+    obj('repere', post, river(post) - 1, 'waterPost', 'repere'),
+    ...pylons,
+    npc('joss', joss[0], joss[1], 'joss', 'down', 'joss'),
   ];
+  b.set(16, 17, '"');
   return { id: 'chemin', name: 'Le chemin des crêtes', outdoor: true, width: W, height: H, rows: b.rows, objects, voidTile: 'azForest' };
 }
 
@@ -111,12 +171,15 @@ function ville(): GameMap {
   b.rect(6, 13, 1, 3, '.').rect(27, 13, 1, 3, '.');
   b.rect(11, 17, 1, 5, '.').rect(23, 17, 1, 5, '.');
   // un jardin entre l'atelier et le centre des pilotes
-  b.rect(13, 18, 9, 3, ',').rect(15, 19, 5, 1, '"');
+  blob(b, 17, 19.4, 4.6, 1.8, ',', 2, '"');
+  blob(b, 17, 19.6, 1.8, 0.6, '"', 4, ',');
   // la passerelle au bord du lac, et le lac
   b.rect(1, 22, W - 2, 2, '=');
   b.rect(1, 24, W - 2, 4, '~');
   b.rect(17, 24, 1, 2, '=');
-  b.points('A', [[1, 2], [10, 2], [23, 2], [32, 2], [1, 18], [32, 18], [12, 18], [22, 18], [14, 3], [20, 3]]);
+  b.points('A', [[1, 2], [10, 2], [23, 2], [32, 2], [1, 18], [32, 18], [12, 18], [22, 18], [14, 3], [20, 3], [1, 1], [2, 1], [31, 1], [32, 1], [1, 19], [32, 19], [11, 1], [22, 1]]);
+  blob(b, 2.5, 15.5, 1.6, 1, ',', 5, '"');
+  blob(b, 31.5, 15.5, 1.6, 1, ',', 6, '"');
   b.points('u', [[10, 5], [23, 5], [10, 10], [23, 12], [2, 13], [31, 13]]);
   b.points(',', [[15, 2], [16, 2], [18, 2], [19, 2], [12, 5], [21, 5], [3, 15], [30, 15], [11, 2], [22, 4]]);
   b.points(';', [[1, 15], [32, 15], [1, 20], [32, 20]]);

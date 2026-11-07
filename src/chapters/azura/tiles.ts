@@ -1,4 +1,4 @@
-// Les tuiles d'Azura : une planète qui n'accueillait personne, rendue habitable.
+// Les tuiles d'Azura : une planète vivable, encore sauvage, où la colonie a semé son herbe.
 // Autour de la colonie : un sol violet, des cratères, des cristaux. Dans la colonie : une herbe
 // semée par les pilotes, des pylônes de terraformage, des conduites, des bâtiments d'Aurore.
 import { T, paint, registerIcons, registerTiles, type Painter } from '../../engine/sprites.js';
@@ -510,8 +510,7 @@ const azFence: Painter = (c, v) => {
   r(c, 2, 4, 2, 1, AZ.glow); r(c, 12, 4, 2, 1, AZ.glow);
 };
 
-registerTiles(
-  {
+const PAINTERS: Record<string, Painter> = {
     slab, azGrass, azFlowers, azTall, azPath, azStone, azDeck, azFloor, regolith, crater, metalFloor,
     bigCrater0: bigCrater(0), bigCrater1: bigCrater(1), bigCrater2: bigCrater(2), bigCrater3: bigCrater(3),
     crystals0: crystals(0), crystals1: crystals(1), conduitH: conduit(false), conduitV: conduit(true),
@@ -525,9 +524,74 @@ registerTiles(
     sirenOn: siren(true), sirenOff: siren(false), stall, townSign, pathSign, lampAz: lamp, bench, flowerBox, waterPost,
     fountain0: fountain(0), fountain1: fountain(1),
     workbench, robotParts, shelfAz, drawingPixel, bedAz, azFence,
-  },
-  ['azGrass', 'azPath', 'azStone', 'azFloor', 'regolith', 'metalFloor'],
-);
+};
+registerTiles(PAINTERS, ['azGrass', 'azPath', 'azStone', 'azFloor', 'regolith', 'metalFloor']);
+
+// ---------- lisières : l'herbe déborde, irrégulière, sur le sol voisin ----------
+// Masque : 1 nord, 2 est, 4 sud, 8 ouest, 16 nord-est, 32 sud-est, 64 sud-ouest, 128 nord-ouest.
+const N = 1, E = 2, S = 4, W = 8, NE = 16, SE = 32, SW = 64, NW = 128;
+const made = new Set<string>();
+
+/** La profondeur de l'herbe le long d'un bord : entre 1 et 6 pixels, en vagues irrégulières. */
+function depth(i: number, seed: number) {
+  const a = Math.sin(i * 0.9 + seed * 1.7) * 1.6 + Math.sin(i * 2.3 + seed * 3.1) * 0.9;
+  return Math.max(1, Math.min(6, Math.round(3 + a)));
+}
+
+function fringe(c: CanvasRenderingContext2D, mask: number, seed: number) {
+  const px = (x: number, y: number, col: string) => r(c, x, y, 1, 1, col);
+  // la couche d'herbe, puis un liseré plus sombre sur son bord
+  const grassAt = new Set<number>();
+  const fill = (x: number, y: number) => grassAt.add(y * T + x);
+  for (let i = 0; i < T; i++) {
+    if (mask & N) for (let k = 0; k < depth(i, seed); k++) fill(i, k);
+    if (mask & S) for (let k = 0; k < depth(i, seed + 5); k++) fill(i, T - 1 - k);
+    if (mask & W) for (let k = 0; k < depth(i, seed + 9); k++) fill(k, i);
+    if (mask & E) for (let k = 0; k < depth(i, seed + 13); k++) fill(T - 1 - k, i);
+  }
+  const corner = (cx: number, cy: number, s2: number) => {
+    const rad = 3 + (s2 % 3);
+    for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) if ((x - cx) ** 2 + (y - cy) ** 2 <= rad * rad) fill(x, y);
+  };
+  if (mask & NE && !(mask & (N | E))) corner(T - 1, 0, seed);
+  if (mask & SE && !(mask & (S | E))) corner(T - 1, T - 1, seed + 1);
+  if (mask & SW && !(mask & (S | W))) corner(0, T - 1, seed + 2);
+  if (mask & NW && !(mask & (N | W))) corner(0, 0, seed + 3);
+  const rand = rng(900 + seed * 7 + mask);
+  for (const k of grassAt) {
+    const x = k % T, y = Math.floor(k / T);
+    const roll = rand();
+    px(x, y, roll < 0.18 ? AZ.grassDark : roll < 0.28 ? AZ.grassLight : AZ.grass);
+  }
+  // le bord : un pixel sombre là où l'herbe s'arrête, et quelques brins qui dépassent
+  for (const k of grassAt) {
+    const x = k % T, y = Math.floor(k / T);
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = x + dx, ny = y + dy;
+      if (nx < 0 || ny < 0 || nx >= T || ny >= T || grassAt.has(ny * T + nx)) continue;
+      px(nx, ny, 'rgba(26,60,40,0.55)');
+      if (rand() < 0.12) px(nx, ny, AZ.grassLight);
+    }
+  }
+}
+
+/** Le nom d'une tuile avec ses lisières d'herbe ; la tuile est dessinée la première fois qu'on la demande. */
+export function withFringe(base: string, mask: number): string {
+  if (!mask) return base;
+  const name = `${base}~${mask}`;
+  if (!made.has(name)) {
+    made.add(name);
+    const painter = PAINTERS[base];
+    registerTiles({
+      [name]: (c, v) => {
+        painter(c, v);
+        fringe(c, mask, v * 4 + (mask % 7));
+      },
+    });
+  }
+  return name;
+}
+export const MASK = { N, E, S, W, NE, SE, SW, NW };
 
 registerIcons({
   fruit: (c) => {

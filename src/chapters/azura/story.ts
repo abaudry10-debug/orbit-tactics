@@ -14,7 +14,7 @@ export const THREADS_AZ: Thread[] = [
 
 export const CLUES_AZ: Clue[] = [
   { id: 'az1', thread: 'arrivee', title: 'Le champ des cuves', text: 'Des cuves à perte de vue, toutes ouvertes, toutes vides. La mienne porte le numéro 07.' },
-  { id: 'azPylone', thread: 'arrivee', title: 'Les pylônes', text: 'Des pylônes entourent la colonie. Au-delà, rien ne pousse : un sol violet, des cratères, des cristaux. L’herbe, ici, a été semée.' },
+  { id: 'azPylone', thread: 'arrivee', title: 'Les pylônes', text: 'Des pylônes marquent les limites de la colonie. Au-delà, Azura est restée sauvage : un sol violet, des cratères, des cristaux. De ce côté, l’herbe a été semée.' },
   { id: 'az2', thread: 'arrivee', title: 'Le registre des réveils', text: 'Toutes les cuves : réveil en l’an 0. La cuve 07 : réveil en l’an 11. J’ai dormi onze ans de plus que les autres.' },
   { id: 'az3', thread: 'ville', title: 'Nouvelle-Vesper', text: 'La ville des colons porte le nom de notre planète. Fondée en l’an 0.' },
   { id: 'azEnfant', thread: 'ville', title: 'Né sur Azura', text: 'Un enfant de la ville est né ici. Il n’a jamais vu Vesper.' },
@@ -210,7 +210,7 @@ export const SCRIPTS_AZ: Record<string, Script> = {
   passant3: (api) => api.say(['« L’eau est haute, ce matin. Enfin… je crois. »', 'Il regarde le lac, les mains dans les poches.']),
   passant4: (api) => api.say(['« Je vais aux vergers de la vallée. À ce soir ! »']),
   pylone: (api) =>
-    api.say(['Un pylône bourdonne doucement. Une lumière rouge clignote à son sommet.', 'Au-delà, l’herbe s’arrête net. Plus rien ne pousse : un sol violet, des cratères.', 'L’herbe, ici, a été semée. Cette planète n’accueillait personne.'], () => api.clue('azPylone')),
+    api.say(['Un pylône bourdonne doucement. Une lumière rouge clignote à son sommet.', 'Au-delà, Azura est restée sauvage : un sol violet, des cratères, des cristaux.', 'De ce côté, l’herbe a été semée par la colonie.'], () => api.clue('azPylone')),
   solaire: (api) => api.say(['Des panneaux solaires, tournés vers le ciel.', 'Au-dessus, deux lunes pâles, en plein jour.']),
   antenne: (api) => api.say(['Une antenne parabolique, pointée vers le ciel.', 'Vers Vesper, peut-être.']),
   pieces: (api) => api.say(['Des pièces de robot en cours d’assemblage.', 'Une tête ronde. Des pattes. Un œil éteint.']),
