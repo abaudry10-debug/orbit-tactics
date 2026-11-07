@@ -55,6 +55,20 @@ const PEOPLE: Record<string, PersonLook> = {
     h: '#d08a3a', H: '#e8a85a', d: '#a0662a', s: '#f6d2b4', S: '#dcae8e',
     r: '#ffffff', R: '#cccccc', j: '#c45ad8', J: '#d888e8', e: '#8a3a9a', p: '#3b4a5a', b: '#5a3f2c', a: '#c45ad8', A: '#d888e8',
   }),
+  // la maîtresse : chignon gris, gilet violet
+  prof: look('prof', {
+    h: '#9a9aa6', H: '#c0c0cc', d: '#6f6f7a', s: '#f0c8a8', S: '#d4a888',
+    r: '#ffffff', R: '#d0d0d0', j: '#7a4f9a', J: '#9b6fbf', e: '#5a3878', p: '#3a3f58', b: '#2a2a2a', a: '#7a4f9a', A: '#9b6fbf',
+  }),
+  // Mina, née sur Azura : couettes noires, tunique turquoise
+  mina: look('mina', {
+    h: '#1e1a22', H: '#3a3040', d: '#100c14', s: '#d9a27a', S: '#b98058',
+    r: '#ffd45e', R: '#d9a83a', j: '#2ec4bd', J: '#82efe3', e: '#1aa2a3', p: '#3b4a5a', b: '#2a2a2a', a: '#2ec4bd', A: '#82efe3',
+  }),
+  lio: look('lio', {
+    h: '#e8c870', H: '#f6e09a', d: '#b89a48', s: '#f6d2b4', S: '#dcae8e',
+    r: '#5fd0c6', R: '#2a9d9a', j: '#3f6fb0', J: '#5f8fd0', e: '#2c4f80', p: '#5a4a3a', b: '#2a2a2a', a: '#3f6fb0', A: '#5f8fd0',
+  }),
   enfant: look('enfant', {
     h: '#3a2418', H: '#5a3a26', d: '#24160e', s: '#c98d62', S: '#a86f48',
     r: '#ffe066', R: '#d9b83a', j: '#e0574f', J: '#f08a80', e: '#a83b35', p: '#3b5a8a', b: '#2a2a2a', a: '#e0574f', A: '#f08a80',
@@ -443,6 +457,35 @@ function drawSteam(g: Game, c: CanvasRenderingContext2D) {
   }
 }
 
+// ---------- la nuit chez Betti : un écran noir, puis le matin du jour 2 ----------
+function night(g: Game) {
+  const screen = document.getElementById('screen')!;
+  const el = document.createElement('div');
+  el.style.cssText =
+    'position:absolute;inset:0;z-index:4;background:#05060c;opacity:0;transition:opacity .9s;display:flex;align-items:center;justify-content:center;' +
+    'color:#bff3f6;font:16px/1.4 inherit;letter-spacing:.12em;text-align:center;padding:24px;';
+  el.textContent = 'La nuit tombe sur Nouvelle-Vesper…';
+  screen.appendChild(el);
+  g.locked = true;
+  requestAnimationFrame(() => (el.style.opacity = '1'));
+  window.setTimeout(() => {
+    el.textContent = 'JOUR 2';
+    g.flags.add('jour2');
+    g.save();
+  }, 2400);
+  window.setTimeout(() => (el.style.opacity = '0'), 4200);
+  window.setTimeout(() => {
+    el.remove();
+    g.locked = false;
+    ui.showPlace('Jour 2 — le matin');
+    sfx.success();
+    ui.say(['« Debout, le dormeur ! »', 'Betti, déjà en salopette, une tasse fumante à la main.', '« Bien dormi ? File à l’école, la leçon du matin va commencer. »'], () => {
+      g.api.clue('azl5');
+      g.save();
+    });
+  }, 5200);
+}
+
 // ---------- l'ouverture : le ciel bleu, celui de la fin du chapitre 1 ----------
 function skyOpening(done: () => void) {
   const screen = document.getElementById('screen')!;
@@ -521,12 +564,22 @@ export const azura: Chapter = {
   switches: { labels: [], order: [] },
   intro: [],
   features: { heatWaves: false, movement: 'grid' },
-  music: (map) => (map.id === 'atelier' ? 'home' : 'azura'),
+  music: (map) => (map.id === 'atelier' || map.id === 'ecole' ? 'home' : 'azura'),
   dialogStyle: 'azura',
   cutTargets: {},
   solid: SOLID_AZ,
   people: PEOPLE,
   heroLook: HERO_AZ,
+  dev: {
+    presets: [
+      { label: 'Centre de clonage', flags: [], items: [], at: { map: 'cuves', x: 27, y: 10, dir: 'up' } },
+      { label: 'Arrivée en ville', flags: ['villeSeen', 'bettiMet'], items: [], at: { map: 'ville', x: 17, y: 5, dir: 'down' } },
+      { label: 'École (jour 1)', flags: ['villeSeen', 'bettiMet'], items: [], at: { map: 'ville', x: 27, y: 6, dir: 'up' } },
+      { label: 'Le soir (lit)', flags: ['villeSeen', 'bettiMet', 'tideRead', 'drawingSeen', 'pixelTalk', 'lesson1Heard'], items: [], at: { map: 'atelier', x: 7, y: 5, dir: 'right' } },
+      { label: 'Jour 2 (école)', flags: ['villeSeen', 'bettiMet', 'tideRead', 'drawingSeen', 'pixelTalk', 'lesson1Heard', 'jour2'], items: [], at: { map: 'ville', x: 27, y: 6, dir: 'up' } },
+    ],
+    actions: [],
+  },
   begin(g: Game) {
     playTheme('azura');
     const sky = skyOpening(() => {});
@@ -540,7 +593,7 @@ export const azura: Chapter = {
             'Je suis… sur Azura.',
             'Ma cuve est ouverte. Toutes les autres aussi. Elles sont vides.',
             '(Touche A pour examiner ce qui t’entoure. Ton journal garde la trace de tout ce que tu découvres.)',
-          ]);
+          ], () => g.api.clue('azl1'));
         });
       });
     });
@@ -578,6 +631,7 @@ export const azura: Chapter = {
         case '4': return withFringe('bigCrater3', grassMask(g, x, y));
         case 'k': return withFringe('crystals' + (Math.floor(g.time * 1.5 + x * 0.7 + y) % 2), grassMask(g, x, y));
         case 'm': return 'metalFloor';
+        case 'N': return 'azPad';
         case 'd': return 'slab';
         case 'c': {
           // horizontale, sauf si la conduite file vers le haut ou le bas
@@ -602,6 +656,23 @@ export const azura: Chapter = {
     },
     update(g, dt) {
       updateEmerge(g, dt);
+    },
+    beforeInteract(g, obj, fx, fy) {
+      // la navette, sous son grand décor
+      if (!obj && g.map.id === 'cuves' && g.map.rows[fy]?.[fx] === 'N') {
+        SCRIPTS_AZ.navette(g.api);
+        return true;
+      }
+      // le lit de Betti : la nuit, puis le jour 2
+      if (obj?.id === 'lit' && g.flags.has('pixelTalk') && !g.flags.has('jour2')) {
+        if (!g.flags.has('lesson1Heard')) {
+          ui.say(['Pas encore. Betti veut que je passe à l’école d’abord.']);
+          return true;
+        }
+        ui.say(['Je m’allonge. Les draps sentent le savon et le métal chaud.', 'Mon premier vrai lit depuis onze ans.'], () => night(g));
+        return true;
+      }
+      return false;
     },
     renderVoid,
     renderOverlay,
@@ -653,6 +724,11 @@ export const azura: Chapter = {
       return true;
     },
     onEnterMap(g, mapId) {
+      // à l'école, la leçon commence dès qu'on entre, une fois par jour
+      if (mapId === 'ecole') {
+        const due = g.flags.has('jour2') ? !g.flags.has('lesson2Heard') : !g.flags.has('lesson1Heard');
+        if (due) window.setTimeout(() => SCRIPTS_AZ.lecon(g.api), 400);
+      }
       if (mapId === 'ville' && !g.flags.has('villeSeen')) {
         g.flags.add('villeSeen');
         sfx.success();

@@ -10,10 +10,11 @@
 //   x  sol nu d'Azura (régolithe)   o  petit cratère   1 2 / 3 4  grand cratère   k  cristaux
 //   m  plancher métallique   c  conduite au sol   d  dalle grise devant une cuve
 //   X  sol nu, à l'intérieur de la zone jouable   Y  barrière d'énergie   M  montagne
+//   N  aire de la navette (sous la navette : on ne passe pas)
 import type { Dir } from '../../engine/sprites.js';
 import { Builder, exit, type GameMap, type MapObject } from '../../engine/world.js';
 
-export const SOLID_AZ = new Set(['~', 'R', 'A', 'u', '|', '#', 'Z', 'F', '1', '2', '3', '4', 'k', 'Y', 'M']);
+export const SOLID_AZ = new Set(['~', 'R', 'A', 'u', '|', '#', 'Z', 'F', '1', '2', '3', '4', 'k', 'Y', 'M', 'N']);
 
 const obj = (id: string, x: number, y: number, sprite: string, script?: string, extra: Partial<MapObject> = {}): MapObject => ({ id, x, y, sprite, script, ...extra });
 const npc = (id: string, x: number, y: number, look: string, dir: Dir, script: string, extra: Partial<MapObject> = {}): MapObject => ({
@@ -96,10 +97,13 @@ function enclose(b: Builder, seeds: [number, number][], exits: [number, number][
 
 // ---------- le champ des cuves ----------
 function cuves(): GameMap {
-  const W = 24, H = 18;
+  const W = 35, H = 18;
   // la planète telle qu'elle était, et la grande tache d'herbe semée autour des cuves
   const b = new Builder(W, H, 'x');
   blob(b, 11.5, 9.5, 11, 8.6, '"', 1);
+  // à l'est, le centre de clonage et la navette d'Aurore
+  blob(b, 23, 10, 3, 5, '"', 12);
+  blob(b, 28.5, 10.5, 6, 6.2, '"', 3);
   blob(b, 4, 15.5, 4, 2.4, '"', 4);
   blob(b, 19.5, 2.5, 3, 2, '"', 6);
 
@@ -111,11 +115,11 @@ function cuves(): GameMap {
   blob(b, 15.8, 3.4, 1.5, 0.8, ',', 11, '"');
   // les cratères et les cristaux, sur le sol nu
   bigCrater(b, 7, 0);
-  b.points('o', [[3, 1], [15, 1], [20, 0], [0, 7], [23, 13], [0, 14]]);
-  b.points('k', [[1, 2], [18, 0], [23, 3], [12, 0], [23, 7], [1, 12]]);
+  b.points('o', [[3, 1], [15, 1], [20, 0], [0, 7], [34, 13], [0, 14]]);
+  b.points('k', [[1, 2], [18, 0], [23, 3], [12, 0], [34, 7], [1, 12]]);
   // des arbres d'Azura, en bosquets irréguliers
-  b.points('A', [[1, 16], [2, 17], [6, 17], [7, 16], [17, 17], [18, 16], [22, 16], [23, 17], [0, 4], [23, 9]]);
-  b.points('u', [[3, 16], [8, 17], [16, 17], [21, 17], [1, 5]]);
+  b.points('A', [[1, 16], [2, 17], [6, 17], [7, 16], [17, 17], [18, 16], [22, 16], [23, 17], [0, 4], [33, 16], [34, 17], [27, 17]]);
+  b.points('u', [[3, 16], [8, 17], [16, 17], [21, 17], [1, 5], [31, 17], [24, 16]]);
   // le sentier, qui serpente jusqu'au bas
   for (let y = 4; y < H; y++) {
     const px = y >= 15 ? 11 : 11 + Math.round(Math.sin(y * 0.6) * 0.9);
@@ -135,16 +139,34 @@ function cuves(): GameMap {
     for (const x of [5, 7, 16, 18]) b.set(x, y + 1, 'c');
   }
   const ground = (pts: [number, number][]) => pts.forEach(([x, y]) => b.set(x, y, '"'));
-  ground([[10, 5], [10, 6], [2, 4], [2, 5], [21, 4], [21, 5], [2, 12], [2, 13], [21, 12], [21, 13], [14, 16], [16, 16], [19, 16]]);
+  ground([[10, 5], [10, 6], [2, 4], [2, 5], [32, 4], [32, 5], [2, 12], [2, 13], [33, 10], [33, 11], [14, 16], [16, 16], [19, 16]]);
   objects.push(...tall('registre', 10, 5, 'holoTop', 'holoBase', 'cuveLog'));
-  objects.push(...pylon('pyl1', 2, 4), ...pylon('pyl2', 21, 4), ...pylon('pyl3', 2, 12), ...pylon('pyl4', 21, 12));
+  objects.push(...pylon('pyl1', 2, 4), ...pylon('pyl2', 32, 4), ...pylon('pyl3', 2, 12), ...pylon('pyl4', 33, 10));
+  // le centre de clonage : les conduites des cuves y mènent toutes
+  b.rect(25, 4, 7, 5, '#');
+  b.rect(20, 6, 5, 1, 'c');
+  b.rect(24, 9, 9, 1, ':');
+  objects.push(
+    obj('porteCentre', 27, 8, 'aurDoorClosed', 'centreClonage'),
+    obj('vitreServeurs', 29, 8, 'floodWindow', 'serveurs'),
+    obj('vitreServeurs2', 30, 8, 'floodWindow', 'serveurs'),
+  );
+  // l'aire de la navette, et la navette posée dessus
+  b.rect(25, 11, 7, 5, ':');
+  b.rect(26, 12, 5, 3, 'N');
+  b.set(24, 13, '"');
+  objects.push(obj('plaqueNavette', 24, 13, 'pathSign', 'navette'));
   objects.push(obj('solaire1', 14, 16, 'solarPanel', 'solaire'), obj('solaire2', 16, 16, 'solarPanel', 'solaire'), obj('antenne', 19, 16, 'dish', 'antenne'));
   objects.push(exit('versChemin', 11, 17, { to: 'chemin', x: 15, y: 1, dir: 'down' }));
   objects.push(exit('versChemin2', 12, 17, { to: 'chemin', x: 15, y: 1, dir: 'down' }));
   // au nord, une vraie chaîne de montagnes ; ailleurs, la barrière de la colonie
   b.rect(0, 0, W, 4, 'M');
   enclose(b, [[4, 7]], [[11, 17], [12, 17]], (_x, y) => (y <= 5 ? 'M' : 'Y'));
-  return { id: 'cuves', name: 'Le champ des cuves', outdoor: true, width: W, height: H, rows: b.rows, objects, voidTile: 'azForest' };
+  return {
+    id: 'cuves', name: 'Le champ des cuves', outdoor: true, width: W, height: H, rows: b.rows, objects, voidTile: 'azForest',
+    skins: [{ x: 25, y: 4, w: 7, h: 5, style: 'aur' }],
+    decals: [{ x: 26, y: 12, w: 5, h: 3, kind: 'navette' }],
+  };
 }
 
 // ---------- le chemin des crêtes ----------
@@ -251,7 +273,8 @@ function ville(): GameMap {
     obj('lampe3', 12, 15, 'lampAz', 'lampe'),
     obj('lampe4', 22, 15, 'lampAz', 'lampe'),
     obj('maison1', 6, 5, 'aurDoorClosed', 'maison'),
-    obj('maison2', 27, 5, 'aurDoorClosed', 'maison'),
+    { id: 'porteEcole', x: 27, y: 5, sprite: 'aurDoor', door: { to: 'ecole', x: 5, y: 7, dir: 'up' } },
+    obj('enseigneEcole', 29, 6, 'pathSign', 'enseigneEcole'),
     obj('maison3', 6, 12, 'aurDoorClosed', 'etiquette'),
     obj('maison4', 27, 12, 'aurDoorClosed', 'maison'),
     obj('portePilotes', 28, 21, 'aurDoorClosed', 'pilotes'),
@@ -300,5 +323,27 @@ function atelier(): GameMap {
   return { id: 'atelier', name: 'L’atelier de Betti', outdoor: false, width: 11, height: 9, rows: b.rows, objects };
 }
 
-export const MAPS_AZ: Record<string, GameMap> = { cuves: cuves(), chemin: chemin(), ville: ville(), atelier: atelier() };
+// ---------- l'école ----------
+function ecole(): GameMap {
+  const b = new Builder(11, 9, 'w');
+  b.rect(0, 0, 11, 2, 'Z').rect(0, 0, 1, 9, 'Z').rect(10, 0, 1, 9, 'Z').rect(0, 8, 11, 1, 'Z');
+  b.set(5, 8, 'w');
+  const objects: MapObject[] = [
+    exit('sortie', 5, 8, { to: 'ville', x: 27, y: 6, dir: 'down' }),
+    obj('tableauClasse', 4, 1, 'classBoard', 'tableauClasse'),
+    obj('tableauClasse2', 5, 1, 'classBoard', 'tableauClasse'),
+    obj('tableauClasse3', 6, 1, 'classBoard', 'tableauClasse'),
+    obj('pupitre1', 2, 4, 'desk', 'pupitre'),
+    obj('pupitre2', 4, 4, 'desk', 'pupitre'),
+    obj('pupitre3', 7, 4, 'desk', 'pupitre'),
+    obj('pupitre4', 8, 4, 'desk', 'pupitre'),
+    npc('prof', 5, 2, 'prof', 'down', 'lecon'),
+    npc('mina', 4, 5, 'mina', 'up', 'mina'),
+    npc('lio', 8, 5, 'lio', 'up', 'lio'),
+    npc('pao', 2, 5, 'enfant', 'up', 'pao'),
+  ];
+  return { id: 'ecole', name: 'L’école', outdoor: false, width: 11, height: 9, rows: b.rows, objects };
+}
+
+export const MAPS_AZ: Record<string, GameMap> = { cuves: cuves(), chemin: chemin(), ville: ville(), atelier: atelier(), ecole: ecole() };
 export const START_AZ = { map: 'cuves', x: 4, y: 7, dir: 'up' as Dir };

@@ -1384,6 +1384,12 @@ export function person(look: PersonLook, dir: Dir, frame: number): HTMLCanvasEle
 }
 
 /** Les icônes du sac propres à un chapitre. */
+/** Les grands décors propres à un chapitre (une image plus grande qu'une case, alignée sur le bas de son emprise). */
+export const DECALS: Record<string, HTMLCanvasElement> = {};
+export function registerDecal(kind: string, img: HTMLCanvasElement) {
+  DECALS[kind] = img;
+}
+
 export function registerIcons(painters: Record<string, Painter>) {
   Object.assign(ICONS, painters);
 }

@@ -5,7 +5,7 @@ import { ch } from './chapter.js';
 import { writeLegacy } from './legacy.js';
 import type { Api } from './content.js';
 import { SOLID, charAt, type GameMap, type MapObject } from './world.js';
-import { T, person, bigTree, cutout, dish, dogSprite, iconCanvas, dogAsleep, type DogLook, frozenTrain, hash, hero, radioTower, shuttleWreck, solarTower, tile, type Dir } from './sprites.js';
+import { T, DECALS, person, bigTree, cutout, dish, dogSprite, iconCanvas, dogAsleep, type DogLook, frozenTrain, hash, hero, radioTower, shuttleWreck, solarTower, tile, type Dir } from './sprites.js';
 import * as ui from './ui.js';
 
 /** Taille de la vue en pixels de jeu ; recalculée selon l'écran (voir main.ts). */
@@ -1802,9 +1802,9 @@ export class Game {
 
     // grands décors, alignés sur le bas de leur emprise
     for (const d of this.map.decals ?? []) {
-      const img =
-        d.kind === 'shuttle' ? this.decalShuttle : d.kind === 'dish' ? this.decalDish : d.kind === 'radioTower' ? this.decalRadio
-        : d.kind === 'train' ? this.decalTrain : d.kind === 'bigTree' ? this.decalBigTree : this.decalTower;
+      const img = DECALS[d.kind] ??
+        (d.kind === 'shuttle' ? this.decalShuttle : d.kind === 'dish' ? this.decalDish : d.kind === 'radioTower' ? this.decalRadio
+        : d.kind === 'train' ? this.decalTrain : d.kind === 'bigTree' ? this.decalBigTree : this.decalTower);
       const left = d.x * T - ox, top = (d.y + d.h) * T - img.height - oy;
       {
         // une ombre douce au pied des grands décors

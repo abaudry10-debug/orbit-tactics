@@ -62,7 +62,7 @@ export interface Decal {
   y: number;
   w: number;
   h: number;
-  kind: 'shuttle' | 'dish' | 'tower' | 'radioTower' | 'train' | 'bigTree';
+  kind: 'shuttle' | 'dish' | 'tower' | 'radioTower' | 'train' | 'bigTree' | (string & {});
 }
 
 export interface GameMap {

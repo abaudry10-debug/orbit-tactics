@@ -1,7 +1,7 @@
 // Les tuiles d'Azura : une planète vivable, encore sauvage, où la colonie a semé son herbe.
 // Autour de la colonie : un sol violet, des cratères, des cristaux. Dans la colonie : une herbe
 // semée par les pilotes, des pylônes de terraformage, des conduites, des bâtiments d'Aurore.
-import { T, paint, registerIcons, registerTiles, type Painter } from '../../engine/sprites.js';
+import { T, paint, registerDecal, registerIcons, registerTiles, type Painter } from '../../engine/sprites.js';
 
 const { r, rng, speckle } = paint;
 
@@ -510,6 +510,81 @@ const azFence: Painter = (c, v) => {
   r(c, 2, 4, 2, 1, AZ.glow); r(c, 12, 4, 2, 1, AZ.glow);
 };
 
+// ---------- le centre de clonage et la navette d'Aurore ----------
+/** Une large vitre dans la façade : derrière, la salle des serveurs, noyée. */
+const floodWindow: Painter = (c) => {
+  aurFront(c, 2);
+  r(c, 1, 4, 14, 9, AZ.metalDark);
+  r(c, 2, 5, 12, 7, '#1c3440');
+  // les armoires de serveurs, éteintes
+  for (const x of [3, 7, 11]) { r(c, x, 5, 3, 7, '#2c3e4a'); r(c, x, 6, 3, 1, '#3a4f5c'); r(c, x + 1, 8, 1, 1, '#4a2a2a'); }
+  // l'eau turquoise jusqu'à mi-hauteur, et la trace sèche plus haut
+  r(c, 2, 9, 12, 3, 'rgba(46,196,189,0.75)');
+  r(c, 2, 9, 12, 1, 'rgba(130,239,227,0.9)');
+  r(c, 2, 6, 12, 1, 'rgba(200,190,150,0.45)');
+  // le reflet sur la vitre
+  r(c, 3, 5, 1, 3, 'rgba(255,255,255,0.5)'); r(c, 4, 5, 1, 1, 'rgba(255,255,255,0.5)');
+};
+/** L'aire de la navette : des plaques de métal et des marques de posé. */
+const azPad: Painter = (c, v) => {
+  azStone(c, v);
+  r(c, 0, 0, T, 1, AZ.stoneDark); r(c, 0, 0, 1, T, AZ.stoneDark);
+  if (v === 0) { r(c, 3, 7, 10, 2, AZ.amber); }
+  if (v === 1) { r(c, 7, 3, 2, 10, AZ.amber); }
+};
+/** La navette d'Aurore, posée sur ses pieds : 5 cases de large. */
+function navette(): HTMLCanvasElement {
+  const cv = document.createElement('canvas');
+  cv.width = 84;
+  cv.height = 50;
+  const c = cv.getContext('2d')!;
+  // les pieds
+  for (const x of [14, 40, 66]) { r(c, x, 38, 3, 9, AZ.metalDark); r(c, x - 3, 46, 9, 3, AZ.metalDeep); }
+  // la coque : un long fuseau blanc
+  r(c, 8, 16, 66, 22, AZ.ink);
+  r(c, 4, 20, 76, 14, AZ.ink);
+  r(c, 9, 17, 64, 20, AZ.white);
+  r(c, 5, 21, 74, 12, AZ.white);
+  r(c, 9, 17, 64, 3, '#ffffff');
+  r(c, 5, 30, 74, 3, AZ.whiteShade);
+  r(c, 9, 34, 64, 3, AZ.whiteDeep);
+  // le nez et le cockpit, à droite
+  r(c, 78, 23, 4, 8, AZ.ink); r(c, 78, 24, 3, 6, AZ.white);
+  r(c, 62, 20, 12, 6, AZ.metalDark); r(c, 63, 21, 10, 4, AZ.glassDark); r(c, 64, 21, 4, 1, AZ.glass);
+  // la bande d'Aurore et les hublots
+  r(c, 5, 27, 74, 2, AZ.teal); r(c, 5, 29, 74, 1, AZ.tealDark);
+  for (let x = 18; x < 58; x += 8) { r(c, x, 21, 4, 4, AZ.metalDark); r(c, x + 1, 22, 2, 2, AZ.glass); }
+  // la soute, les réacteurs à gauche, l'aileron
+  r(c, 24, 30, 16, 6, AZ.whiteShade); r(c, 24, 30, 16, 1, AZ.metalLight); r(c, 31, 30, 1, 6, AZ.metal);
+  r(c, 0, 22, 6, 4, AZ.metalDeep); r(c, 0, 28, 6, 4, AZ.metalDeep); r(c, 1, 23, 3, 2, '#3a4856'); r(c, 1, 29, 3, 2, '#3a4856');
+  r(c, 14, 6, 12, 11, AZ.ink); r(c, 15, 7, 10, 10, AZ.white); r(c, 15, 7, 3, 10, AZ.teal);
+  // le soleil d'Aurore, peint sur le flanc
+  r(c, 46, 31, 5, 3, AZ.sun); r(c, 47, 30, 3, 1, AZ.sun);
+  // l'usure : des traînées et quelques herbes contre les pieds
+  r(c, 30, 18, 6, 1, AZ.whiteShade); r(c, 50, 35, 8, 1, AZ.metalLight);
+  for (const x of [12, 19, 38, 45, 64, 71]) { r(c, x, 45, 1, 4, AZ.grassDark); r(c, x + 1, 44, 1, 5, AZ.grassLight); }
+  return cv;
+}
+
+// ---------- l'école ----------
+const classBoard: Painter = (c) => {
+  azWallFront(c, 0);
+  r(c, 0, 3, T, 10, AZ.metalDark);
+  r(c, 1, 4, 14, 8, AZ.screen);
+  // un dessin de cours : une planète, une flèche, une autre planète
+  r(c, 2, 7, 3, 3, '#e8622c'); r(c, 6, 8, 4, 1, AZ.screenLine); r(c, 9, 7, 1, 3, AZ.screenLine);
+  r(c, 11, 7, 3, 3, AZ.water); r(c, 12, 6, 1, 1, AZ.white);
+  r(c, 2, 5, 6, 1, 'rgba(95,240,224,0.6)');
+};
+const desk: Painter = (c) => {
+  azFloor(c, 0);
+  r(c, 1, 5, 14, 6, AZ.metalDark);
+  r(c, 1, 4, 14, 5, AZ.white); r(c, 1, 4, 14, 1, '#ffffff'); r(c, 1, 8, 14, 1, AZ.whiteShade);
+  r(c, 3, 5, 4, 2, AZ.screen); r(c, 4, 5, 2, 1, AZ.screenLine);
+  r(c, 9, 5, 3, 3, AZ.paper);
+  r(c, 2, 11, 2, 4, AZ.metalDeep); r(c, 12, 11, 2, 4, AZ.metalDeep);
+};
+
 const PAINTERS: Record<string, Painter> = {
     slab, azGrass, azFlowers, azTall, azPath, azStone, azDeck, azFloor, regolith, crater, metalFloor,
     bigCrater0: bigCrater(0), bigCrater1: bigCrater(1), bigCrater2: bigCrater(2), bigCrater3: bigCrater(3),
@@ -524,7 +599,9 @@ const PAINTERS: Record<string, Painter> = {
     sirenOn: siren(true), sirenOff: siren(false), stall, townSign, pathSign, lampAz: lamp, bench, flowerBox, waterPost,
     fountain0: fountain(0), fountain1: fountain(1),
     workbench, robotParts, shelfAz, drawingPixel, bedAz, azFence,
+    floodWindow, azPad, classBoard, desk,
 };
+registerDecal('navette', navette());
 registerTiles(PAINTERS, ['azGrass', 'azPath', 'azStone', 'azFloor', 'regolith', 'metalFloor']);
 
 // ---------- lisières : l'herbe déborde, irrégulière, sur le sol voisin ----------
