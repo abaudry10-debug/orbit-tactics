@@ -599,3 +599,112 @@ registerIcons({
     r(c, 7, 2, 2, 3, AZ.leafDark); r(c, 9, 2, 3, 2, AZ.leaf); r(c, 9, 9, 1, 1, AZ.glow);
   },
 });
+
+// ---------- au-delà des bords : la planète sauvage ----------
+// Des tuiles qu'on ne peut pas atteindre, mais qui racontent qu'Azura est vaste et vivante.
+const disc = (c: CanvasRenderingContext2D, cx: number, cy: number, rad: number, col: string) => {
+  for (let y = Math.floor(cy - rad); y <= cy + rad; y++)
+    for (let x = Math.floor(cx - rad); x <= cx + rad; x++) if ((x - cx) ** 2 + (y - cy) ** 2 <= rad * rad) r(c, x, y, 1, 1, col);
+};
+
+const CANOPY: [string, string, string][] = [
+  ['#2f9e8a', '#1f6f66', '#62d0b4'],
+  ['#2f8fae', '#1e5f7a', '#6cc6e8'],
+  ['#3a9a52', '#25693a', '#78cf7a'],
+  ['#6a5aa8', '#463a7a', '#a796e0'],
+];
+/** Des cimes d'arbres serrées, vues d'en haut. */
+const canopy = (pal: number, glow: number): Painter => (c, v) => {
+  const [mid, dark, light] = CANOPY[pal];
+  r(c, 0, 0, T, T, '#123a3e');
+  const rand = rng(1300 + pal * 97 + v * 31);
+  for (let i = 0; i < 4; i++) {
+    const cx = 2 + rand() * 12, cy = 2 + rand() * 12, rad = 3.5 + rand() * 3.5;
+    disc(c, cx + 1, cy + 1.5, rad, dark);
+    disc(c, cx, cy, rad, mid);
+    disc(c, cx - rad * 0.35, cy - rad * 0.35, rad * 0.45, light);
+  }
+  if (glow) {
+    const g2 = rng(77 + v * 13 + glow);
+    for (let i = 0; i < 4; i++) r(c, Math.floor(g2() * 15), Math.floor(g2() * 15), 1, 1, glow === 1 ? AZ.glow : AZ.pink);
+  }
+};
+const mushroom: Painter = (c, v) => {
+  // dessiné par-dessus la forêt : seulement le chapeau et son ombre
+  // un champignon géant : chapeau rose, taches claires, bord lumineux
+  const hue = v === 1 ? ['#b45ad0', '#7a3a9a', '#e0a0f0'] : ['#d0607a', '#8a3a50', '#f6a8b8'];
+  disc(c, 8.5, 9, 7, 'rgba(0,0,0,0.35)');
+  disc(c, 8, 7.5, 7, hue[1]);
+  disc(c, 8, 7, 6.5, hue[0]);
+  disc(c, 6, 5, 2.5, hue[2]);
+  for (const [x, y] of [[10, 4], [11, 9], [5, 9], [8, 11]]) r(c, x, y, 2, 2, '#fff0f6');
+  r(c, 7, 6, 2, 2, AZ.glow);
+};
+const boulders: Painter = (c, v) => {
+  regolith(c, v);
+  const rock = (cx: number, cy: number, rad: number) => {
+    disc(c, cx + 1, cy + 1.5, rad, 'rgba(20,10,40,0.35)');
+    disc(c, cx, cy, rad, '#7a6c96');
+    disc(c, cx - rad * 0.3, cy - rad * 0.3, rad * 0.55, '#a497c0');
+    r(c, Math.round(cx - rad * 0.4), Math.round(cy - rad * 0.5), 1, 1, '#d8d0ea');
+  };
+  rock(5, 6, 4);
+  if (v !== 1) rock(11, 10, 3);
+  if (v === 2) rock(3, 12, 2);
+};
+const spire = (frame: number): Painter => (c, v) => {
+  regolith(c, v);
+  // une flèche de cristal, haute, avec son halo
+  disc(c, 8, 9, 7, frame ? 'rgba(95,240,224,0.22)' : 'rgba(95,240,224,0.12)');
+  for (let y = 1; y < 14; y++) {
+    const w = y < 7 ? Math.ceil(y / 2) : Math.ceil((14 - y) / 2) + 1;
+    r(c, 8 - w, y, w * 2, 1, y < 8 ? '#7fe8f8' : '#3fb6c8');
+    r(c, 8 - w, y, 1, 1, '#ffffff');
+  }
+  r(c, 8, 2, 1, 11, '#c8fbff');
+  if (frame) { r(c, 5, 4, 1, 1, '#ffffff'); r(c, 11, 9, 1, 1, '#ffffff'); }
+};
+const geyser = (frame: number): Painter => (c, v) => {
+  regolith(c, v);
+  // un évent bordé de croûtes minérales, et sa vapeur
+  disc(c, 8, 10, 5, '#d9c08a');
+  disc(c, 8, 10, 4, '#b08a5a');
+  disc(c, 8, 10, 2.5, '#3a2f4a');
+  r(c, 5, 8, 1, 1, '#fff6d8'); r(c, 11, 12, 1, 1, '#fff6d8');
+  const puff = [[8, 6, 2.5], [7, 4, 3.5], [9, 2, 4.5]][frame];
+  disc(c, puff[0], puff[1], puff[2], 'rgba(240,250,255,0.55)');
+  disc(c, puff[0] - 1, puff[1] - 1, puff[2] * 0.6, 'rgba(255,255,255,0.6)');
+};
+const fossil: Painter = (c, v) => {
+  regolith(c, v);
+  // les côtes d'une bête immense, à moitié enfouies
+  const bone = '#efe6d2', shade = '#b9ad94';
+  r(c, 1, 8, 14, 2, shade); r(c, 1, 7, 14, 2, bone);
+  for (const x of [3, 7, 11]) {
+    r(c, x, 2, 2, 5, bone); r(c, x - 1, 1, 2, 2, bone); r(c, x + 1, 2, 1, 5, shade);
+    r(c, x, 10, 2, 4, bone); r(c, x - 1, 13, 2, 2, bone); r(c, x + 1, 10, 1, 4, shade);
+  }
+  if (v === 1) r(c, 13, 3, 2, 2, AZ.glow);
+};
+const probe = (frame: number): Painter => (c, v) => {
+  regolith(c, v);
+  // une sonde d'Aurore, tombée là il y a longtemps : une coque, une aile solaire, une trace brûlée
+  r(c, 1, 9, 14, 5, 'rgba(30,20,30,0.35)');
+  r(c, 4, 5, 7, 6, AZ.white); r(c, 4, 5, 7, 1, AZ.stoneLight); r(c, 10, 5, 1, 6, AZ.whiteDeep);
+  r(c, 5, 7, 3, 2, AZ.tealDark); r(c, 6, 7, 1, 1, AZ.tealLight);
+  r(c, 11, 3, 4, 5, '#2b4f8a'); r(c, 12, 4, 1, 3, '#6f9fe0'); r(c, 10, 6, 1, 1, AZ.metal);
+  r(c, 1, 10, 3, 1, AZ.metal); r(c, 2, 11, 2, 1, AZ.metalDark);
+  r(c, 7, 4, 1, 1, frame ? AZ.red : '#5a2a2a');
+};
+const farWater: Painter = (c, v) => {
+  waterFrame(v % 2, false)(c, v);
+  r(c, 0, 0, T, T, 'rgba(10,40,60,0.15)');
+};
+
+const WILD: Record<string, Painter> = {
+  canopy0: canopy(0, 0), canopy1: canopy(1, 0), canopy2: canopy(2, 0), canopy3: canopy(3, 0),
+  canopyGlow0: canopy(0, 1), canopyGlow1: canopy(1, 2),
+  mushroom, boulders, spire0: spire(0), spire1: spire(1), geyser0: geyser(0), geyser1: geyser(1), geyser2: geyser(2),
+  fossil, probe0: probe(0), probe1: probe(1), farWater,
+};
+registerTiles(WILD);

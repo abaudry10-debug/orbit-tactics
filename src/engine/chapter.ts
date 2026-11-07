@@ -46,6 +46,8 @@ export interface ChapterHooks {
   tileName?(g: Game, ch: string, x: number, y: number, below: string): string | undefined;
   /** Le dessin d'un objet à cet instant (pour les objets animés). */
   objectSprite?(g: Game, name: string): string | undefined;
+  /** Le paysage au-delà des bords de la carte (inaccessible) ; true s'il a été dessiné. */
+  renderVoid?(g: Game, c: CanvasRenderingContext2D, x: number, y: number, sx: number, sy: number): boolean;
   /** La lumière du chapitre (teinte, particules) ; true si elle a été dessinée. */
   renderAtmosphere?(g: Game, c: CanvasRenderingContext2D, w: number, h: number): boolean;
   /** Pixel est-il « chez lui » ici (il remue la queue, jappe de joie) ? */

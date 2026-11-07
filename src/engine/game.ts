@@ -1742,6 +1742,8 @@ export class Game {
     for (let y = y0; y <= y0 + view.h / T + 2; y++) {
       for (let x = x0; x <= x0 + view.w / T + 2; x++) {
         if (x < 0 || y < 0 || x >= this.map.width || y >= this.map.height) {
+          // au-delà des bords : le chapitre peut dessiner son propre paysage
+          if (ch().hooks.renderVoid?.(this, c, x, y, x * T - ox, y * T - oy)) continue;
           const voidTile = this.map.voidTile ?? (this.map.outdoor ? 'rubble' : '');
           if (voidTile) c.drawImage(tile(voidTile, hash(x, y)), x * T - ox, y * T - oy);
           continue;

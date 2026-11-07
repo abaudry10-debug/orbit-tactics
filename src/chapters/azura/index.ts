@@ -2,6 +2,7 @@
 import { playTheme, sfx } from '../../engine/audio.js';
 import type { Chapter } from '../../engine/chapter.js';
 import { view, type Game } from '../../engine/game.js';
+import { tile } from '../../engine/sprites.js';
 import type { PersonLook } from '../../engine/sprites.js';
 import * as ui from '../../engine/ui.js';
 import { MAPS_AZ, SOLID_AZ, START_AZ } from './maps.js';
@@ -79,6 +80,135 @@ function grassMask(g: Game, x: number, y: number): number {
   if (is(-1, 1)) m |= MASK.SW;
   if (is(-1, -1)) m |= MASK.NW;
   return m;
+}
+
+// ---------- au-delà des bords : un paysage qui prolonge la carte ----------
+const h01 = (x: number, y: number, s: number) => {
+  const v = Math.sin(x * 127.1 + y * 311.7 + s * 74.7) * 43758.5453;
+  return v - Math.floor(v);
+};
+/** Un bruit doux : des régions de quelques cases, qui ondulent. */
+function smooth(x: number, y: number, s: number) {
+  const xi = Math.floor(x), yi = Math.floor(y);
+  const fx = x - xi, fy = y - yi;
+  const u = fx * fx * (3 - 2 * fx), w = fy * fy * (3 - 2 * fy);
+  const a = h01(xi, yi, s), b = h01(xi + 1, yi, s), c = h01(xi, yi + 1, s), d = h01(xi + 1, yi + 1, s);
+  return a + (b - a) * u + (c - a) * w + (a - b - c + d) * u * w;
+}
+const WATERISH = new Set(['~', 'B', 'b']);
+const BARE = new Set(['x', 'o', 'k', '1', '2', '3', '4']);
+
+function wildTile(g: Game, x: number, y: number, seed: number): string {
+  const h = h01(x, y, seed + 9);
+  const t = g.time;
+  if (h < 0.035) return 'crater';
+  if (h < 0.075) return 'crystals' + (Math.floor(t * 1.5 + x * 0.7 + y) % 2);
+  if (h < 0.095) return 'geyser' + (Math.floor(t * 3 + x + y * 2) % 3);
+  if (h < 0.11) return 'fossil';
+  if (h < 0.125) return 'spire' + (Math.floor(t * 2 + x) % 2);
+  if (h < 0.2) return 'boulders';
+  if (h < 0.205) return 'probe' + (Math.floor(t * 1.2) % 2);
+  return 'regolith';
+}
+
+// La forêt est dessinée d'un seul tenant : des cimes rondes qui débordent d'une case sur l'autre.
+const CANOPY_PAL: [string, string, string][] = [
+  ['#2f9e8a', '#1f6f66', '#62d0b4'],
+  ['#2f8fae', '#1e5f7a', '#6cc6e8'],
+  ['#3a9a52', '#25693a', '#78cf7a'],
+  ['#6a5aa8', '#463a7a', '#a796e0'],
+];
+const forestCache = new Map<string, HTMLCanvasElement>();
+function forestCanvas(x: number, y: number, seed: number): HTMLCanvasElement {
+  const key = `${seed}:${x},${y}`;
+  let cv = forestCache.get(key);
+  if (cv) return cv;
+  cv = document.createElement('canvas');
+  cv.width = 16;
+  cv.height = 16;
+  const c = cv.getContext('2d')!;
+  c.fillStyle = '#103236';
+  c.fillRect(0, 0, 16, 16);
+  // les arbres des cases voisines, pour que leurs cimes débordent jusqu'ici
+  const trees: { cx: number; cy: number; rad: number; pal: [string, string, string]; fruit: number }[] = [];
+  for (let j = y - 1; j <= y + 1; j++) {
+    for (let i = x - 1; i <= x + 1; i++) {
+      for (let k = 0; k < 2; k++) {
+        const kind = smooth(i * 0.22, j * 0.22, seed + 1);
+        trees.push({
+          cx: (i - x) * 16 + 2 + h01(i, j, seed + k * 3) * 12,
+          cy: (j - y) * 16 + 2 + h01(i, j, seed + k * 3 + 1) * 12,
+          rad: 5 + h01(i, j, seed + k * 3 + 2) * 4,
+          pal: CANOPY_PAL[kind < 0.3 ? 3 : kind < 0.5 ? 1 : kind < 0.75 ? 0 : 2],
+          fruit: h01(i, j, seed + k + 40),
+        });
+      }
+    }
+  }
+  trees.sort((a, b) => a.cy - b.cy);
+  const disc = (cx: number, cy: number, rad: number, col: string) => {
+    c.fillStyle = col;
+    for (let py = Math.max(0, Math.floor(cy - rad)); py <= Math.min(15, Math.ceil(cy + rad)); py++) {
+      const half = Math.sqrt(Math.max(0, rad * rad - (py - cy) ** 2));
+      const x0 = Math.max(0, Math.round(cx - half)), x1 = Math.min(16, Math.round(cx + half));
+      if (x1 > x0) c.fillRect(x0, py, x1 - x0, 1);
+    }
+  };
+  for (const t of trees) {
+    disc(t.cx + 1.5, t.cy + 2, t.rad, 'rgba(5,20,25,0.55)');
+    disc(t.cx, t.cy, t.rad, t.pal[1]);
+    disc(t.cx - 0.6, t.cy - 0.8, t.rad * 0.85, t.pal[0]);
+    disc(t.cx - t.rad * 0.35, t.cy - t.rad * 0.4, t.rad * 0.4, t.pal[2]);
+    if (t.fruit > 0.82) {
+      c.fillStyle = t.fruit > 0.92 ? '#ff7ac8' : '#5ff0e0';
+      for (const [dx, dy] of [[-2, 2], [2, 1], [0, -2]]) {
+        const fx = Math.round(t.cx + dx), fy = Math.round(t.cy + dy);
+        if (fx >= 0 && fy >= 0 && fx < 16 && fy < 16) c.fillRect(fx, fy, 1, 1);
+      }
+    }
+  }
+  if (forestCache.size > 4000) forestCache.clear();
+  forestCache.set(key, cv);
+  return cv;
+}
+
+function renderVoid(g: Game, c: CanvasRenderingContext2D, x: number, y: number, sx: number, sy: number) {
+  const W = g.map.width, H = g.map.height;
+  if (!g.map.outdoor) return false;
+  const cx = Math.max(0, Math.min(W - 1, x)), cy = Math.max(0, Math.min(H - 1, y));
+  const d = Math.max(cx - x, x - cx, cy - y, y - cy);
+  const edge = g.map.rows[cy][cx];
+  const seed = g.map.id.length * 13 + g.map.width;
+  const wave = Math.floor(g.time * 1.4 + (x + y) * 0.35) % 2;
+  const n = smooth(x * 0.18, y * 0.18, seed);
+  let name = '';
+  let forest = false;
+  if (WATERISH.has(edge) && d <= 4 + Math.round(n * 3)) name = d > 3 ? 'farWater' : 'azWater' + wave;
+  else if (WATERISH.has(edge) && d <= 5 + Math.round(n * 3)) name = 'azRockFace';
+  else if (BARE.has(edge)) (n > 0.66 ? (forest = true) : (name = wildTile(g, x, y, seed)));
+  else n < 0.22 ? (name = wildTile(g, x, y, seed)) : (forest = true);
+  if (forest) {
+    // de loin en loin, une clairière de champignons géants
+    c.drawImage(forestCanvas(x, y, seed), sx, sy);
+    if (smooth(x * 0.35, y * 0.35, seed + 3) > 0.76) c.drawImage(tile('mushroom', (x * 7 + y * 13) & 0xff), sx, sy);
+  } else {
+    // juste au-delà du bord, une ceinture de rochers : on voit qu'on ne peut pas aller plus loin
+    if (d === 1 && name === 'regolith') name = 'boulders';
+    else if (d === 2 && name === 'regolith' && h01(x, y, seed + 2) < 0.45) name = 'boulders';
+    c.drawImage(tile(name, (x * 7 + y * 13) & 0xff), sx, sy);
+  }
+  // plus c'est loin, plus c'est sombre : un fondu continu, sans marches
+  const shade = (k: number) => Math.min(0.55, 0.03 + k * 0.065);
+  const gx = x < 0 ? 1 : x >= W ? -1 : 0, gy = y < 0 ? 1 : y >= H ? -1 : 0;
+  const dx = Math.abs(x - cx), dy = Math.abs(y - cy);
+  const horiz = dx >= dy;
+  const far = shade(d), near = shade(d - 1);
+  const grad = horiz ? c.createLinearGradient(sx + (gx > 0 ? 0 : 16), 0, sx + (gx > 0 ? 16 : 0), 0) : c.createLinearGradient(0, sy + (gy > 0 ? 0 : 16), 0, sy + (gy > 0 ? 16 : 0));
+  grad.addColorStop(0, `rgba(6,12,24,${far})`);
+  grad.addColorStop(1, `rgba(6,12,24,${near})`);
+  c.fillStyle = grad;
+  c.fillRect(sx, sy, 16, 16);
+  return true;
 }
 
 // ---------- la sortie de la cuve : vapeur, puis on pose le pied sur la dalle ----------
@@ -328,6 +458,7 @@ export const azura: Chapter = {
     update(g, dt) {
       updateEmerge(g, dt);
     },
+    renderVoid,
     heroWalking(g) {
       return emerging.get(g)?.stage === 'out';
     },
